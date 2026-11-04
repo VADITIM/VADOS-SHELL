@@ -15,6 +15,17 @@ Project description plus a summary of the three chats in this project (Nov 4, 20
 - Responsive, physics-based animation across the whole shell: liquidity across modules, a unified modular system that interacts as one rather than as individual parts.
 - Establishes new core pillars for V/AS, such as unified icons stored directly inside V/AS.
 - Pushes motion logic to its limits: fast, responsive, visual animations tuned between speed and responsiveness, with clear visual hierarchy and reactions.
+- **Mutation:** interactive pills and the pop bar mutate (see below).
+
+### Mutation
+
+Mutation is how interactive pills and the pop bar change themselves. It covers three things:
+
+1. **Self-change:** how a pill or the pop bar reshapes itself (size, shape, content) when its state changes.
+2. **Enter / leave:** the animation it plays when it appears or disappears.
+3. **Inner element change:** the animation played when elements inside it are swapped, added or removed.
+
+Mutation timing and curves come from the shared motion tokens (`config/Motion.qml`), so every pill and the pop bar mutate the same way.
 
 ---
 

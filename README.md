@@ -29,4 +29,6 @@ scripts/  assets/
 
 Rule: data flows down, events flow up, nothing reaches sideways.
 
+Interactive pills and the pop bar **mutate**: they reshape themselves, play their own enter/leave animations, and animate changes to the elements inside them.
+
 See [docs/project-notes.md](docs/project-notes.md) for design notes and build order.

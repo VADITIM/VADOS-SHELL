@@ -309,6 +309,8 @@ Singleton {
         readonly property int lobeGap: 12
         readonly property int found: 220
         readonly property int foundIcon: 120
+        readonly property int foundAvatar: 196
+        readonly property real avatarShrink: 0.6
         readonly property int foundX: 390
         readonly property real foundShare: 0.483
         readonly property real ringStroke: 2

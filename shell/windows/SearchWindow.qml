@@ -29,6 +29,8 @@ PanelWindow {
         anchors.fill: parent
         isOpen: window.isOpen
         favoriteIds: Config.data.search.favorites
+        profileName: Config.data.profile.name
+        profilePicture: Config.data.profile.picture
         parts: Visibilities.taskbarParts[window.screenName] ?? []
         isMirrored: Config.data.taskbar.side === "right"
         canHandOff: Config.data.taskbar.style !== "bare"

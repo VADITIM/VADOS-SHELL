@@ -216,6 +216,7 @@ Singleton {
         readonly property real ripple: 0.32
         readonly property int settledStagger: 18
         readonly property int swap: 90
+        readonly property int mutate: 220
         readonly property int bud: 340
         readonly property int budOut: 140
         readonly property int nameGrow: 360

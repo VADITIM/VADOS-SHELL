@@ -10,6 +10,8 @@ FocusScope {
 
     property bool isOpen: false
     property var favoriteIds: []
+    property string profileName: ""
+    property string profilePicture: ""
     property var parts: []
     property bool isMirrored: false
     property bool canHandOff: false
@@ -450,6 +452,9 @@ FocusScope {
         isMirrored: search.isMirrored
         nameX: search.wallReach - search.foundCenterX + search.foundRadius + search.look.nameReach
         app: search.best
+        isSearching: search.isSearching
+        profileName: search.profileName
+        profilePicture: search.profilePicture
         isShown: search.isContentShown
         isSelected: search.zone === "found"
         enterDelay: search.revealDelay(search.foundCenterX, 1)

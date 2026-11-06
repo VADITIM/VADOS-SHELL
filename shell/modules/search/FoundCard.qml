@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import qs.config
 import qs.components
 
@@ -13,6 +14,17 @@ Item {
     property real nameX: width
     property var shownApp: null
     property bool isSwapping: false
+    property bool isSearching: false
+    property string profileName: ""
+    property string profilePicture: ""
+    property real mutation: isSearching ? 1 : 0
+
+    Behavior on mutation {
+        NumberAnimation {
+            duration: Motion.search.mutate
+            easing.type: card.isSearching ? Easing.OutBack : Easing.OutCubic
+        }
+    }
 
     readonly property var look: Appearance.search
     readonly property bool isNamed: card.isShown && !card.isSwapping && card.shownApp !== null
@@ -88,17 +100,70 @@ Item {
                 }
             }
 
+            Item {
+                id: avatar
+                anchors.centerIn: parent
+                width: card.look.foundAvatar
+                height: width
+                opacity: 1 - card.mutation
+                scale: 1 - card.mutation * (1 - card.look.avatarShrink)
+                visible: opacity > 0
+
+                Rectangle {
+                    id: avatarMask
+                    anchors.fill: parent
+                    radius: width / 2
+                    visible: false
+                    layer.enabled: true
+                }
+
+                Image {
+                    id: portrait
+                    anchors.fill: parent
+                    source: card.profilePicture
+                    sourceSize.width: avatar.width * 2
+                    sourceSize.height: avatar.height * 2
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    smooth: true
+                    visible: status === Image.Ready
+                    layer.enabled: true
+                    layer.effect: MultiEffect {
+                        maskEnabled: true
+                        maskSource: avatarMask
+                    }
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: width / 2
+                    color: Appearance.color.wash
+                    visible: portrait.status !== Image.Ready
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: (card.profileName || "?").charAt(0).toUpperCase()
+                        color: Appearance.color.text
+                        font.family: Appearance.font.mono
+                        font.pixelSize: Math.round(avatar.width * 0.4)
+                        font.bold: true
+                    }
+                }
+            }
+
             AppIcon {
                 anchors.centerIn: parent
                 size: card.look.foundIcon
                 app: card.shownApp
-                visible: card.shownApp !== null
+                opacity: card.mutation
+                scale: card.look.avatarShrink + card.mutation * (1 - card.look.avatarShrink)
+                visible: card.shownApp !== null && opacity > 0
             }
 
             Text {
                 anchors.centerIn: parent
                 text: "NO MATCH"
-                visible: card.shownApp === null
+                visible: card.isSearching && card.shownApp === null
                 color: Appearance.color.textFaint
                 font.family: Appearance.font.mono
                 font.pixelSize: Appearance.font.label

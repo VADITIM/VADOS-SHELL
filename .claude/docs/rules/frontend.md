@@ -7,6 +7,7 @@
 - **The accent is white by default and user-set** from settings. Selected and active state use `Appearance.color.accent`, never a fixed colour.
 - **The search is one liquid body growing out of the taskbar edge** (user's sketches, 2026-11-05 and 2026-11-06): a base column 100% of the screen height and 20% of its width; favourites in a two-row grid at the top-left that scrolls and drags sideways, fading on the taskbar side and cut by the wall; the list below them, its rows fading and shrinking as they scroll up under the favourites; the best match as a large ringed circle at mid-height, beside the list, with its name in a pill outside the body; the field at the bottom.
 - **The far wall keeps the drawn curve**: one smooth S-wave traced from the sketch (`Appearance.search.wall`), not steps, shelves or bulge lobes. Change the points only from a new drawing.
+- **The best-match circle shows the user's profile picture while the field is empty and mutates into the found app's icon once the user searches** (2026-11-06); it falls back to the name's initial without a picture.
 - **List rows beside the best match shorten** (name elided at the end) so text never runs under it; no fade there.
 - **App entries have no container**: the icon itself is the tile (1:1) and the name sits below it. No hint labels (`ENTER`, `RECENT`).
 - **Overlays dim the screen**; blur is the compositor's job (Hyprland `layerrule`, driftwm window/layer rules).

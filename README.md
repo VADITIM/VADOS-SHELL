@@ -122,6 +122,8 @@ shell.json        user config
 | `appearance.accent` | hex colour, e.g. `"#ffffff"`; set live from the settings window (Appearance tab) | `"#ffffff"` |
 | `desktop.mode` | `"canvas"` / `"desktop"` (driftwm only) | `"canvas"` |
 | `search.favorites` | desktop entry ids, e.g. `["firefox.desktop"]` | `[]` |
+| `profile.name` | your name; its initial shows in the search circle when there is no picture | `""` |
+| `profile.picture` | path to your profile picture, shown in the search circle until you type | `""` |
 | `weather.location` | city for the dashboard weather, e.g. `"Berlin"`; `""` guesses from your IP | `""` |
 
 Changes apply live.

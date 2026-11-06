@@ -22,6 +22,7 @@ Ordered. Shipped items move to `decisions.md`. Mirrored to the Obsidian vault "V
 
 ## Later
 
+- **User profiles** (agreed 2026-11-06): several profiles with name and picture, chosen in settings. Today a single `profile` in `shell.json` feeds the search circle.
 - **Notifications** (`modules/notifications`): alert band pulled from the top edge, liquid stack (V/AS `components/15-alert-band.md`).
 - **More abilities**: the taskbar carry as a drag ability, a right click ability, `Jolt` on more surfaces.
 - **Dashboard wave**: the shelved pour-out wave and idle ripple (`shelf/dashboard-wave/`) could return as an option.

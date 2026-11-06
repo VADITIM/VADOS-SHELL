@@ -36,6 +36,12 @@ Singleton {
         file.writeAdapter()
     }
 
+    function setProfile(name, picture) {
+        adapter.profile.name = name
+        adapter.profile.picture = picture
+        file.writeAdapter()
+    }
+
     function toggleFavorite(appId) {
         const favorites = (adapter.search.favorites || []).slice()
         const at = favorites.indexOf(appId)
@@ -75,6 +81,10 @@ Singleton {
             }
             property JsonObject search: JsonObject {
                 property var favorites: []
+            }
+            property JsonObject profile: JsonObject {
+                property string name: ""
+                property string picture: ""
             }
             property JsonObject weather: JsonObject {
                 property string location: ""

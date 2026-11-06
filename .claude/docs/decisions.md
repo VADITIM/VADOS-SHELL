@@ -179,3 +179,12 @@ GPU, CPU, RAM and the disk row moved toward the top-left empty space: `top` 48 t
 ## Wall waves follow the steps (2026-11-05)
 
 The crest ran along the plain body edge, hidden under the top and bottom steps (user: not visible on the steps). `Burst.wallTrack` now builds each side's outline as line and quarter-arc segments: along the step's outer edge, round its corner, down to the body edge, round the far corner, and around the battery notch when it has risen. `crestPath` samples that track by distance in one forward pass (`segmentPoint`), offsetting along each segment's outward normal.
+
+## Activity pill (2026-11-06)
+
+- **In the middle of the taskbar, not in the compact idle column** (user: it expands "from the center of the taskbar towards the right"). The roadmap had it opening from the compact column; the middle is the empty part of the bar and reads as a dynamic island. It is pushed down below a long task stack and up above the idle column.
+- **Four states on a ladder** (user): hidden, idle, active, expanded. `CTRL + LEFT / RIGHT` step down / up and clamp at the ends rather than wrap, so holding a key lands on a known end. Data only nudges it (idle ↔ active when activities start or all stop), so a state the user forced stays.
+- **Expanded grows from the spine towards the screen**: centred on the spine up to the capsule width, then the left side holds and the body spreads right. One body sized by one ability (`Reshape`) in the taskbar's own liquid, instead of a separate panel layer like the extension, so it necks with the taskbar pills it passes.
+- **Each activity draws its own liquid on top of the shared body** (user: each module has its own expanded view): music a disc head with a progress ring, Discord two hanging drops for mic and deafen. A new activity is a key in `Activities.keys`, a face in `ActivityGlance` and an expanded view with its size in `Appearance.activity`.
+- **Discord is detected from PipeWire, not an API**: a capture stream (`Stream/Input/Audio`) from Discord, Vesktop, WebCord, ArmCord or `WEBRTC VoiceEngine` means a call. Mic and deafen mute Discord's own streams, the only control a shell has; Discord's own mute icon does not follow.
+- **Media counts as running while the player is not stopped**, paused included, so pausing from the expanded view does not fold it away.

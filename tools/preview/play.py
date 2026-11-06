@@ -103,7 +103,7 @@ def main():
     environment["QML_IMPORT_PATH"] = BUILD
     environment["QSG_RENDER_LOOP"] = "basic"
     environment["PYTHONPATH"] = PYSIDE
-    print("Running. Ctrl+P settings, G or Ctrl+G search, D or Ctrl+D dashboard, Esc closes. Close the window to quit.")
+    print("Running. Ctrl+P settings, G or Ctrl+G search, D or Ctrl+D dashboard, Ctrl+Left/Right activity pill state, Ctrl+Up activity lead, C call, M media, Esc closes. Close the window to quit.")
     command = [sys.executable, "-m", "PySide6.scripts.qml", os.path.join(PREVIEW, "play.qml")] + sys.argv[1:]
     return subprocess.call(command, env=environment)
 

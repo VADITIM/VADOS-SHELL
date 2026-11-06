@@ -72,6 +72,10 @@ PanelWindow {
         onDashboardRequested: Visibilities.toggleDashboard(window.screenName)
         isAway: Visibilities.taskbarAwayScreen === window.screenName
         visitor: Visibilities.visitors[window.screenName] ?? null
+        activityMode: ActivityState.modeOn(window.screenName)
+        activityLead: ActivityState.leadKey
+        onActivityModeRequested: mode => ActivityState.set(window.screenName, mode)
+        onActivityLeadRequested: direction => ActivityState.rotate(direction)
         onSettingsOriginChanged: Visibilities.placeSettingsOrigin(window.screenName, settingsOrigin)
         isCovered: Occupancy.isCovered(window.screen?.name ?? "")
         isEaten: extension.isHolding

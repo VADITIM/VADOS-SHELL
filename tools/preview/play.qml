@@ -59,6 +59,10 @@ Window {
         onCompactRequested: isCompact => Config.setTaskbarCompact(isCompact)
         isAway: Visibilities.taskbarAwayScreen === root.screenName
         visitor: Visibilities.visitors[root.screenName] ?? null
+        activityMode: ActivityState.modeOn(root.screenName)
+        activityLead: ActivityState.leadKey
+        onActivityModeRequested: mode => ActivityState.set(root.screenName, mode)
+        onActivityLeadRequested: direction => ActivityState.rotate(direction)
         onSettingsRequested: Visibilities.toggleSettings(root.screenName)
         onDashboardRequested: Visibilities.toggleDashboard(root.screenName)
         onSettingsOriginChanged: Visibilities.placeSettingsOrigin(root.screenName, settingsOrigin)
@@ -121,6 +125,38 @@ Window {
         onVisitorChanged: Visibilities.placeVisitor(root.screenName, visitor)
         onCloseRequested: Visibilities.closeDashboard()
         onLanded: Visibilities.returnTaskbar(root.screenName)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Right"
+        context: Qt.ApplicationShortcut
+        onActivated: ActivityState.step(root.screenName, 1)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Left"
+        context: Qt.ApplicationShortcut
+        onActivated: ActivityState.step(root.screenName, -1)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Up"
+        context: Qt.ApplicationShortcut
+        onActivated: ActivityState.rotate(1)
+    }
+
+    Shortcut {
+        sequence: "C"
+        enabled: Visibilities.searchScreen === ""
+        context: Qt.ApplicationShortcut
+        onActivated: Activities.isCalling = !Activities.isCalling
+    }
+
+    Shortcut {
+        sequence: "M"
+        enabled: Visibilities.searchScreen === ""
+        context: Qt.ApplicationShortcut
+        onActivated: Activities.hasMedia = !Activities.hasMedia
     }
 
     Shortcut {

@@ -4,7 +4,7 @@ Ordered. Shipped items move to `decisions.md`. Mirrored to the Obsidian vault "V
 
 ## Next
 
-1. **Activity bar** (agreed 2026-11-05): a dynamic island that lives inside the taskbar, opened from the compact idle column. It shows what is happening now: the playing music, Discord calls, notifications, the system tray, and more over time. VAD/OS BUBBLE (`C:\Users\vn\source\VADOS-BUBBLE`) already has a first version of this; port it into the shell, improve it, and bring it in line with V/AS.
+1. **Activity bar** (agreed 2026-11-05): a dynamic island that lives inside the taskbar. It shows what is happening now: the playing music, Discord calls, notifications, the system tray, and more over time. VAD/OS BUBBLE (`C:\Users\vn\source\VADOS-BUBBLE`) already has a first version of this; port it into the shell, improve it, and bring it in line with V/AS. **Started 2026-11-06**: the activity pill in the middle of the taskbar with its four states, music and Discord (`decisions.md` § Activity pill). Next: notifications as alerts out of the pill, the system tray, timers, more modules.
 2. **Settings on the burst**: settings is the last overlay not growing out of the taskbar column with the dashboard's `Burst` (left alone on 2026-11-05 at the user's request).
 3. **Verify on driftwm.** Run the shell in a real session and check every assumption in `quirks.md` § Unverified driftwm assumptions: camera centre, Y-up, fullscreen/pinned shapes, negative `move`.
 4. **Persist Desktop mode parking** to `~/.cache/vados/desktop.json`, so a restart never strands windows (`known-issues.md`).

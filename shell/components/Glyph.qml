@@ -121,6 +121,26 @@ Item {
             return "M13 3 L7 13 H12 L11 21 L17 11 H12 Z"
         case "close":
             return "M7 7 L17 17 M17 7 L7 17"
+        case "music":
+            return "M9 17.5 V6 L19 4 V15.5 M9 9.5 L19 7.5 M9 17.5 a2.5 2.5 0 1 1 -5 0 a2.5 2.5 0 1 1 5 0 M19 15.5 a2.5 2.5 0 1 1 -5 0 a2.5 2.5 0 1 1 5 0"
+        case "headset":
+            return "M4.5 14 V12 a7.5 7.5 0 0 1 15 0 V14 M4.5 13.5 H7.5 V18.5 H4.5 Z M16.5 13.5 H19.5 V18.5 H16.5 Z M19.5 18 a4 4 0 0 1 -4 3.5 H13"
+        case "headphones":
+            return "M4.5 17 V12 a7.5 7.5 0 0 1 15 0 V17 M4.5 13.5 H7.5 V19.5 H4.5 Z M16.5 13.5 H19.5 V19.5 H16.5 Z"
+        case "deafened":
+            return "M4.5 17 V12 a7.5 7.5 0 0 1 15 0 V17 M4.5 13.5 H7.5 V19.5 H4.5 Z M16.5 13.5 H19.5 V19.5 H16.5 Z M3.5 3.5 L20.5 20.5"
+        case "mic":
+            return "M9.5 5.5 a2.5 2.5 0 0 1 5 0 V11.5 a2.5 2.5 0 0 1 -5 0 Z M6.5 11 a5.5 5.5 0 0 0 11 0 M12 16.5 V20 M9 20 H15"
+        case "mic-off":
+            return "M9.5 5.5 a2.5 2.5 0 0 1 5 0 V11.5 a2.5 2.5 0 0 1 -5 0 Z M6.5 11 a5.5 5.5 0 0 0 11 0 M12 16.5 V20 M9 20 H15 M4.5 4.5 L19.5 19.5"
+        case "play":
+            return "M8 5.5 L18.5 12 L8 18.5 Z"
+        case "pause":
+            return "M8.5 6 V18 M15.5 6 V18"
+        case "next":
+            return "M6.5 6 L14.5 12 L6.5 18 Z M17.5 6 V18"
+        case "previous":
+            return "M17.5 6 L9.5 12 L17.5 18 Z M6.5 6 V18"
         case "cpu":
             return chip(false)
         case "gpu":

@@ -33,6 +33,8 @@ Item {
     property bool isVeiled: false
     property bool isEaten: false
     property var visitor: null
+    property string activityMode: "idle"
+    property string activityLead: "media"
     readonly property rect settingsOrigin: {
         const size = settingsIdle.size
         const left = idleColumn.x + settingsIdle.x + settingsIdle.circleX
@@ -44,6 +46,8 @@ Item {
     signal settingsRequested()
     signal dashboardRequested()
     signal extensionRequested(string key, rect origin)
+    signal activityModeRequested(string mode)
+    signal activityLeadRequested(int direction)
 
     readonly property bool isRevealed: (!isCovered || isSummoned) && !isAway
     readonly property bool isHeld: rootHover.hovered || carried.isActive || taskPointer.pressed
@@ -52,6 +56,16 @@ Item {
     readonly property real pitch: Appearance.taskbar.item + Appearance.taskbar.itemGap
     readonly property bool isCarrying: carried.isActive
     readonly property real inputWidth: inputZone.width
+    readonly property real activityCenter: {
+        let stackBottom = Appearance.taskbar.margin
+        for (const pill of allPills()) {
+            if (pill.livingCount > 0)
+                stackBottom = Math.max(stackBottom, pill.y + pill.height)
+        }
+        const highest = stackBottom + Appearance.taskbar.pillGap + Appearance.activity.length / 2
+        const lowest = idleColumn.y - Appearance.taskbar.pillGap - activityPill.extent
+        return Math.max(highest, Math.min(lowest, height / 2))
+    }
 
     function touchOf(centerX, top, bottom, halfWidth) {
         if (!visitor)
@@ -69,6 +83,8 @@ Item {
             if (pill.isShown && pill.popScale > 0.5)
                 parts.push(Qt.rect(pill.x + pill.thickness * (1 - pill.popScale) / 2, pill.shellTop, pill.thickness * pill.popScale, pill.shellLength * pill.popScale))
         }
+        if (activityPill.isShown && activityPill.popScale > 0.5)
+            parts.push(activityPill.bodyRect())
         const idles = idleColumn.children
         for (let position = 0; position < idles.length; position++) {
             const idle = idles[position]
@@ -194,6 +210,11 @@ Item {
             hoveredTask = task
         else if (hoveredTask === task)
             hoveredTask = null
+    }
+
+    function collapseActivity() {
+        if (activityMode === "expanded")
+            activityModeRequested("active")
     }
 
     function summon() {
@@ -324,13 +345,16 @@ Item {
             isSummoned = true
     }
     onIsRevealedChanged: {
-        if (!isRevealed)
+        if (!isRevealed) {
             expandedIdle = ""
+            collapseActivity()
+        }
     }
     onIsEatenChanged: {
         if (isEaten) {
             expandedIdle = ""
             hoveredTask = null
+            collapseActivity()
         }
     }
     onExpandedIdleChanged: {
@@ -634,6 +658,18 @@ Item {
         y: Appearance.taskbar.margin
     }
 
+    ActivityPill {
+        id: activityPill
+        host: shell
+        mode: shell.activityMode
+        leadKey: shell.activityLead
+        liveKeys: Activities.liveKeys
+        x: shell.inset
+        y: shell.activityCenter
+        onModeRequested: mode => shell.activityModeRequested(mode)
+        onLeadRequested: direction => shell.activityLeadRequested(direction)
+    }
+
     Column {
         id: idleColumn
         x: shell.inset
@@ -735,7 +771,7 @@ Item {
             ? Appearance.taskbar.edgeStrip
             : carried.isActive
                 ? shell.width
-                : Math.min(shell.width, Math.max(Appearance.taskbar.reach, idleReach + Appearance.taskbar.idleGap, tip.reachRight + Appearance.taskbar.tipGap))
+                : Math.min(shell.width, Math.max(Appearance.taskbar.reach, idleReach + Appearance.taskbar.idleGap, tip.reachRight + Appearance.taskbar.tipGap, activityPill.isShown ? activityPill.reachRight : 0))
         height: parent.height
     }
 }

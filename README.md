@@ -32,6 +32,8 @@ autostart = ["qs -p ~/.config/vados/shell"]
 "super+left" = "exec qs -p ~/.config/vados/shell ipc call desktop snap left"
 "super+right" = "exec qs -p ~/.config/vados/shell ipc call desktop snap right"
 "f11" = "exec qs -p ~/.config/vados/shell ipc call desktop fullscreen"
+"ctrl+right" = "exec qs -p ~/.config/vados/shell ipc call activity next"
+"ctrl+left" = "exec qs -p ~/.config/vados/shell ipc call activity previous"
 ```
 
 Check the keybinding table name against your driftwm version's `config.reference.toml`.
@@ -49,6 +51,8 @@ layerrule = ignorezero, vados-settings
 bind = SUPER, A, global, vados:dashboard
 layerrule = blur, vados-dashboard
 layerrule = ignorezero, vados-dashboard
+bind = CTRL, right, global, vados:activityNext
+bind = CTRL, left, global, vados:activityPrevious
 ```
 
 ### Anything else
@@ -76,6 +80,19 @@ Switching back to Canvas restores every minimized window to where it was.
 ## Taskbar
 
 Drag down on the idle pills to fold them to power, audio and a small dot; drag up, or press the dot, to unfold them.
+
+## Activity pill
+
+A liquid pill in the middle of the taskbar shows what is running now. It has four states:
+
+- **Hidden**: gone.
+- **Idle**: a small bead, nothing happening.
+- **Active**: a capsule with the leading activity (Spotify or any MPRIS player with live bars, a Discord voice call with the mic state). Other running activities hang under it as small droplets; scroll on the pill to bring the next one to the front.
+- **Expanded**: the pill spreads from the taskbar towards the screen into that activity's own shape. Music: a disc with the cover and a progress ring, title, artist, previous / play / next. Discord: the call time, with mic and deafen droplets hanging under it.
+
+`CTRL + RIGHT` steps up (hidden, idle, active, expanded), `CTRL + LEFT` steps down; a click on the pill steps up too, and a click on the expanded body folds it back. It turns active on its own when something starts and idle when everything stops. IPC: `ipc call activity next`, `previous`, `mode <name>`, `rotate`.
+
+`CTRL + LEFT` / `RIGHT` are global bindings, so they shadow word-jump inside apps. Rebind them in the compositor config if that matters to you. Discord's mic and deafen mute Discord's own PipeWire streams, so Discord's interface does not show them.
 
 ## Settings window
 

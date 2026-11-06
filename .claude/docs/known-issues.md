@@ -25,3 +25,6 @@
 - **Search has no rising bubbles**: its body spans the full screen height, so `Rising` (top and bottom surfaces to the screen edges) has no room.
 - **Search and the dashboard share `Visibilities.visitors`** per screen. Only one is open at a time, but if one leaves while the other is still leaving, the last writer wins and the other's ball can vanish from the taskbar early.
 - **The dashboard's top step is not a hit area**: the body `MouseArea` covers only the rectangle, so a click on the top step closes the dashboard. The bottom step (disk notch) has its own `MouseArea`.
+- **The expanded activity pill does not close on a click outside it**: the taskbar layer only sees clicks inside its input zone. It folds back on a click on its body, `CTRL + LEFT`, or when the taskbar hides or an overlay opens.
+- **Activity pill gaps**: only music and Discord calls so far (no notifications, tray, timers); the Discord view shows no participants or speaking state; one MPRIS player at a time; not run on the Linux shell.
+- **`CTRL + LEFT / RIGHT` are global**, so they shadow word-jump in every app while bound.

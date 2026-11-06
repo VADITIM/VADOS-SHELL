@@ -37,6 +37,26 @@ Singleton {
         readonly property int trail: 60
     }
 
+    readonly property QtObject activity: QtObject {
+        readonly property int spread: 200
+        readonly property int expand: 380
+        readonly property int shrink: 170
+        readonly property int shrinkDelay: 60
+        readonly property int lag: 60
+        readonly property real overshoot: 1.7
+        readonly property real arriveShare: 0.55
+        readonly property int faceEnter: 140
+        readonly property int faceLeave: 90
+        readonly property int stagger: 40
+        readonly property int satelliteEnter: 240
+        readonly property int satelliteLeave: 120
+        readonly property real dropStart: 0.6
+        readonly property int bars: 900
+        readonly property real barRest: 0.25
+        readonly property real barOffset: 0.3
+        readonly property int tick: 1000
+    }
+
     readonly property QtObject extension: QtObject {
         readonly property int grow: 360
         readonly property int shrink: 240

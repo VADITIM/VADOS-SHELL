@@ -90,6 +90,43 @@ Singleton {
         readonly property int foldSpeckGap: 3
     }
 
+    readonly property QtObject activity: QtObject {
+        readonly property int bead: 24
+        readonly property int speck: 6
+        readonly property int width: 40
+        readonly property int length: 92
+        readonly property int padding: 12
+        readonly property int glyph: 18
+        readonly property int barCount: 3
+        readonly property int bar: 3
+        readonly property int barGap: 3
+        readonly property int barHeight: 14
+        readonly property int satellite: 10
+        readonly property int satelliteGap: 5
+        readonly property int detailGap: 14
+        readonly property int lineGap: 2
+        readonly property int control: 28
+        readonly property int controlGap: 4
+        readonly property QtObject media: QtObject {
+            readonly property int width: 300
+            readonly property int height: 112
+            readonly property int head: 128
+            readonly property int art: 88
+            readonly property int ring: 104
+            readonly property real ringStroke: 2.5
+            readonly property int padding: 14
+        }
+        readonly property QtObject call: QtObject {
+            readonly property int width: 236
+            readonly property int height: 76
+            readonly property int avatar: 56
+            readonly property int padding: 12
+            readonly property int drop: 34
+            readonly property int dropGap: 3
+            readonly property int dropSpacing: 8
+        }
+    }
+
     readonly property QtObject extension: QtObject {
         readonly property int width: 300
         readonly property int radius: 44

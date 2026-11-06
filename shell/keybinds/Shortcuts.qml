@@ -30,6 +30,40 @@ Scope {
         onPressed: Visibilities.toggleDashboard(Compositor.focusedScreen)
     }
 
+    GlobalShortcut {
+        appid: "vados"
+        name: "activityNext"
+        description: "Step the activity pill up: hidden, idle, active, expanded"
+        onPressed: ActivityState.step(Compositor.focusedScreen, 1)
+    }
+
+    GlobalShortcut {
+        appid: "vados"
+        name: "activityPrevious"
+        description: "Step the activity pill down: expanded, active, idle, hidden"
+        onPressed: ActivityState.step(Compositor.focusedScreen, -1)
+    }
+
+    IpcHandler {
+        target: "activity"
+
+        function next(): void {
+            ActivityState.step(Compositor.focusedScreen, 1)
+        }
+
+        function previous(): void {
+            ActivityState.step(Compositor.focusedScreen, -1)
+        }
+
+        function mode(name: string): void {
+            ActivityState.set(Compositor.focusedScreen, name)
+        }
+
+        function rotate(): void {
+            ActivityState.rotate(1)
+        }
+    }
+
     IpcHandler {
         target: "dashboard"
 

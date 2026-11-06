@@ -36,6 +36,11 @@ Singleton {
         file.writeAdapter()
     }
 
+    function setNotificationsEnabled(isEnabled) {
+        adapter.notifications.enabled = isEnabled
+        file.writeAdapter()
+    }
+
     function setProfile(name, picture) {
         adapter.profile.name = name
         adapter.profile.picture = picture
@@ -88,6 +93,9 @@ Singleton {
             }
             property JsonObject weather: JsonObject {
                 property string location: ""
+            }
+            property JsonObject notifications: JsonObject {
+                property bool enabled: false
             }
         }
     }

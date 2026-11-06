@@ -123,3 +123,18 @@ QtObject {
         { kind: "cloudy", high: 17 }, { kind: "rain", high: 15 }, { kind: "storm", high: 22 }
     ]
 }
+Notifications|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isServing: false
+    property var list: []
+    property var latest: null
+    property int unreadCount: 0
+    property bool hasUnread: false
+    property bool isUrgent: false
+    signal received(var notification)
+    function markRead() { unreadCount = 0 }
+    function dismiss(notification) {}
+    function clear() {}
+    function invoke(notification, identifier) {}
+}

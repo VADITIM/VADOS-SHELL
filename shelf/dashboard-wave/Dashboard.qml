@@ -76,7 +76,7 @@ FocusScope {
 
     FrameAnimation {
         running: dashboard.isPresent
-        onTriggered: dashboard.clock += Math.min(frameTime, Motion.carry.frameCap)
+        onTriggered: dashboard.clock += Math.min(frameTime, Motion.liquid.frameCap)
     }
 
     Item {

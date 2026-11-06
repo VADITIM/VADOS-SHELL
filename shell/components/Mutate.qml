@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import "../utils/Liquid.js" as Liquid
 
 QtObject {
     id: mutate
@@ -9,7 +10,14 @@ QtObject {
     property int enterDelay: 0
     property int leaveDelay: Motion.pill.leaveWindow + Motion.pill.leaveElement / 4
     property int popDuration: Motion.pill.pop
-    property real pop: 0
+    property var character: Motion.liquid.pill
+    property real popTime: 0
+    property real popFrom: 0
+    property real popRemaining: 1
+    property bool isPopLeaving: false
+    readonly property real pop: isPopLeaving ? popFrom * popRemaining
+        : popTime >= popDuration ? 1
+        : popFrom + (1 - popFrom) * Liquid.rise(character, popTime / 1000)
     property real spread: 0
     property bool isInnerShown: false
     readonly property int innerLead: Motion.pill.spread / 2
@@ -22,10 +30,9 @@ QtObject {
         ParallelAnimation {
             NumberAnimation {
                 target: mutate
-                property: "pop"
-                to: 1
+                property: "popTime"
+                to: mutate.popDuration
                 duration: mutate.popDuration
-                easing.type: Easing.OutBack
             }
             SequentialAnimation {
                 PauseAnimation { duration: Motion.pill.spreadDelay }
@@ -51,10 +58,9 @@ QtObject {
         ScriptAction { script: mutate.isInnerShown = true }
         NumberAnimation {
             target: mutate
-            property: "pop"
-            to: 1
+            property: "popTime"
+            to: mutate.popDuration
             duration: mutate.popDuration
-            easing.type: Easing.OutBack
         }
     }
 
@@ -68,9 +74,10 @@ QtObject {
             duration: mutate.hasSpread ? Motion.pill.leaveSpread : 0
             easing.type: Easing.InOutCubic
         }
+        ScriptAction { script: mutate.holdPop(true) }
         NumberAnimation {
             target: mutate
-            property: "pop"
+            property: "popRemaining"
             to: 0
             duration: Motion.pill.leavePop
             easing.type: Easing.InBack
@@ -78,9 +85,18 @@ QtObject {
         ScriptAction { script: mutate.departed() }
     }
 
+    function holdPop(isLeaving) {
+        const current = pop
+        popFrom = current
+        popTime = 0
+        popRemaining = 1
+        isPopLeaving = isLeaving
+    }
+
     function play() {
         if (isShown) {
             leave.stop()
+            holdPop(false)
             if (hasSpread)
                 spreadEnter.restart()
             else

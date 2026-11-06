@@ -106,7 +106,7 @@ Item {
 
     FrameAnimation {
         running: rising.isActive
-        onTriggered: rising.advance(Math.min(frameTime, Motion.carry.frameCap))
+        onTriggered: rising.advance(Math.min(frameTime, Motion.liquid.frameCap))
     }
 
     Repeater {

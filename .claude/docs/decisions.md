@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11-06 (liquid engine, activity state, notifications)
+
+- **One liquid engine, not physics per feature** (user: one reusable system with configurable parameters, so VAD/OS has one physical identity). The material, shapes and the burst were already shared; the physics were four hand-written oscillators with their own names (`Burst` bounce and impact, `Launch` wave, `Carried` springs). They are now characters in `Motion.liquid` run through `utils/Liquid.js`.
+- **Three parameters, not seven.** The user's list (mass, elasticity, damping, expansion force, merge threshold, separation force, settling duration) is redundant for a spring: mass only matters against stiffness, and settling follows from response and damping, so setting all of them independently would contradict itself. A character is `response` (mass and elasticity), `damping` and `expansion` (launch speed), the V/AS parameterisation (`components/29-physics-motion.md`). Merge and separation are the neck's `merge`, `separate` and their kicks; the material's threshold is `Appearance.liquid`.
+- **Characters run in seconds, not in shares of a duration.** The old oscillators were written in a share of their animation, so changing a duration also changed the spring. A character's feel now stays put when a choreography duration changes. The converted values reproduce the old curves within 0.01 % (`Burst`, `Launch`) and the integrator exactly (`Carried`).
+- **The engine is a JavaScript library, not a singleton.** Pure functions on a character, like `Fuzzy.js`: no QML property overhead in the burst's per-frame trace, and nothing to mock in the preview.
+- **`Mutate`'s pop is a spring; its leave keeps InBack.** The pop was `Easing.OutBack`, which a spring from rest cannot match (9 % off). With a launch speed (`expansion` 1) it matches within 1.7 % over the pop (peak 1.093 against 1.10). Idle circles and the fold dot pop over 220 ms, so they get their own time-scaled character (`circle`) instead of a stretched clock. Leaves are not springs (animation rules: a leave is its own faster motion).
+- **Not moved onto the engine**: `Press`, `Carried`'s lift and the tab bar bud still use `Easing.OutBack`. They are press and bud feedback, not liquid bodies; they can become characters when they should share the identity.
+- **Activity state merges the sources; the bar only reads it** (agreed step 2). `state/Activity.qml` decides what is current, so the taskbar, alerts and any later surface agree on it. It reads services, which is a downward read.
+- **The notification server is off by default** (`notifications.enabled`). Owning `org.freedesktop.Notifications` replaces mako, dunst or swaync, and the shell has no surface that shows notifications yet; turning it on now would make notifications disappear. Turn it on once the activity bar shows them.
+
 ## 2026-11-06 (wall flares after the bounce)
 
 - **The wall's end flares turn outward only after the bounce** (user: the curves into the screen edges should appear after the bounce, and be inward until they expand outward). `Burst.flare` rises from `Motion.burst.flareStart` of the opening (the height has settled to under 1 % by then) and retracts over `flareRetract` of the leave; at 0 each end point is mirrored inward about its neighbour, so the corners round into the body, and at 1 they reach the drawn flare.

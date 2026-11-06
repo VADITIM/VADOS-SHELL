@@ -23,6 +23,7 @@ QtObject {
         property QtObject desktop: QtObject { property string mode: "canvas" }
         property QtObject search: QtObject { property var favorites: ["firefox.desktop", "kitty.desktop"] }
         property QtObject weather: QtObject { property string location: "" }
+        property QtObject notifications: QtObject { property bool enabled: false }
     }
     function setTaskbarStyle(style) { data.taskbar.style = style }
     function setTaskbarSide(side) { data.taskbar.side = side }
@@ -30,6 +31,7 @@ QtObject {
     function setAccent(color) { data.appearance.accent = color }
     function setWindowMode(mode) { data.desktop.mode = mode }
     function setWeatherLocation(location) { data.weather.location = location }
+    function setNotificationsEnabled(isEnabled) { data.notifications.enabled = isEnabled }
     function toggleFavorite(appId) {
         const favorites = data.search.favorites.slice()
         const at = favorites.indexOf(appId)
@@ -93,8 +95,11 @@ def build():
     for module in ("taskbar", "search", "settings", "dashboard"):
         write_module("qs.modules." + module, qml_files(os.path.join(SHELL, "modules", module)))
     write_module("qs.services", mock_services())
-    os.makedirs(os.path.join(BUILD, "qs", "utils"), exist_ok=True)
-    shutil.copy(os.path.join(SHELL, "utils", "Fuzzy.js"), os.path.join(BUILD, "qs", "utils", "Fuzzy.js"))
+    utilities = os.path.join(BUILD, "qs", "utils")
+    os.makedirs(utilities, exist_ok=True)
+    for name in os.listdir(os.path.join(SHELL, "utils")):
+        if name.endswith(".js"):
+            shutil.copy(os.path.join(SHELL, "utils", name), os.path.join(utilities, name))
 
 
 def main():

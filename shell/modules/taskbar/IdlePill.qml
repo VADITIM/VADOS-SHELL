@@ -94,6 +94,7 @@ Item {
         enterDelay: idle.order * Motion.reveal.stagger
         leaveDelay: idle.stretch > 0.01 ? Motion.pill.fold + Motion.pill.sizeFollow : Motion.pill.leaveElement
         popDuration: Motion.stateDuration
+        character: Motion.liquid.circle
     }
 
     EdgeFuse {

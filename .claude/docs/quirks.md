@@ -1,5 +1,10 @@
 # Quirks
 
+- **Liquid characters must be underdamped** (`damping` below 1). `Liquid.swing` takes `√(1 − damping²)`; at 1 or above it is NaN and the body vanishes. Liquid always overshoots, so a non-overshooting motion is an easing, not a character.
+- **`Mutate`'s pop snaps the last 1.2 %.** The spring has not fully settled when the pop clock (`Motion.pill.pop`) ends, so `pop` reads 1 from then on; the snap is under half a pixel on a task pill.
+- **Characters are in seconds.** `Burst` and `Launch` convert their phase share to seconds (`openTime`, `spreadTime`) before calling the engine. Retuning `Motion.burst.spread` or `Motion.settings.pop` now changes how much of the spring plays, not the spring.
+- **Unverified Quickshell assumption (notifications, 2026-11-06):** singletons are created on first use, so `Shortcuts` binds to `Notifications.isServing` to create the service and register the server at startup. `LazyLoader` with a `NotificationServer` child and `trackedNotifications.values` as an array are also untested.
+- **Preview on Linux** (cloud sessions): PySide6 needs `libegl1`, and the offscreen platform draws each `LiquidLayer` as an unmasked grey slab, so goo shapes cannot be judged there. Content, layout and runtime warnings can: run `play.build()` and load `play.qml` with `QT_QPA_PLATFORM=offscreen`.
 - **`long` is a reserved word in QML JavaScript.** `const long = …` makes the file fail to parse, and `qmlformat` exits 1 without a message.
 - **The preview harness cannot time animations.** `grabWindow` under the basic render loop lets every animation finish within one frame, and the threaded loop stalls while grabbing. Check motion by setting the phase properties by hand and grabbing poses.
 - **The dashboard body uses per-corner `Rectangle` radii** (`topLeftRadius` and friends), which need Qt 6.7 or newer.

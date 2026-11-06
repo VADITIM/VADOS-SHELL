@@ -95,6 +95,13 @@ A click on the taskbar clock (or `SUPER + A`, or `ipc call dashboard toggle`) st
 
 Bars and rings are colour-coded in bands: blue, yellow, orange, red. GPU readings need `nvidia-smi` (NVIDIA) or the amdgpu driver (AMD). Esc or a click outside closes it.
 
+## Activity and notifications
+
+The activity bar (coming) will show what is happening now inside the taskbar. Its state and the notification service exist already:
+
+- `qs -p ~/.config/vados/shell ipc call activity toggle` (or the Hyprland global shortcut `vados:activity`), `... activity current`, `... activity pin notifications`.
+- `... ipc call notifications enable` makes the shell your notification daemon, `... disable` gives it back; `status`, `count` and `clear` report and dismiss.
+
 ## Layout
 
 ```
@@ -125,6 +132,7 @@ shell.json        user config
 | `profile.name` | your name; its initial shows in the search circle when there is no picture | `""` |
 | `profile.picture` | path to your profile picture, shown in the search circle until you type | `""` |
 | `weather.location` | city for the dashboard weather, e.g. `"Berlin"`; `""` guesses from your IP | `""` |
+| `notifications.enabled` | `true`: the shell becomes the notification daemon (replaces mako, dunst, swaync); nothing shows them yet, so leave it off until the activity bar lands<br>`false`: your existing daemon keeps them | `false` |
 
 Changes apply live.
 

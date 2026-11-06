@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import "../utils/Liquid.js" as Liquid
 
 Item {
     id: launch
@@ -47,6 +48,7 @@ Item {
     readonly property real launchX: seedX - headingX * look.crouchShift
     readonly property real launchY: seedY - headingY * look.crouchShift
     readonly property real popStart: look.ball * (1 + pace.inflate)
+    readonly property real spreadTime: pace.pop * (1 - pace.impactShare) / 1000
 
     readonly property var form: isLeaving ? leaveForm(collapse, back, leaveFrom) : enterForm(merge, shoot, pop, jolt)
     readonly property real formWidth: form.width * body
@@ -84,7 +86,7 @@ Item {
             }
             const spread = (pop - pace.impactShare) / (1 - pace.impactShare)
             const opening = 1 - Math.pow(1 - Math.min(1, spread / pace.expandShare), 3)
-            const wobble = pace.wave * Math.exp(-pace.waveDecay * spread) * Math.sin(2 * Math.PI * pace.waveCycles * spread)
+            const wobble = Liquid.ring(Motion.liquid.launch, spread * spreadTime)
             const width = (popStart + (look.width - popStart) * opening) * (1 + wobble)
             const height = (popStart + (look.height - popStart) * opening) * (1 - wobble) + jolt
             const radius = Math.min(width / 2, height / 2, popStart / 2 + (look.radius - popStart / 2) * opening)

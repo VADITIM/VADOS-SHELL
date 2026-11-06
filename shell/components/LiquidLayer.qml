@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Effects
+import qs.config
 
 Item {
     id: liquid
@@ -8,8 +9,8 @@ Item {
     property color rim: "grey"
     property real fillAlpha: 1
     property int melt: 12
-    property real fillThreshold: 0.5
-    property real rimThreshold: 0.3
+    property real fillThreshold: Appearance.liquid.fillThreshold
+    property real rimThreshold: Appearance.liquid.rimThreshold
     readonly property Item shapes: shapeHolder
 
     Item {
@@ -71,7 +72,7 @@ Item {
             maskEnabled: true
             maskSource: blurredTexture
             maskThresholdMin: liquid.rimThreshold
-            maskSpreadAtMin: 0.04
+            maskSpreadAtMin: Appearance.liquid.edgeSoftness
         }
 
         MultiEffect {
@@ -80,7 +81,7 @@ Item {
             maskEnabled: true
             maskSource: blurredTexture
             maskThresholdMin: liquid.fillThreshold
-            maskSpreadAtMin: 0.04
+            maskSpreadAtMin: Appearance.liquid.edgeSoftness
         }
 
         MultiEffect {
@@ -88,8 +89,8 @@ Item {
             source: fillSurface
             maskEnabled: true
             maskSource: shapeTexture
-            maskThresholdMin: 0.5
-            maskSpreadAtMin: 0.1
+            maskThresholdMin: Appearance.liquid.coreThreshold
+            maskSpreadAtMin: Appearance.liquid.coreSoftness
         }
     }
 }

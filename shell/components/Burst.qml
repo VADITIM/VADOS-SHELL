@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.config
+import "../utils/Liquid.js" as Liquid
 
 Item {
     id: burst
@@ -31,6 +32,8 @@ Item {
 
     readonly property var look: Appearance.burst
     readonly property var pace: Motion.burst
+    readonly property var character: Motion.liquid.burst
+    readonly property real openTime: pace.spread * (1 - pace.impactShare) / 1000
     readonly property bool isActive: isShown || leave.running
     readonly property bool isOpened: isShown && !isLeaving && spread >= pace.openShare
     readonly property bool isSplashing: isShown && !isLeaving && spread > pace.impactShare
@@ -40,10 +43,10 @@ Item {
     readonly property real farDistance: farX - seedX
     readonly property real startReach: look.ball * (1 + pace.inflate) / 2
     readonly property real opening: clampUnit((spread - pace.impactShare) / (1 - pace.impactShare))
-    readonly property real widthShare: bounce(opening)
-    readonly property real heightShare: bounce(opening * pace.heightLead)
+    readonly property real widthShare: Liquid.rise(character, opening * openTime)
+    readonly property real heightShare: Liquid.rise(character, opening * pace.heightLead * openTime)
     readonly property real front: startReach + (farDistance - startReach) * widthShare
-    readonly property real crossShare: 1 / (4 * pace.bounceCycles * pace.heightLead)
+    readonly property real crossShare: crossOf(pace.heightLead)
     readonly property real meetShare: pace.impactShare + (crossShare + pace.crestRun * (1 - crossShare)) * (1 - pace.impactShare)
 
     readonly property var flights: (parts || []).map(part => flightOf(part))
@@ -96,12 +99,12 @@ Item {
         return value * value * (3 - 2 * value)
     }
 
-    function bounce(time) {
-        return 1 - Math.exp(-pace.bounceDamping * time) * Math.cos(2 * Math.PI * pace.bounceCycles * time)
+    function crossOf(lead) {
+        return Liquid.arrival(character) / (lead * openTime)
     }
 
     function sinceCross(lead) {
-        const cross = 1 / (4 * pace.bounceCycles * lead)
+        const cross = crossOf(lead)
         return opening < cross ? -1 : (opening - cross) / (1 - cross)
     }
 
@@ -433,7 +436,7 @@ Item {
     }
 
     function impactWobble() {
-        return impact <= 0 || impact >= 1 ? 0 : -Math.exp(-pace.impactDamping * impact) * Math.sin(2 * Math.PI * pace.impactCycles * impact)
+        return impact >= 1 ? 0 : -Liquid.ring(Motion.liquid.crash, impact * pace.impact / 1000)
     }
 
     function stepForm(kind) {

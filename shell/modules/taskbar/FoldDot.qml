@@ -43,6 +43,7 @@ Item {
         enterDelay: Motion.fold.dotDelay
         leaveDelay: 0
         popDuration: Motion.stateDuration
+        character: Motion.liquid.circle
     }
 
     EdgeFuse {

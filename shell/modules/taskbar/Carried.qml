@@ -2,6 +2,7 @@ import QtQuick
 import qs.config
 import qs.services
 import qs.components
+import "../../utils/Liquid.js" as Liquid
 
 Item {
     id: carried
@@ -80,22 +81,13 @@ Item {
 
     function advance(frameTime) {
         const target = isCarried ? finger : landingTarget()
-        const spring = isCarried ? Motion.springs.follow : Motion.springs.dock
-        const stiffness = Motion.stiffness(spring)
-        const friction = Motion.friction(spring)
-        let remaining = Math.min(Motion.carry.frameCap, frameTime)
-        let positionX = centerX
-        let positionY = centerY
-        let movingX = velocityX
-        let movingY = velocityY
-        while (remaining > 0) {
-            const step = Math.min(remaining, Motion.carry.substep)
-            movingX += (-stiffness * (positionX - target.x) - friction * movingX) * step
-            movingY += (-stiffness * (positionY - target.y) - friction * movingY) * step
-            positionX += movingX * step
-            positionY += movingY * step
-            remaining -= step
-        }
+        const character = isCarried ? Motion.liquid.follow : Motion.liquid.dock
+        const alongX = Liquid.pull(centerX, velocityX, target.x, character, frameTime, Motion.liquid)
+        const alongY = Liquid.pull(centerY, velocityY, target.y, character, frameTime, Motion.liquid)
+        const positionX = alongX.value
+        const positionY = alongY.value
+        const movingX = alongX.velocity
+        const movingY = alongY.velocity
         const isResting = Math.hypot(positionX - target.x, positionY - target.y) < Motion.carry.restDistance
             && Math.hypot(movingX, movingY) < Motion.carry.restVelocity
         if (isLanding && isResting) {
@@ -124,19 +116,9 @@ Item {
             turn = Math.atan2(Math.sin(2 * turn), Math.cos(2 * turn)) / 2
             deformAxis += turn * Math.min(1, frameTime * 18)
         }
-        const stiffness = Motion.stiffness(Motion.springs.wobble)
-        const friction = Motion.friction(Motion.springs.wobble)
-        let remaining = Math.min(Motion.carry.frameCap, frameTime)
-        let amount = deform
-        let moving = deformVelocity
-        while (remaining > 0) {
-            const step = Math.min(remaining, Motion.carry.substep)
-            moving += (-stiffness * (amount - wanted) - friction * moving) * step
-            amount += moving * step
-            remaining -= step
-        }
-        deform = Math.max(-0.35, Math.min(0.6, amount))
-        deformVelocity = moving
+        const shape = Liquid.pull(deform, deformVelocity, wanted, Motion.liquid.droplet, frameTime, Motion.liquid)
+        deform = Math.max(-0.35, Math.min(0.6, shape.value))
+        deformVelocity = shape.velocity
     }
 
     FrameAnimation {

@@ -9,6 +9,8 @@ import qs.state
 Scope {
     id: shortcuts
 
+    readonly property bool isServingNotifications: Notifications.isServing
+
     GlobalShortcut {
         appid: "vados"
         name: "search"
@@ -28,6 +30,13 @@ Scope {
         name: "dashboard"
         description: "Open or close the dashboard"
         onPressed: Visibilities.toggleDashboard(Compositor.focusedScreen)
+    }
+
+    GlobalShortcut {
+        appid: "vados"
+        name: "activity"
+        description: "Open or close the activity bar"
+        onPressed: Activity.toggle(Compositor.focusedScreen)
     }
 
     IpcHandler {
@@ -96,6 +105,50 @@ Scope {
 
         function snap(direction: string): void {
             Confinement.snap(direction)
+        }
+    }
+
+    IpcHandler {
+        target: "activity"
+
+        function toggle(): void {
+            Activity.toggle(Compositor.focusedScreen)
+        }
+
+        function close(): void {
+            Activity.close()
+        }
+
+        function pin(kind: string): void {
+            Activity.pin(kind)
+        }
+
+        function current(): string {
+            return Activity.current ? Activity.current.kind : ""
+        }
+    }
+
+    IpcHandler {
+        target: "notifications"
+
+        function enable(): void {
+            Config.setNotificationsEnabled(true)
+        }
+
+        function disable(): void {
+            Config.setNotificationsEnabled(false)
+        }
+
+        function status(): string {
+            return shortcuts.isServingNotifications ? "serving" : "off"
+        }
+
+        function count(): int {
+            return Notifications.list.length
+        }
+
+        function clear(): void {
+            Notifications.clear()
         }
     }
 }

@@ -60,6 +60,44 @@ Animations are **ability components**: attached to an element, an ability watche
 
 Abilities without visuals are `QtObject`s (`Press`, `Mutate`, `Jolt`), so attaching one never takes a slot in a `Row` or `Column`. A `Behavior` easing a property towards a state value (overlay dim, idle stretch, hover swell, taskbar inset and fuse) counts as an ability. Not yet an ability: the taskbar carry (drag) choreography in `Taskbar.qml`, whose droplet is `Carried`; right click has no animation.
 
+## Liquid engine
+
+One physical identity for everything liquid (user, 2026-11-06). Three parts, no feature has its own physics:
+
+- **Material**: `LiquidLayer` (blur `melt` per surface, then the `Appearance.liquid` thresholds) is the only goo. Bodies are `LiquidShape`, `LiquidBridge`, `Lobe`, `EdgeFuse` and `Shape`s inside a layer.
+- **Characters**: every spring, bounce and wobble is a named character in `Motion.liquid`, written the V/AS way (`components/29-physics-motion.md`), so a spring tuned here feels the same as one in VAD/OS Notes:
+  - `response`: seconds of one undamped swing. Mass and elasticity in one number: heavier or softer is a longer response.
+  - `damping`: damping fraction, below 1 (liquid always overshoots; `quirks.md`).
+  - `expansion`: the launch speed, in swing amplitudes. A rise with 0 starts from rest; a ring's amplitude is its expansion.
+  - Settling is derived from the two above (the envelope is `e^(−damping · 2π / response · t)`), never set on its own.
+- **Maths** (`utils/Liquid.js`, pure functions on a character):
+  - `rise(character, seconds)`: 0 → 1 with overshoot and settle; enters and bounces.
+  - `ring(character, seconds)`: a wobble around rest after a kick; impacts and pops.
+  - `arrival(character)`: seconds until a rise first reaches 1; choreography keys off it (the burst's wave start).
+  - `pull(value, velocity, target, character, frameTime, Motion.liquid)`: one frame of the semi-implicit spring integrator (1/240 s substeps, 50 ms cap) for anything a finger drives.
+  - `isMerged(wasMerged, closeness, neck)` and `neckKick`: the neck between two bodies merges past `neck.merge`, separates under `neck.separate`, and kicks the droplet by `mergeKick` / `separateKick`.
+
+| Character | Plays | Was |
+|---|---|---|
+| `burst` | `Burst` width and height bounce | `bounceDamping`, `bounceCycles` |
+| `crash` | `Burst` far-wall impact wobble | `impactDamping`, `impactCycles` |
+| `launch` | `Launch` panel pop wobble | `wave`, `waveDecay`, `waveCycles` |
+| `pill` | `Mutate` pop of task pills (60 ms) | `Easing.OutBack` |
+| `circle` | `Mutate` pop of idle circles and the fold dot (220 ms) | `Easing.OutBack` |
+| `follow`, `dock` | `Carried` droplet following the finger, docking into its slot | `Motion.springs` |
+| `droplet` | `Carried` stretch | `Motion.springs.wobble` |
+| `neck` | taskbar carry neck merge and separation | `carry.joinShare`, `snapShare`, `joinKick`, `snapKick` |
+
+Closed-form rises and rings run on an ability's own clock (a linear phase in seconds), so they stay abilities; `pull` runs in a `FrameAnimation`. Leaves are not springs: they keep their own faster easing (`Mutate` InBack), as the animation rules require. A new liquid surface (alerts, clipboard, lock) picks a character or adds one; it never writes `Math.exp` itself.
+
+## Activity and notifications
+
+`state/Activity.qml` is the shared state of the activity bar (roadmap 1), the sideways channel its pieces will read: `openScreen`, `pinnedKind`, `entries` merged from services (`notifications` from `Notifications`, `tray` from `Tray`; each `{ kind, count, unread, isUrgent, latest }`), and `current`: the pinned entry, else the first urgent, else the first unread, else the first. `open(screen)` marks notifications read. Media and calls will join `entries` as services for them land.
+
+`services/Notifications.qml` owns `org.freedesktop.Notifications` through a `NotificationServer` inside a `LazyLoader`, active only while `notifications.enabled` (default off, `decisions.md`). Every arriving notification is tracked and unread until `markRead`; `list` is newest first. `Shortcuts` binds to `Notifications.isServing`, which creates the singleton at startup (`quirks.md`).
+
+Entry points before the bar exists: the Hyprland shortcut `vados:activity`, IPC `activity toggle | close | pin <kind> | current` and `notifications enable | disable | status | count | clear`.
+
 ## Settings
 
 `SettingsWindow` is a full-screen overlay layer per screen (namespace `vados-settings`, exclusive keyboard while open), like search. It bridges `Config` into `modules/settings/Settings.qml` and its signals back to `Config.setAccent`, `setTaskbarSide`, `setTaskbarStyle` and `setWindowMode`.
@@ -70,7 +108,7 @@ Morph (the `Launch` ability, playing from `isOpen`: linear phase values; `enterF
 
 1. **Merge**: every taskbar part is drawn into the gear pill, near ends first (`mergeLag`), while the gear swells into one ball (`Appearance.settings.ball`).
 2. **Shoot**: from the gear, the ball crouches away from the panel (squash), then fires straight to the panel centre, stretched by speed with three trailing droplets that catch up.
-3. **Pop**: impact squash and inflate along the flight line, then the bubble bursts open into the panel. Width and height wobble in antiphase (a damped wave), and splash droplets ride just ahead of the wave front and settle back into the edge. Content `Turn`s in at `contentShare`, and `Rising` bubbles start leaving the top and bottom edges for the screen edges.
+3. **Pop**: impact squash and inflate along the flight line, then the bubble bursts open into the panel. Width and height wobble in antiphase (the `launch` character, `Liquid.ring`), and splash droplets ride just ahead of the wave front and settle back into the edge. Content `Turn`s in at `contentShare`, and `Rising` bubbles start leaving the top and bottom edges for the screen edges.
 4. **Tab bar**: a circle buds out of the container's left edge (OutBack), then extends into the `TabBar` pill, and its items enter.
 
 Tab switch: the highlight slides, the panel jolts (`Jolt` haptic, fed into `Launch.jolt`), the old page leaves (`Motion.settings.pageSwap`) before the new one enters. Close (its own animation): content out, bubbles drain, the tab bar retracts into the panel, the panel implodes into the ball (InBack) from wherever it was, the ball is sucked back to the gear (InCubic, stretched), then `landed()` → `Visibilities.returnTaskbar` lets the taskbar re-enter with its own pill pop while the ball shrinks into the gear. The gear is mirrored by the live `taskbarSide`, so a side switch from the settings sends the ball to the new side.
@@ -103,7 +141,7 @@ Enter (`components/Burst.qml`, about 0.8 s):
 
 1. **Converge** (`converge`, InQuad): every taskbar part tips over towards the seed point (the taskbar column, `seedX`, at the dashboard's height), contracts into a stream and flies in, nearest first (`convergeLag`). The ball bulges out of the screen edge. There is no ball before: the ball is only the mass that has arrived (`ball · √arrived`), so it is born from the parts.
 2. **Charge**: the ball inflates and squashes (`impactShare`, `inflate`, `squash`).
-3. **Bounce out** (`spread`): width and height follow a damped spring, `1 − e^(−bounceDamping·t)·cos(2π·bounceCycles·t)`. The height leads (`heightLead`), so the body first stands up between the top and bottom walls, then shoots out along the dashboard, overshoots the far wall by about 15 % and snaps back, stretched thinner while overshooting (`drag`). The root side settles onto the root wall early (`rootShare`).
+3. **Bounce out** (`spread`): width and height follow the `burst` character (`Liquid.rise`, launched at `expansion` so it is `1 − e^(−σt)·cos(ωt)`), over the spread's seconds. The height leads (`heightLead`), so the body first stands up between the top and bottom walls, then shoots out along the dashboard, overshoots the far wall by about 15 % and snaps back, stretched thinner while overshooting (`drag`). The root side settles onto the root wall early (`rootShare`).
 4. **Waves crash**: when the height first reaches its walls one wave per side (a single `Shape` bump, `crestLength` long, drawn along the wall path by `wallPoint`) starts at the root on the top and bottom walls, runs along it, wraps round the far corner curve and meets the other on the far wall at 50% height (`crestRun`). The meeting starts `impact` (its own timeline, paused until `meetShare` of the spread): the two halves fuse into one mound that swells and sinks into the body, a jet droplet leaps off the far wall and falls back, and the body bounces like a puddle hit by a drop (far wall dents in then out, height the other way, damped: `impactPush`, `impactCycles`, `impactDamping`). A droplet also splashes off each far corner (`splashSpan`).
 5. **Steps**: two rectangles in the liquid give the body a step: the top from the root to `stepTopShare` of the width rises `stepTop` above it, the bottom from the root to `stepBottomShare` drops a bigger `stepBottom` below it. Both scale with the body height, so they grow in and shrink away with it. While they show (`isStepped`), the root `Lobe` grows by their rises (`aboveRise`, `belowRise`) and shifts its centre, so the edge curve covers the steps too. With `hasSideStep` (the host sets it when `Battery.isPresent`), a third step (`stepForm("side")`) grows out of the far wall, `stepSide` deep and `stepSideHeight` tall, centred `stepSideOffset` below the middle, from the moment the waves meet until the overshoot ends (`spread` from `meetShare` to 1), so it lands with the body's bounce. It rides the impact wobble with the wall. A fan of spray droplets runs ahead of the front and is swallowed when it catches up.
 5. Content `Turn`s in by distance from the root (`Motion.dashboard.reveal` ms per px) once `openShare` of the spread has passed; `Rising` bubbles leave the top and bottom surfaces.

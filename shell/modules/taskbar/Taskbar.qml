@@ -2,6 +2,7 @@ import QtQuick
 import qs.config
 import qs.services
 import qs.components
+import "../../utils/Liquid.js" as Liquid
 
 Item {
     id: shell
@@ -261,10 +262,10 @@ Item {
         if (target !== carryTarget && carryTarget)
             carryTarget.freezeGhost(appId)
         carryCloseness = reach * reach * (3 - 2 * reach)
-        const isNowNecked = isNecked ? reach > Motion.carry.snapShare : reach > Motion.carry.joinShare
+        const isNowNecked = Liquid.isMerged(isNecked, reach, Motion.liquid.neck)
         if (isNowNecked !== isNecked) {
             isNecked = isNowNecked
-            carried.deformVelocity += isNowNecked ? -Motion.carry.joinKick : Motion.carry.snapKick
+            carried.deformVelocity += Liquid.neckKick(isNowNecked, Motion.liquid.neck)
         }
         carryTarget = target
         if (target) {
@@ -548,7 +549,7 @@ Item {
         toX: carried.meniscusX
         toY: carried.meniscusY
         toRadius: carried.size / 2 * carried.dropletScale
-        readonly property real hold: Math.max(0, Math.min(1, (share - Motion.carry.snapShare) / (1 - Motion.carry.snapShare)))
+        readonly property real hold: Math.max(0, Math.min(1, (share - Motion.liquid.neck.separate) / (1 - Motion.liquid.neck.separate)))
         spread: shell.isNecked || carried.isLanding ? Motion.carry.spread * (Motion.carry.snapSpread + (1 - Motion.carry.snapSpread) * Math.sqrt(hold)) : 0
         handle: Motion.carry.handle
     }

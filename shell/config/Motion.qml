@@ -93,17 +93,11 @@ Singleton {
         readonly property real spread: 0.62
         readonly property real handle: 2.4
         readonly property real tide: 0.22
-        readonly property real joinShare: 0.5
-        readonly property real snapShare: 0.28
         readonly property real snapSpread: 0.32
-        readonly property real joinKick: 3
-        readonly property real snapKick: 5
         readonly property real stretchPerVelocity: 0.00008
         readonly property real stretchLimit: 0.18
         readonly property real restDistance: 0.5
         readonly property real restVelocity: 8
-        readonly property real substep: 1 / 240
-        readonly property real frameCap: 0.05
         readonly property real lift: 1.08
         readonly property real absorb: 0.42
         readonly property real iconAbsorb: 0.16
@@ -130,9 +124,6 @@ Singleton {
         readonly property real inflate: 0.2
         readonly property real impactSquash: 0.28
         readonly property real expandShare: 0.36
-        readonly property real wave: 0.06
-        readonly property real waveDecay: 4.5
-        readonly property int waveCycles: 2
         readonly property real splashShare: 0.55
         readonly property real contentShare: 0.4
         readonly property int budDelay: 20
@@ -174,8 +165,6 @@ Singleton {
         readonly property real inflate: 0.18
         readonly property real squash: 0.16
         readonly property real rootShare: 0.2
-        readonly property real bounceCycles: 1.25
-        readonly property real bounceDamping: 5
         readonly property real heightLead: 1.6
         readonly property real drag: 0.35
         readonly property real crestRise: 0.12
@@ -185,8 +174,6 @@ Singleton {
         readonly property real moundSink: 0.4
         readonly property real moundRise: 0.6
         readonly property real jetShare: 0.55
-        readonly property real impactCycles: 1.75
-        readonly property real impactDamping: 4.5
         readonly property real impactSquash: 0.5
         readonly property real splashSpan: 0.5
         readonly property real sprayLead: 1.45
@@ -224,26 +211,54 @@ Singleton {
         readonly property real nameHeightLead: 2.5
     }
 
-    readonly property QtObject springs: QtObject {
+    readonly property QtObject liquid: QtObject {
+        readonly property real substep: 1 / 240
+        readonly property real frameCap: 0.05
+        readonly property QtObject burst: QtObject {
+            readonly property real response: 0.5466
+            readonly property real damping: 0.537
+            readonly property real expansion: 0.6366
+        }
+        readonly property QtObject crash: QtObject {
+            readonly property real response: 0.5289
+            readonly property real damping: 0.3788
+            readonly property real expansion: 1
+        }
+        readonly property QtObject launch: QtObject {
+            readonly property real response: 0.174
+            readonly property real damping: 0.3371
+            readonly property real expansion: 0.06
+        }
+        readonly property QtObject pill: QtObject {
+            readonly property real response: 0.068
+            readonly property real damping: 0.67
+            readonly property real expansion: 1
+        }
+        readonly property QtObject circle: QtObject {
+            readonly property real response: 0.2493
+            readonly property real damping: 0.67
+            readonly property real expansion: 1
+        }
         readonly property QtObject follow: QtObject {
             readonly property real response: 0.12
             readonly property real damping: 0.65
+            readonly property real expansion: 0
         }
         readonly property QtObject dock: QtObject {
             readonly property real response: 0.38
             readonly property real damping: 0.7
+            readonly property real expansion: 0
         }
-        readonly property QtObject wobble: QtObject {
+        readonly property QtObject droplet: QtObject {
             readonly property real response: 0.2
             readonly property real damping: 0.3
+            readonly property real expansion: 0
         }
-    }
-
-    function stiffness(spring) {
-        return Math.pow(2 * Math.PI / spring.response, 2)
-    }
-
-    function friction(spring) {
-        return 4 * Math.PI * spring.damping / spring.response
+        readonly property QtObject neck: QtObject {
+            readonly property real merge: 0.5
+            readonly property real separate: 0.28
+            readonly property real mergeKick: 3
+            readonly property real separateKick: 5
+        }
     }
 }

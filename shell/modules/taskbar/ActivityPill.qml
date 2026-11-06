@@ -30,7 +30,6 @@ Item {
     readonly property var satellites: liveKeys.filter(key => key !== leadKey)
     readonly property real satellitePitch: Appearance.activity.satellite + Appearance.activity.satelliteGap
     readonly property bool areSatellitesShown: face === "active" && isShown
-    property real satellitePresence: areSatellitesShown ? 1 : 0
     readonly property real extent: Appearance.activity.length / 2 + satellites.length * satellitePitch
     readonly property real reachRight: x + bodyLeft + Math.max(bodyWidth, Appearance.activity.media.head * Math.min(1, expansion)) * popScale + Appearance.taskbar.idleGap
 
@@ -44,13 +43,6 @@ Item {
         const width = bodyWidth * popScale
         const height = bodyHeight * popScale
         return Qt.rect(x + bodyLeft + bodyWidth * (1 - popScale) / 2, y - height / 2, width, height)
-    }
-
-    Behavior on satellitePresence {
-        NumberAnimation {
-            duration: pill.areSatellitesShown ? Motion.activity.satelliteEnter : Motion.activity.satelliteLeave
-            easing.type: pill.areSatellitesShown ? Easing.OutBack : Easing.InQuad
-        }
     }
 
     Mutate {
@@ -96,14 +88,24 @@ Item {
         model: pill.satellites.length
 
         LiquidShape {
+            id: satellite
             required property int index
-            readonly property real size: Appearance.activity.satellite * pill.satellitePresence * pill.popScale
+            readonly property real size: Appearance.activity.satellite * satellitePop.pop * pill.popScale
             parent: pill.host.liquidShapes
             visible: size > 0.5
             width: size
             height: size
             x: pill.x + pill.spineX - size / 2
-            y: pill.y + (pill.bodyHeight / 2 + Appearance.activity.satelliteGap + Appearance.activity.satellite / 2 + index * pill.satellitePitch) * pill.satellitePresence - size / 2
+            y: pill.y + pill.bodyHeight / 2 + Appearance.activity.satelliteGap + Appearance.activity.satellite / 2 + index * pill.satellitePitch - size / 2
+
+            Mutate {
+                id: satellitePop
+                isShown: pill.areSatellitesShown && reshape.isArrived
+                hasSpread: false
+                enterDelay: (satellite.index + 1) * Motion.activity.stagger
+                leaveDelay: 0
+                popDuration: Motion.activity.satelliteEnter
+            }
         }
     }
 

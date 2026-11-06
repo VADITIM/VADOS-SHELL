@@ -49,7 +49,6 @@ Singleton {
         readonly property int faceLeave: 90
         readonly property int stagger: 40
         readonly property int satelliteEnter: 240
-        readonly property int satelliteLeave: 120
         readonly property real dropStart: 0.6
         readonly property int bars: 900
         readonly property real barRest: 0.25

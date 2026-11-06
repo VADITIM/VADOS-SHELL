@@ -195,16 +195,28 @@ Item {
     function flightOf(part) {
         const fromX = part.x + part.width / 2
         const fromY = part.y + part.height / 2
+        const isUpright = part.height >= part.width
+        const along = isUpright ? Math.abs(seedY - fromY) : Math.abs(seedX - fromX)
+        const lengthwise = Math.max(1, isUpright ? part.height : part.width)
         return {
             x: fromX,
             y: fromY,
             width: part.width,
             height: part.height,
             area: part.width * part.height,
-            isUpright: part.height >= part.width,
+            isUpright: isUpright,
+            lean: clampUnit(along / lengthwise),
             distance: Math.hypot(seedX - fromX, seedY - fromY),
             heading: Math.atan2(seedY - fromY, seedX - fromX) * 180 / Math.PI
         }
+    }
+
+    function startAngleOf(flight) {
+        if (flight.isUpright)
+            return flight.heading >= 0 ? 90 : -90
+        if (Math.abs(flight.heading) <= 90)
+            return 0
+        return flight.heading > 0 ? 180 : -180
     }
 
     function progressOf(flight) {
@@ -218,12 +230,12 @@ Item {
 
     function streamForm(flight) {
         const progress = progressOf(flight)
-        const tilt = smooth(clampUnit(progress / pace.tiltShare))
+        const tilt = smooth(clampUnit(progress / pace.tiltShare)) * flight.lean
         const travel = progress * progress
         const remaining = 1 - absorbedShare(flight)
         const thin = flight.isUpright ? flight.width : flight.height
         const lengthwise = flight.isUpright ? flight.height : flight.width
-        const start = flight.isUpright ? (flight.heading >= 0 ? 90 : -90) : 0
+        const start = startAngleOf(flight)
         return {
             x: flight.x + (seedX - flight.x) * travel,
             y: flight.y + (seedY - flight.y) * travel,

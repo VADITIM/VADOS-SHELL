@@ -1,0 +1,37 @@
+# VAD/OS Shell
+
+This project is built on V/AS (VAD/OS APPLICATION SYSTEMS). Read SKILL.md in the V/AS clone (`C:\Users\vn\source\VADOS-APPLICATION-SYSTEMS`, see ~/.claude/CLAUDE.md).
+
+A Quickshell (Qt 6 / QML) desktop shell. **driftwm first**, compatible with Hyprland and any Wayland compositor. One liquid, mutating, interactive system rather than separate widgets.
+
+## Stack and commands
+
+- Quickshell QML; entry `shell/shell.qml`; config `shell.json` (live-reloaded).
+- Run on Linux: `qs -p ~/.config/vados/shell`.
+- Preview on Windows: the PySide6 harness with mock `qs.*` modules (auto-memory `qml-preview-harness`). Services that talk to a compositor are not previewable; syntax-check them with `C:\Users\vn\dependencies\pyside6\PySide6\qmlformat.exe <file>`.
+- Releases: on command.
+- Changelog: `CHANGELOGS.md` at the repo root, one section per version. On each push the user states when to bump the version and to what; then move `Unreleased` entries under the new version heading. Add entries to `Unreleased` as changes land.
+
+## Hard rules
+
+@docs/rules/architecture.md
+@docs/rules/compositor.md
+@docs/rules/animations.md
+@docs/rules/frontend.md
+@docs/rules/code-quality.md
+
+## Keeping `.claude` current
+
+Update these docs in the same task as the change, without being asked (V/AS `guides/claude-folder.md` §3). A Stop hook (`.claude/hooks/docs-current.py`) refuses to end a turn once when `shell/` changed after the docs did.
+
+| Change | File |
+|---|---|
+| File or folder added, moved, renamed | `docs/map.md` |
+| Layer, boundary, data flow | `docs/architecture.md` |
+| Choice between real alternatives | `docs/decisions.md` |
+| Trap, workaround, unverified assumption | `docs/quirks.md` |
+| Bug or debt not fixed now | `docs/known-issues.md` |
+| Planned work agreed or shipped | `docs/roadmap.md` (also mirrored to the Obsidian vault "VADOS SHELL", note `Shell.md`) |
+| A rule the user states | `docs/rules/<domain>.md` |
+
+`docs/project-notes.md` holds the early design chats (Hyprland era); it is history, not rules.

@@ -1,0 +1,8 @@
+# Compositor rules
+
+- **driftwm is the primary target; every feature must still work, or degrade cleanly, on Hyprland and on a plain Wayland compositor.**
+- **All window-manager access goes through `services/Compositor.qml`.** No file other than `Compositor.qml` imports `Quickshell.Hyprland`, calls `hyprctl`, or runs `driftwm msg`. Features ask `Compositor` for `activeWindow`, `focusedScreen`, `canvasState`, `viewports()`, `send()` and `action()`.
+- **`Compositor.activeWindow` is screen-local, top-left, Y-down** `{ id, appId, screen, x, y, width, height, isFullscreen }` on every backend. Backend coordinate systems (driftwm canvas: centre-anchored, Y-up, zoomed) are converted inside `Compositor` and nowhere else.
+- **Only the active (focused) window can hide the taskbar**, and only when it reaches into `Appearance.taskbar.reach` from the taskbar's edge (left or right) or is fullscreen. Other windows overlapping the edge never hide it: on an infinite canvas many windows overlap at once.
+- **Window modes are driftwm-only.** `Canvas` keeps driftwm's native behaviour untouched. `Desktop` (`services/Confinement.qml`) makes the screen behave like Windows: camera locked at zoom 1, windows confined to the screen, others minimized on entry, cascade placement for new windows, taskbar click restores, focuses or minimizes, snap/maximize/fullscreen through IPC. Mode buttons only show where `Confinement.canConfine`.
+- **driftwm has no minimize.** Desktop mode emulates it by parking a window far off-screen at opacity 0 and remembering its position; leaving Desktop restores every parked window.

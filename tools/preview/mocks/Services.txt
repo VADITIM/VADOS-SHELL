@@ -1,0 +1,125 @@
+Occupancy|pragma Singleton
+import QtQuick
+QtObject {
+    property bool covered: false
+    function isCovered(name) { return covered }
+}
+Audio|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isReady: true
+    property real volume: 0.64
+    property bool isMuted: false
+    function setVolume(value) { isMuted = false; volume = Math.max(0, Math.min(1, value)) }
+    function toggleMute() { isMuted = !isMuted }
+}
+Battery|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isPresent: true
+    property real level: 0.62
+    property bool isCharging: false
+    property real secondsLeft: 7600
+}
+Network|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isEnabled: true
+    property bool isWired: false
+    property string ssid: "VADOS-NET"
+    property real strength: 0.8
+    readonly property bool isConnected: isEnabled && ssid.length > 0
+    function toggle() { isEnabled = !isEnabled }
+}
+Removable|pragma Singleton
+import QtQuick
+QtObject {
+    property var devices: [{ label: "KINGSTON", path: "/dev/sdb", partitions: [] }]
+    function eject(device) { devices = devices.filter(candidate => candidate !== device) }
+}
+Tray|pragma Singleton
+import QtQuick
+QtObject {
+    property var items: []
+    function open(item, window, x, y) {}
+    function openMenu(item, window, x, y) {}
+}
+Power|pragma Singleton
+import QtQuick
+QtObject {
+    function lock() { console.log("power: lock") }
+    function suspend() { console.log("power: suspend") }
+    function restart() { console.log("power: restart") }
+    function shutdown() { console.log("power: shutdown") }
+}
+DateTime|pragma Singleton
+import QtQuick
+QtObject {
+    property date now: new Date()
+    readonly property string time: Qt.formatDateTime(now, "hh:mm:ss")
+    readonly property string date: Qt.formatDateTime(now, "ddd dd MMM").toUpperCase()
+    property Timer ticker: Timer { interval: 1000; running: true; repeat: true; onTriggered: now = new Date() }
+}
+Hardware|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isActive: false
+    property real cpuLoad: 0.3
+    property real cpuTemperature: 40
+    property string cpuName: "Ryzen 7 5800X"
+    property real memoryUsed: 22 * 1073741824
+    property real memoryTotal: 32 * 1073741824
+    property bool hasGpu: true
+    property string gpuName: "GeForce RTX 3080"
+    property real gpuLoad: 0.7
+    property real gpuTemperature: 75
+    property real videoMemoryUsed: 7.4 * 1073741824
+    property real videoMemoryTotal: 10 * 1073741824
+    property var disks: [
+        { mount: "/", used: 412 * 1073741824, total: 931 * 1073741824 },
+        { mount: "/home", used: 1520 * 1073741824, total: 1863 * 1073741824 },
+        { mount: "/mnt/games", used: 1940 * 1073741824, total: 2000 * 1073741824 }
+    ]
+    property Timer drift: Timer {
+        interval: 1500; running: true; repeat: true
+        onTriggered: {
+            cpuLoad = Math.max(0.05, Math.min(0.98, cpuLoad + (Math.random() - 0.5) * 0.12))
+            gpuLoad = Math.max(0.05, Math.min(0.98, gpuLoad + (Math.random() - 0.5) * 0.12))
+        }
+    }
+}
+Traffic|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isActive: false
+    property real download: 8.2e6
+    property real upload: 0.9e6
+    property var downloads: Array.from({ length: 60 }, (_, index) => 7e6 + Math.sin(index / 4) * 1.2e6 + Math.random() * 6e5)
+    property var uploads: Array.from({ length: 60 }, (_, index) => 6e5 + Math.random() * 5e5)
+    property real ping: 53
+    property real jitter: 19
+    property bool hasPing: true
+    property Timer drift: Timer {
+        interval: 1000; running: true; repeat: true
+        onTriggered: {
+            download = Math.max(2e5, download + (Math.random() - 0.5) * 2e6)
+            upload = Math.max(1e5, upload + (Math.random() - 0.5) * 3e5)
+            downloads = downloads.concat([download]).slice(-60)
+            uploads = uploads.concat([upload]).slice(-60)
+        }
+    }
+}
+Weather|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isActive: false
+    property bool isReady: true
+    property real temperature: 28
+    property real rainChance: 0
+    property string kind: "partly"
+    readonly property int forecastDays: 6
+    property var days: [
+        { kind: "clear", high: 20 }, { kind: "clear", high: 20 }, { kind: "partly", high: 21 },
+        { kind: "cloudy", high: 17 }, { kind: "rain", high: 15 }, { kind: "storm", high: 22 }
+    ]
+}

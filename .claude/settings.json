@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/code-style.py\"",
+            "timeout": 10,
+            "statusMessage": "Checking V/AS code style"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/docs-current.py\"",
+            "timeout": 15,
+            "statusMessage": "Checking .claude docs are current"
+          }
+        ]
+      }
+    ]
+  }
+}

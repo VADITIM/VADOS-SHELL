@@ -1,5 +1,19 @@
 {
-  "bar": {
-    "enabled": true
+  "taskbar": {
+    "enabled": true,
+    "style": "floating",
+    "side": "left"
+  },
+  "appearance": {
+    "accent": "#ffffff"
+  },
+  "desktop": {
+    "mode": "canvas"
+  },
+  "search": {
+    "favorites": []
+  },
+  "weather": {
+    "location": ""
   }
 }

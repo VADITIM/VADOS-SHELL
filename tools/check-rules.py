@@ -18,10 +18,39 @@ ENGINE_TESTS = {
     "shell/components/Lifecycle.qml": "tst_lifecycle.qml",
     "shell/components/Launch.qml": "tst_launch.qml",
     "shell/utils/Geometry.js": "tst_geometry.qml",
-    "shell/utils/Platform.js": "tst_geometry.qml",
+    "shell/utils/Platform.js": "tst_platform.qml",
+    "shell/utils/Schema.js": "tst_schema.qml",
+    "shell/components/LiquidLayer.qml": "tst_rendering.qml",
+    "shell/components/Masked.qml": "tst_rendering.qml",
+    "shell/config/Rendering.qml": "tst_rendering.qml",
+    "shell/utils/Log.js": "tst_log.qml",
+    "shell/utils/Backoff.js": "tst_supervisor.qml",
+    "shell/services/Supervisor.qml": "tst_supervisor.qml",
+    "shell/utils/Diagnostics.js": "tst_diagnostics.qml",
 }
 
-TIMERS_NOT_MOTION = {"Motion.reveal.dwell"}
+RENDERING_COMPONENTS = {"shell/components/LiquidLayer.qml", "shell/components/Masked.qml"}
+
+TIMERS_NOT_MOTION = {"Motion.reveal.dwell", "edgePull.pace.dwell"}
+
+LAYER_IMPORTS = {
+    "config": {"state", "services", "components", "modules", "windows", "keybinds"},
+    "state": {"components", "modules", "windows", "keybinds"},
+    "services": {"state", "components", "modules", "windows", "keybinds"},
+    "components": {"state", "services", "modules", "windows", "keybinds"},
+    "modules": {"windows", "keybinds"},
+    "windows": {"keybinds"},
+    "keybinds": {"components", "modules", "windows"},
+}
+
+VISUAL_TYPES = r"Item|Rectangle|Text|TextInput|TextEdit|Image|IconImage|Shape|ShapePath|Canvas|MouseArea|HoverHandler|TapHandler|DragHandler|Column|Row|Grid|Flow|Flickable|ListView|GridView|PathView|Repeater|Loader|ShaderEffect|MultiEffect|\w*Window"
+
+COMPONENT_TOKENS = {
+    "Appearance": {"unit", "radius", "color", "font", "liquid", "rising", "burst"},
+    "Motion": {"isReduced", "pace", "stateDuration", "hoverIn", "hoverOut", "press", "pill", "type", "gesture", "lifecycle", "burst", "rising", "liquid"},
+}
+
+COMPOSITOR_SUPPORT_BACKENDS = ["driftwm", "hyprland", "generic"]
 
 
 def relative(path):
@@ -103,6 +132,26 @@ def check(files):
             "user settings are written only by config/Config.qml (rules/architecture.md)")
     only_in("attention", r"function onReceived\(", {"shell/state/Attention.qml"},
             "only state/Attention.qml decides whether a notification may interrupt (rules/interaction.md)")
+    only_in("reliability", r"\bconsole\.\w+\(", {"shell/utils/Log.js"},
+            "log through utils/Log.js (Log.info, Log.warn, Log.error), one format with repeats held back (rules/reliability.md)")
+    only_in("rendering", r"\bMultiEffect\b|\bShaderEffect(Source)?\b|\blayer\.(enabled|effect)\b|^import QtQuick\.Effects|GraphicalEffects|\b(OpacityMask|GaussianBlur|FastBlur)\b",
+            RENDERING_COMPONENTS,
+            "effects, layers and masks live in the rendering components (LiquidLayer, Masked); compose them (rules/performance.md)")
+    for path in sorted(RENDERING_COMPONENTS):
+        text = dict(files).get(path, "")
+        for match in re.finditer(r"^\s*(layer\.enabled|live):\s*true\s*$", text, re.M):
+            flag("rendering", path, line_of(text, match.start()), "a layer or texture runs only while its surface renders, never always (rules/performance.md)")
+    for path, text in files:
+        for start, block in blocks(text, "LiquidLayer"):
+            depth, top = 0, []
+            for character in block:
+                depth += character == "{"
+                depth -= character == "}"
+                if depth == 1 or character in "{}":
+                    top.append(character)
+            surface = "".join(top)
+            if not re.search(r"^\s*isShown:", surface, re.M) or re.search(r"^\s*visible:", surface, re.M):
+                flag("rendering", path, line_of(text, start), "a LiquidLayer says when it is shown with isShown, never visible, so it stops rendering when idle (rules/performance.md)")
 
     for path, text in files:
         if path.startswith("shell/components/") and re.search(r"^\s*id: leave$", text, re.M) and "Lifecycle {" not in text:
@@ -131,6 +180,40 @@ def check(files):
                 if re.search(r"^\s*onClicked\s*:", block, re.M):
                     flag("gestures", path, line_of(text, start), f"a {kind} answers taps with onTapped; onClicked also fires after a drag (rules/interaction.md)")
 
+    for path, text in files:
+        layer = path.split("/")[1] if path.count("/") > 1 else ""
+        for match in re.finditer(r"^import\s+(?:qs\.(\w+)|\"(?:\.\./)+(\w+))", text, re.M):
+            target = match.group(1) or match.group(2)
+            if target in LAYER_IMPORTS.get(layer, set()):
+                flag("layers", path, line_of(text, match.start()), f"{layer} does not import {target}; data flows down, events up, and state is the only sideways channel (rules/architecture.md)")
+        if layer == "services":
+            for match in re.finditer(r"(?:^\s*|:\s*)(" + VISUAL_TYPES + r")\s*\{|^import (QtQuick\.(?:Shapes|Controls|Layouts|Effects)|Quickshell\.Widgets)\b", text, re.M):
+                flag("layers", path, line_of(text, match.start()), f"services own no UI; {match.group(1) or match.group(2)} belongs in a component or module (rules/architecture.md)")
+        if layer == "components":
+            for match in re.finditer(r"\b(Appearance|Motion)\.(\w+)", text):
+                if match.group(2) not in COMPONENT_TOKENS[match.group(1)]:
+                    flag("layers", path, line_of(text, match.start()), f"components stay feature-agnostic: {match.group(0)} is a feature group, take it as a property from the module (rules/architecture.md)")
+
+    platform = dict(files).get("shell/utils/Platform.js", "")
+    backends = {
+        name: dict(re.findall(r"(\w+): (true|false)", body))
+        for name, body in re.findall(r"^\s*(\w+): \{(.*?)\},?$", platform, re.M)
+    }
+    if sorted(backends) != sorted(COMPOSITOR_SUPPORT_BACKENDS):
+        flag("compositor", "shell/utils/Platform.js", 1, f"backends {sorted(backends)} differ from the README Compositor support columns {COMPOSITOR_SUPPORT_BACKENDS} (rules/compositor.md)")
+    support = {
+        name: [cell.strip() for cell in cells.split("|")[:len(COMPOSITOR_SUPPORT_BACKENDS)]]
+        for name, cells in re.findall(r"^\| `(\w+)` \|(.*)\|$", readme_section("Compositor support"), re.M)
+    }
+    for backend in sorted(set(backends) & set(COMPOSITOR_SUPPORT_BACKENDS)):
+        column = COMPOSITOR_SUPPORT_BACKENDS.index(backend)
+        for capability in sorted(set(backends[backend]) | set(support)):
+            claimed = backends[backend].get(capability)
+            documented = support[capability][column] if capability in support and column < len(support[capability]) else None
+            expected = {"true": "yes", "false": "no"}.get(claimed)
+            if expected != documented:
+                flag("compositor", "shell/utils/Platform.js", 1, f"`{capability}` on {backend} is {claimed} in utils/Platform.js but {documented} in the README Compositor support table; they say the same (rules/compositor.md)")
+
     network = readme_section("Network")
     for path, text in files:
         match = re.search(r"XMLHttpRequest|\bcurl\b|\bwget\b|\"ping\"|https?://", text)
@@ -158,6 +241,25 @@ def check(files):
         for key in re.findall(r"property \w+ (\w+):", body):
             if f"`{group}.{key}`" not in settings:
                 flag("settings", "shell/config/Config.qml", 1, f"`{group}.{key}` has no README settings row (rules/architecture.md)")
+
+    schema = dict(files).get("shell/utils/Schema.js", "")
+    fallbacks = dict(re.findall(r"^\s*\"(\w+\.\w+)\": \{ type: \"\w+\", fallback: (.+?)(?:, choices: .*)? \},?$", schema, re.M))
+    defaults = {
+        f"{group}.{key}": value
+        for group, body in re.findall(r"property JsonObject (\w+): JsonObject \{(.*?)\n            \}", config, re.S)
+        for key, value in re.findall(r"property \w+ (\w+): (.+)", body)
+    }
+    rows = set(re.findall(r"^\| `(\w+\.\w+)` \|", settings, re.M))
+    assigned = set(re.findall(r"adapter\.(\w+\.\w+) = ", config))
+    accepted = set(re.findall(r"accept\(\"(\w+\.\w+)\"", config))
+    for key in sorted(set(fallbacks) | set(defaults) | rows):
+        missing = [place for place, keys in (("utils/Schema.js", fallbacks), ("Config.qml adapter", defaults), ("README settings", rows)) if key not in keys]
+        if missing:
+            flag("settings", "shell/utils/Schema.js", 1, f"`{key}` is missing from {', '.join(missing)}; the schema, the adapter and the README list the same keys (rules/state.md)")
+        elif fallbacks[key] != defaults[key]:
+            flag("settings", "shell/config/Config.qml", 1, f"`{key}` defaults to {defaults[key]} in the adapter but {fallbacks[key]} in utils/Schema.js (rules/state.md)")
+    for key in sorted(assigned - accepted):
+        flag("settings", "shell/config/Config.qml", 1, f"the setter for `{key}` does not check it with accept() against utils/Schema.js (rules/state.md)")
     return found
 
 

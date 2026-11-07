@@ -4,6 +4,16 @@ Newest version first. The version and its number are set by the user on each pus
 
 ## Unreleased
 
+- One logger (`utils/Log.js`): every message reads `vados: <subsystem>: <message>`, repeats within 5 minutes are counted instead of flooding the journal, and the last 100 entries are kept for diagnostics. IPC `diagnostics report` prints the compositor level, missing capabilities, overlay phases, background process restarts and the recent log.
+- Background processes recover on their own (`services/Supervisor.qml`): the driftwm event stream, `nmcli monitor` and `udevadm monitor` (which never restarted before), `ping` and the weather requests restart with backoff (1 s doubling to 60 s) and log each failure and recovery; a failed weather fetch now retries instead of waiting 15 minutes.
+
+- Compositor support is documented per backend (README "Compositor support") from one capability contract (`utils/Platform.js`): window minimize, snap, focus tracking, fullscreen detection and workspace management are now separate capabilities, and the `desktop maximize` / `fullscreen` IPC calls ask for window control. Hyprland no longer claims workspace support it never had.
+- Layer boundaries are enforced: services hold no UI and import no higher layer, components import no services or state and take feature sizes from their module (`.claude/docs/interfaces.md`).
+- Rendering quality: `rendering.quality: "lite"` drops the liquid's blur passes for weaker GPUs; shapes and outlines stay (`config/Rendering.qml`).
+- Liquid layers render only while their surface is shown; the taskbar's empty title-tip layer no longer runs over the taskbar in the floating and fused styles. Effects and masks live only in the rendering components (`LiquidLayer`, the new `Masked`).
+- `shell.json` is validated against one schema (`utils/Schema.js`): a wrong type or an unknown value falls back to its default and is reported once in the log (`vados: config:`), repaired values are written back, unknown keys are reported and ignored, and the settings refuse invalid values. The file now carries `version: 1`; files without one are migrated.
+- New setting `rendering.quality` (`"full"` / `"lite"`).
+
 - Overlays know each surface's phase (`Overlays.phaseOf`, `isSettled`): a screen whose overlays are all closed always gets its taskbar back, and an unplugged monitor closes its overlays instead of holding the keyboard.
 - A leave cut short by the stuck-transition recovery still hands the taskbar back (it stayed hidden before) and clears the search field.
 - A screen resized while the dashboard, search or settings is leaving reshapes the leaving body instead of drawing it in the old size.

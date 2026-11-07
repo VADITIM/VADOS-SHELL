@@ -5,6 +5,8 @@ import Quickshell.Hyprland
 import qs.config
 import qs.services
 import qs.state
+import "../utils/Diagnostics.js" as Diagnostics
+import "../utils/Log.js" as Log
 
 Scope {
     id: shortcuts
@@ -162,6 +164,14 @@ Scope {
 
         function dismiss(): void {
             Attention.dismissPeek()
+        }
+    }
+
+    IpcHandler {
+        target: "diagnostics"
+
+        function report(): string {
+            return Diagnostics.report(Compositor, Overlays, Supervision.supervisors, Log.recent())
         }
     }
 

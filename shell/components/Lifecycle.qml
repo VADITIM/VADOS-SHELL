@@ -1,6 +1,7 @@
 import QtQuick
 import qs.config
 import "../utils/Phases.js" as Phases
+import "../utils/Log.js" as Log
 
 QtObject {
     id: lifecycle
@@ -16,7 +17,7 @@ QtObject {
     property Timer watchdog: Timer {
         interval: Motion.lifecycle.stuck
         onTriggered: {
-            console.warn("vados: " + lifecycle.name + " stuck in " + lifecycle.phase + ", settling")
+            Log.warn("lifecycle", lifecycle.name + " stuck in " + lifecycle.phase + ", settling")
             lifecycle.send("settle")
         }
     }

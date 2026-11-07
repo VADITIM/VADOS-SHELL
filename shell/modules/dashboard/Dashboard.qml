@@ -94,6 +94,7 @@ FocusScope {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
+        isShown: burst.isActive
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha

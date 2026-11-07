@@ -1,5 +1,15 @@
 # Known issues
 
+- **The capability contract is unverified on real compositors** (2026-11-07). `Platform.js` claims what the code paths implement; none was run against driftwm, Hyprland or a plain Wayland compositor here. Unchecked: whether `GlobalShortcut` warns or stays silent where the Hyprland protocol is missing, and whether driftwm offers that protocol.
+- **Generic Wayland has no focus tracking**: `Compositor.focusedScreen` stays on the first screen, so shortcuts, IPC overlays and notification peeks open there on multi-monitor setups. `ToplevelManager.activeToplevel.screens` could supply it; not built.
+- **Search and dashboard read `Appearance.taskbar.margin`** (another feature's group) for their root column. It is shared geometry with the taskbar they grow out of; the checker covers only components, not module-to-feature token reads.
+- **Components still hold literal pixel sizes** (`ColorWheel` spacing 10, margins 12 and 6, borders) that predate the token rule; the feature-agnostic rule only checks token groups.
+
+- **`Config`'s load repair has not run in Quickshell** (2026-11-07). Only `utils/Schema.js` is tested; the order of `JsonAdapter`'s own read and `FileView.loaded`, whether `JsonAdapter` keeps unknown keys when it writes, and whether its own writes come back through `fileChanged` are unverified. The repair runs a tick after `loaded` to be safe from the first; the tests have no `JsonAdapter` fake.
+- **A `shell.json` from a newer shell is downgraded by the first setter call**: load never writes it, but a setter writes `version` and only the keys this shell knows.
+- **`taskbar.enabled` has no setter**; it is only set by hand in `shell.json`.
+- **`rendering.quality` has no reader yet**; the rendering workstream builds the lite path.
+
 - **The dashboard's leaving ball in the taskbar is unverified.** The hand-off assumes the dashboard and taskbar windows share the screen's top edge and full height, so their y coordinates match; with a taskbar margin or exclusive zone on top the ball would jump at the hand-off.
 - **Taskbar toplevels are matched to driftwm windows by `app_id` + title.**
   - Two windows with the same app and title can resolve to the wrong window.
@@ -24,7 +34,9 @@
 - **System tray items have no place in the taskbar** since the `...` pill was removed (2026-11-05). `services/Tray.qml` feeds `Activity.entries` for the activity bar, which is planned to host them.
 - **Notifications have no surface yet.** `services/Notifications.qml` and `state/Activity.qml` exist, but nothing draws them until the activity bar and the alert band land; `notifications.enabled` stays off until then (`decisions.md`).
 - **Not yet on the gesture engine**: nothing left in the shell; new swipes (notifications, clipboard rows) must use `Gesture`.
-- **No lite mode yet**: reduced motion stops idle motion, but the `LiquidLayer` blur still runs; a lite mode without blur would join `Motion.pace` (`rules/performance.md`).
+- **Rendering cost is unmeasured on a GPU (2026-11-07).** `tst_rendering` proves which passes run (lite has no blur, an unshown layer runs none), not what they cost. Still to profile on real hardware: a full against a lite liquid, the search favourites mask (two full-screen layers re-rendered every frame of the burst), and the extension's liquid stacked over the taskbar's while grown. Lite has no settings toggle yet (`rendering.quality` in `shell.json` only).
+- **The shelved `shelf/dashboard-wave/Dashboard.qml` would not load as is**: `LiquidLayer` now requires `isShown`.
+- **Supervision is untested in Quickshell (2026-11-07):** tested against a fake `Process` only. Unverified: that a command that cannot start flips `running` back to false (the supervisor counts that as `failed to start`), the `ping` exit when the network is down, `nmcli monitor` and `udevadm monitor` exits, and the `diagnostics` IPC returning multi-line text through `qs ipc call`. Hyprland's `hyprctl` queries and `Hardware`'s probe are not supervised (a poll repeats them) and fail silently.
 - **Untested on real hardware (engines, 2026-11-07):** `OverlayWindow` keyboard hand-over between overlays, `StateFile` writes through `FileView.setText` and its `mkdir`, `Confinement.recover` on a live driftwm, `Notification.expireTimeout` being in seconds.
 - **Untested on real hardware (notifications, 2026-11-06):** the `NotificationServer` registering, actions and images, and replacing a running mako or dunst.
 - **Search has no rising bubbles**: its body spans the full screen height, so `Rising` (top and bottom surfaces to the screen edges) has no room.

@@ -122,6 +122,7 @@ FocusScope {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
+        isShown: launch.isActive
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
@@ -131,6 +132,8 @@ FocusScope {
         Launch {
             id: launch
             parent: liquid.shapes
+            look: settings.look
+            pace: Motion.settings
             isShown: settings.isOpen
             parts: settings.parts
             isMirrored: settings.isMirrored
@@ -241,6 +244,7 @@ FocusScope {
                     spacing: settings.look.headerGap
 
                     ColorWheel {
+                        look: settings.look
                         color: settings.accent
                         onPicked: value => settings.accentRequested(value)
                     }

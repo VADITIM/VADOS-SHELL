@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import qs.config
+import "../utils/Log.js" as Log
 
 Singleton {
     id: weather
@@ -36,13 +37,18 @@ Singleton {
 
     function request(url, onReady) {
         const call = new XMLHttpRequest()
+        const host = url.split("/")[2]
         call.onreadystatechange = () => {
-            if (call.readyState !== XMLHttpRequest.DONE || call.status !== 200)
+            if (call.readyState !== XMLHttpRequest.DONE)
                 return
+            if (call.status !== 200) {
+                supervisor.fail(host + " answered with status " + call.status)
+                return
+            }
             try {
                 onReady(JSON.parse(call.responseText))
             } catch (error) {
-                console.warn("weather:", error)
+                supervisor.fail(host + " sent an unreadable answer: " + error)
             }
         }
         call.open("GET", url)
@@ -57,8 +63,10 @@ Singleton {
         if (location.length > 0) {
             request("https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + encodeURIComponent(location), answer => {
                 const found = answer.results?.[0]
-                if (!found)
+                if (!found) {
+                    Log.warn("weather", "no place named " + location)
                     return
+                }
                 place = { latitude: found.latitude, longitude: found.longitude }
                 onPlaced(place)
             })
@@ -83,6 +91,7 @@ Singleton {
         days = found
         fetchedAt = Date.now()
         isReady = true
+        supervisor.succeed()
     }
 
     function refresh() {
@@ -99,6 +108,13 @@ Singleton {
             refresh()
     }
     onIsActiveChanged: if (isActive && Date.now() - fetchedAt > Motion.dashboard.weatherPoll) refresh()
+
+    Supervisor {
+        id: supervisor
+        name: "weather"
+        isActive: weather.isActive
+        onRestarted: weather.refresh()
+    }
 
     Timer {
         interval: Motion.dashboard.weatherPoll

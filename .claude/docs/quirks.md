@@ -1,5 +1,11 @@
 # Quirks
 
+- **`Supervisor` reads a stop one timer tick later** (2026-11-07): it is unverified whether Quickshell's `Process` emits `exited` before or after `runningChanged`, and a failed start emits no `exited` at all. A zero-length timer after `runningChanged` sees both, so the failure says `exited with code N` or `failed to start` either way.
+- **`Log.js` is one instance only if every importer resolves to the same file URL.** All shell files import `"../utils/Log.js"`, which is the same file in Quickshell; the tests import it by another path (`../../shell/utils/Log.js`), so `tst_log` has its own ring, separate from the one the components log into. Within one engine, an identical message within `Log.repeatWindow` is held back, so a test that expects a warning (`ignoreWarning`) must use a message no earlier test printed (unique supervisor names in `tst_supervisor`).
+
+- **`Config` repairs a tick after `FileView.loaded`** (`Qt.callLater`, 2026-11-07), because it is unverified whether `JsonAdapter` reads the file before or after `loaded` is emitted; repairing first would be overwritten by the raw values. For that tick a bad value is what `JsonAdapter` coerced it to.
+- **The schema's `fallback` and the adapter's literal default are written twice on purpose**; `check-rules.py` compares them as text, so write both the same way (`"left"`, `[]`, `false`).
+
 - **`Burst.wallOutline` is traced, not bound** (2026-11-07). It is set in `trace()` once per frame, so for one frame after the wall appears it can be empty while `hasWall` is already true; read it with a length check (`cornerSplashForm` does). `farFront` is traced with it.
 - **`tst_budget` numbers are from this container, offscreen.** They budget script work only; a slower CPU or the real compositor's rendering are not in them. The suite prints the measured 95th percentile and worst frame on every run.
 

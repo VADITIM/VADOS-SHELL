@@ -224,6 +224,13 @@ Singleton {
         readonly property int write: 400
     }
 
+    readonly property QtObject supervision: QtObject {
+        readonly property int base: 1000
+        readonly property real factor: 2
+        readonly property int cap: 60000
+        readonly property int healthy: 30000
+    }
+
     readonly property QtObject attention: QtObject {
         readonly property int peek: 5000
         readonly property int batch: 600

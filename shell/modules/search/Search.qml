@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Shapes
-import QtQuick.Effects
 import qs.config
 import qs.services
 import qs.components
@@ -221,6 +220,7 @@ FocusScope {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
+        isShown: burst.isActive
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
@@ -261,32 +261,6 @@ FocusScope {
                 y: search.foundCenterY - height / 2
                 width: foundCard.nameSpan
                 height: foundCard.nameThickness
-            }
-        }
-    }
-
-    Item {
-        id: wallMask
-        anchors.fill: parent
-        visible: false
-        layer.enabled: true
-
-        Item {
-            anchors.fill: parent
-            transform: Upright {
-                isMirrored: search.isMirrored
-                axis: wallMask.width / 2
-            }
-
-            Shape {
-                anchors.fill: parent
-
-                ShapePath {
-                    fillColor: "white"
-                    strokeColor: "transparent"
-                    strokeWidth: 0
-                    PathPolyline { path: search.maskOutline }
-                }
             }
         }
     }
@@ -464,12 +438,25 @@ FocusScope {
         onPointed: search.select("found", 0)
     }
 
-    Item {
+    Masked {
         anchors.fill: parent
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            maskEnabled: true
-            maskSource: wallMask
+        mask: Item {
+            anchors.fill: parent
+            transform: Upright {
+                isMirrored: search.isMirrored
+                axis: search.width / 2
+            }
+
+            Shape {
+                anchors.fill: parent
+
+                ShapePath {
+                    fillColor: "white"
+                    strokeColor: "transparent"
+                    strokeWidth: 0
+                    PathPolyline { path: search.maskOutline }
+                }
+            }
         }
 
         Flickable {

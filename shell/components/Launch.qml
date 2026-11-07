@@ -17,8 +17,8 @@ Item {
     property real budY: 0
     property real budLength: 0
     property real jolt: 0
-    property var look: Appearance.settings
-    property var pace: Motion.settings
+    required property var look
+    required property var pace
 
     property real material: 1
     property real merge: 0

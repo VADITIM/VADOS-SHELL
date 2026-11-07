@@ -69,7 +69,7 @@ Item {
         function test_stuckBurstSettles() {
             burst.lifecycle.watchdog.interval = 40
             burst.isShown = true
-            ignoreWarning(new RegExp("vados: burst stuck in"))
+            ignoreWarning(new RegExp("vados: lifecycle: burst stuck in"))
             tryCompare(burst, "phase", "active", 1000)
             compare(burst.spread, 1)
             burst.lifecycle.watchdog.interval = Motion.lifecycle.stuck
@@ -89,7 +89,7 @@ Item {
             tryCompare(burst, "phase", "active", 3000)
             landings.clear()
             burst.lifecycle.watchdog.interval = 20
-            ignoreWarning(new RegExp("vados: burst stuck in exiting"))
+            ignoreWarning(new RegExp("vados: lifecycle: burst stuck in exiting"))
             burst.isShown = false
             tryCompare(burst, "phase", "idle", 1000)
             compare(landings.count, 1, "a settled leave hands the taskbar back")

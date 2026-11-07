@@ -6,7 +6,7 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 
 Exit: transitions can be created, interrupted, reversed and chained without inconsistent visual or logical states.
 
-- Shipped: liquid engine, motion tokens and reduced motion, overlay engine, gesture engine, transition lifecycle with recovery, shared geometry, compositor capabilities, persistence, enforced rules and tests; overlays joined with the lifecycles, leave geometry that follows screen changes, a measured script frame budget (2026-11-07).
+- Shipped: liquid engine, motion tokens and reduced motion, overlay engine, gesture engine, transition lifecycle with recovery, shared geometry, compositor capabilities, persistence, enforced rules and tests; overlays joined with the lifecycles, leave geometry that follows screen changes, a measured script frame budget; subsystem interfaces and ownership (`interfaces.md`) with enforced import direction (2026-11-07).
 - Left: verify on hardware and budget the render cost there (`known-issues.md`). Phase 2 can start.
 
 ## Phase 2: vertical slice (taskbar and search)
@@ -17,7 +17,7 @@ Exit: search works as a finished daily-use feature, not an animation demonstrati
 
 ## Phase 3 onwards: daily driver, compositors, productization
 
-The numbered list below is the daily-driver backlog (phase 3: settings, notifications, controls, clipboard, tray, multi-monitor). Phase 4 completes the driftwm adapter and other backends on `Compositor.capabilities`; phase 5 is installation, config validation and migration, logging and diagnostics.
+The numbered list below is the daily-driver backlog (phase 3: settings, notifications, controls, clipboard, tray, multi-monitor). Phase 4 completes the driftwm adapter and other backends on `Compositor.capabilities` (the contract and the README "Compositor support" table shipped 2026-11-07; left: test each backend for real, focus tracking on generic Wayland); phase 5 is installation, config validation and migration, logging and diagnostics.
 
 ## Next
 

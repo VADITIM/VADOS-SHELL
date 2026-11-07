@@ -68,11 +68,16 @@ Singleton {
     Component.onCompleted: refresh()
 
     Process {
+        id: monitor
         command: ["nmcli", "monitor"]
-        running: true
         stdout: SplitParser {
             onRead: settle.restart()
         }
+    }
+
+    Supervisor {
+        name: "network"
+        process: monitor
     }
 
     Timer {

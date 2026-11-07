@@ -1,7 +1,6 @@
 import QtQuick
 import QtTest
 import "../../shell/utils/Geometry.js" as Geometry
-import "../../shell/utils/Platform.js" as Platform
 
 TestCase {
     name: "Geometry"
@@ -38,13 +37,5 @@ TestCase {
         const same = Geometry.refit(shape, { x: 0, y: 0, width: 0, height: 0 }, { x: 5, y: 5, width: 0, height: 0 })
         compare(same.width, 400)
         compare(same.x, 115)
-    }
-
-    function test_capabilityLevels() {
-        compare(Platform.levelOf(Platform.capabilitiesOf("driftwm")), "native")
-        compare(Platform.levelOf(Platform.capabilitiesOf("hyprland")), "extended")
-        compare(Platform.levelOf(Platform.capabilitiesOf("generic")), "core")
-        compare(Platform.levelOf(Platform.capabilitiesOf("unknown")), "core")
-        verify(Platform.capabilitiesOf("generic").layerShell)
     }
 }

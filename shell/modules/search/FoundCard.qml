@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import qs.config
 import qs.components
 
@@ -109,28 +108,23 @@ Item {
                 scale: 1 - card.mutation * (1 - card.look.avatarShrink)
                 visible: opacity > 0
 
-                Rectangle {
-                    id: avatarMask
+                Masked {
                     anchors.fill: parent
-                    radius: width / 2
-                    visible: false
-                    layer.enabled: true
-                }
+                    visible: portrait.status === Image.Ready
+                    mask: Rectangle {
+                        anchors.fill: parent
+                        radius: width / 2
+                    }
 
-                Image {
-                    id: portrait
-                    anchors.fill: parent
-                    source: card.profilePicture
-                    sourceSize.width: avatar.width * 2
-                    sourceSize.height: avatar.height * 2
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    smooth: true
-                    visible: status === Image.Ready
-                    layer.enabled: true
-                    layer.effect: MultiEffect {
-                        maskEnabled: true
-                        maskSource: avatarMask
+                    Image {
+                        id: portrait
+                        anchors.fill: parent
+                        source: card.profilePicture
+                        sourceSize.width: avatar.width * 2
+                        sourceSize.height: avatar.height * 2
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        smooth: true
                     }
                 }
 

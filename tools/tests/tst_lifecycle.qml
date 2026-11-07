@@ -66,7 +66,7 @@ Item {
             lifecycle.watchdog.interval = 50
             lifecycle.send("show")
             verify(lifecycle.watchdog.running)
-            ignoreWarning("vados: test stuck in preparing, settling")
+            ignoreWarning("vados: lifecycle: test stuck in preparing, settling")
             tryCompare(lifecycle, "phase", "active", 500)
             verify(!lifecycle.watchdog.running, "nothing ticks once settled")
         }

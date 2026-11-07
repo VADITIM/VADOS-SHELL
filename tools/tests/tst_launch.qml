@@ -15,6 +15,8 @@ Item {
 
     Launch {
         id: launch
+        look: Appearance.settings
+        pace: Motion.settings
         seed: Qt.rect(10, 400, 40, 40)
         panelX: 500
         panelY: 200
@@ -47,7 +49,7 @@ Item {
             tryCompare(launch, "phase", "active", 3000)
             landings.clear()
             launch.lifecycle.watchdog.interval = 20
-            ignoreWarning(new RegExp("vados: launch stuck in exiting"))
+            ignoreWarning(new RegExp("vados: lifecycle: launch stuck in exiting"))
             launch.isShown = false
             tryCompare(launch, "phase", "idle", 1000)
             compare(landings.count, 1)

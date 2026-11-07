@@ -493,6 +493,7 @@ Item {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
+        isShown: true
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
@@ -533,6 +534,7 @@ Item {
     LiquidLayer {
         id: tipLiquid
         anchors.fill: parent
+        isShown: shell.isBare && tip.visible
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
@@ -710,6 +712,8 @@ Item {
 
     EdgePull {
         anchors.fill: parent
+        look: Appearance.taskbar
+        pace: Motion.reveal
         isEnabled: !shell.isRevealed
         shapes: shell.liquidShapes
         onSummoned: shell.summon()

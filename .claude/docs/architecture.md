@@ -1,6 +1,6 @@
 # Architecture
 
-Layers: `config → services → components → modules → windows → shell.qml`, plus `state/` (sideways) and `keybinds/` (state flips). Rules in `rules/architecture.md`. The product direction and its phases are `direction.md` (user, 2026-11-07).
+Layers: `config → services → components → modules → windows → shell.qml`, plus `state/` (sideways) and `keybinds/` (state flips). Rules in `rules/architecture.md`; each layer's owner, imports, public interface and callers in `interfaces.md`. The product direction and its phases are `direction.md` (user, 2026-11-07).
 
 ## Engine map
 
@@ -13,9 +13,18 @@ How the subsystems of `direction.md` land in this tree:
 | Motion system | `config/Motion.qml` (tokens, `pace`), `utils/Liquid.js` (springs) |
 | Geometry system | `utils/Geometry.js` (clamps, easing, mixing, splines), `Compositor.toScreen` (backend to screen coordinates) |
 | State machine | `Lifecycle` per surface; `Overlays` for surfaces against each other; `Attention` for interruptions by notifications |
-| Rendering system | `components/LiquidLayer.qml` and the liquid primitives (`LiquidShape`, `LiquidBridge`, `EdgeFuse`, `Lobe`) |
+| Rendering system | `components/LiquidLayer.qml` (goo) and `components/Masked.qml` (masks), the only owners of effects and layers; `config/Rendering.qml` (quality, `blur`); the liquid primitives (`LiquidShape`, `LiquidBridge`, `EdgeFuse`, `Lobe`) are plain shapes drawn into a layer (§ Rendering system) |
 | Platform adapters | `services/Compositor.qml` with `capabilities` and `level` (`utils/Platform.js`) |
-| System services | `services/` |
+| System services | `services/`, kept running by `services/Supervisor.qml` (§ Diagnostics and supervision) |
+| Logs and diagnostics | `utils/Log.js` (the one logger), `utils/Diagnostics.js` (the report), IPC `diagnostics` |
+
+## Boundaries
+
+`interfaces.md` is the contract between layers. `tools/check-rules.py` holds it mechanically (`[layers]`):
+
+- Import direction per layer (`LAYER_IMPORTS`): services import no state, components, modules, windows or keybinds; components import no state, services, modules, windows or keybinds; state imports no components, modules, windows or keybinds; config imports nothing from `qs`; keybinds import no components, modules or windows. Relative `import "../x"` counts the same.
+- Services declare no visual type (`Item`, `Rectangle`, `Text`, `Shape`, windows, ...) and import no UI module (`QtQuick.Shapes`, `Controls`, `Layouts`, `Effects`, `Quickshell.Widgets`).
+- Components read only component-level `Appearance` and `Motion` groups (`COMPONENT_TOKENS`). A component sized or timed by a feature takes `required property var look` and/or `pace` from the module: `Launch` (settings), `ColorWheel` (settings), `EdgePull` (taskbar sizes, `Motion.reveal`).
 
 ## Transition lifecycle
 
@@ -24,7 +33,7 @@ How the subsystems of `direction.md` land in this tree:
 - The host sends `show` and `hide` (from `isShown`) and its animations send `prepared`, `entered`, `recovered` and `exited` from a final `ScriptAction`, so an animation that was stopped never reports.
 - `show` during `exiting` is an interruption (`interrupted`): it goes to `recovering` when the host can rewind (`canRecover`), else back to `preparing`.
 - `moving(from, to, event)` fires before the phase changes (the host captures its leave form there, while it still reads the old phase); `moved` fires after it (the host starts animations there).
-- **Recovery**: a watchdog (`Motion.lifecycle.stuck`, longer than any real phase) runs only while a phase is moving. If it fires it logs `vados: <name> stuck in <phase>` and sends `settle`: entering phases land on `active`, `exiting` on `idle`, and the host snaps its values to that end. No surface can stay orphaned half-open.
+- **Recovery**: a watchdog (`Motion.lifecycle.stuck`, longer than any real phase) runs only while a phase is moving. If it fires it logs `vados: lifecycle: <name> stuck in <phase>, settling` and sends `settle`: entering phases land on `active`, `exiting` on `idle`, and the host snaps its values to that end. No surface can stay orphaned half-open.
 - Hosts: `Burst` (dashboard, search; recovers by rewinding) and `Launch` (settings; restarts). Their `isActive`, `isLeaving` and `phase` read the lifecycle.
 - **Every leave lands exactly once.** The hosts emit `landed()` through `land()` (guarded by `hasLanded`, reset when a leave starts), from the leave's `ScriptAction` or, when the watchdog settles a leave to `idle`, from `settle`. A settled leave still hands the taskbar back.
 - **Leave geometry follows the screen.** At the leave start the host keeps its form with the frame it was drawn in (`heldForm`, `heldFrame`; Burst: seed point and form size, Launch: panel centre and size). `leaveFrom` is `Geometry.refit(heldForm, heldFrame, frame)`, so a screen resized or a panel moved mid-leave reshapes the leaving body instead of drawing it in the old screen's coordinates. The enter already binds to the live geometry.
@@ -35,8 +44,8 @@ How the subsystems of `direction.md` land in this tree:
 `Compositor` picks a backend once:
 
 1. **hyprland**, when `HYPRLAND_INSTANCE_SIGNATURE` is set. It runs `hyprctl -j monitors` and `activewindow`, 60 ms after relevant socket2 events and every 2 s.
-2. Otherwise it starts `driftwm msg --json subscribe`. The first `State` line selects **driftwm**. Each line is a full snapshot (camera, zoom, windows, outputs, fullscreen, pinned). The stream restarts 2 s after it exits.
-3. **generic**, when the stream fails. It reads `ToplevelManager.activeToplevel` and counts as covered only when fullscreen or maximized.
+2. Otherwise it starts `driftwm msg --json subscribe`. The first `State` line selects **driftwm**. Each line is a full snapshot (camera, zoom, windows, outputs, fullscreen, pinned). Once driftwm is selected, a `Supervisor` restarts the stream with backoff whenever it exits (§ Diagnostics and supervision).
+3. **generic**, when the stream exits before any `State` line (`hasNoCanvas`; the supervisor goes inactive and never retries). It reads `ToplevelManager.activeToplevel` and counts as covered only when fullscreen or maximized.
 
 It publishes:
 
@@ -46,9 +55,16 @@ It publishes:
 - `viewports()`
 - the `canvasChanged` signal
 
-Writes go out through `send([...])` / `action("spec")` as detached `driftwm msg` calls.
+Writes go out through `send([...])` / `action("spec")` as detached `driftwm msg` calls, only while `capabilities.windowControl` holds; elsewhere they go nowhere.
 
-**Capabilities** (`utils/Platform.js`): features ask `Compositor.capabilities` (`activeWindow`, `windowGeometry`, `windowControl`, `freeCanvas`, `workspaces`, `layerShell`) and never which compositor runs. `Compositor.level` is `core` (generic), `extended` (Hyprland: geometry, no window control) or `native` (driftwm: free canvas and control, so Desktop mode). `Confinement.canConfine` is `freeCanvas && windowControl`.
+**Capabilities** (`utils/Platform.js`, the contract): features ask `Compositor.capabilities` and never which compositor runs. Each backend row answers every key, and claims only what the code implements:
+
+- `activeWindow`, `fullscreenDetection`, `layerShell`: every backend (generic knows the active window only while it is fullscreen or maximized).
+- `windowGeometry`, `focusTracking`: driftwm and Hyprland. Without them the taskbar hides only for covering windows and `focusedScreen` stays on the first screen.
+- `windowControl`, `freeCanvas`, `windowMinimize`, `windowSnap`: driftwm (IPC by window id; minimize is `Confinement`'s parking, snap is its resize and move, both in Desktop mode).
+- `workspaceManagement`: no backend yet (Hyprland workspace events only trigger a refresh).
+
+`Compositor.level` is `core` (generic), `extended` (Hyprland: geometry, no window control) or `native` (driftwm: free canvas and control, so Desktop mode). `Confinement.canConfine` is `freeCanvas && windowControl`, `canMinimize` and `canSnap` add `windowMinimize` and `windowSnap` to Desktop mode, and `maximize()` and `fullscreen()` ask `windowControl`. The README "Compositor support" table is the user-facing copy; `tools/check-rules.py` fails when it and `Platform.js` disagree. Capability tests: `tst_platform`.
 
 ## Taskbar hiding
 
@@ -120,6 +136,38 @@ One physical identity for everything liquid (user, 2026-11-06). Three parts, no 
 
 Closed-form rises and rings run on an ability's own clock (a linear phase in seconds), so they stay abilities; `pull` runs in a `FrameAnimation`. Leaves are not springs: they keep their own faster easing (`Mutate` InBack), as the animation rules require. A new liquid surface (alerts, clipboard, lock) picks a character or adds one; it never writes `Math.exp` itself.
 
+## Rendering system
+
+Rendering is separate from state and transitions: a host says only whether a surface is shown (`isShown`, its opacity); the rendering components decide which passes run. Two components own every effect, layer and mask in the shell (`tools/check-rules.py`, rule `rendering`); modules and other components compose them.
+
+| Component | Owns | Passes (full) | Passes (lite) | Runs while |
+|---|---|---|---|---|
+| `LiquidLayer` | the goo: blur + threshold of its `shapes` | shapes texture, blur (`MultiEffect`, `blurMax` = `Rendering.blur(melt)`), blurred texture, rim, fill and core threshold passes, a flattening layer when `fillAlpha < 1` (always: `panelAlpha` 0.94); two static colour layers | shapes texture and the core threshold pass only | `isShown && opacity > 0` (`isRendering`); off is `visible: false`, textures not `live`, layers disabled |
+| `Masked` | an alpha mask: content cut by the shape in `mask` | mask layer, content layer, one mask pass | same (a mask is layout, not decoration) | it is visible and its opacity > 0 |
+
+Cost: every pass covers the component's whole area and re-renders in any frame where something inside it moves; static frames reuse the textures. A full liquid is about six full-area passes (blur is several downsampled levels), lite two.
+
+| Instance | Area | Shown (`isShown`) |
+|---|---|---|
+| Taskbar `liquid` | taskbar window | `true`; stops at opacity 0 (bare style, taskbar away) |
+| Taskbar `tipLiquid` | taskbar window | bare style while the title tip is up (before 2026-11-07 it ran empty, always) |
+| Extension | taskbar window | while the extension is grown; stacks over the taskbar liquid then |
+| Search, Dashboard | full screen | `burst.isActive` (enter to landed) |
+| Settings | full screen | `launch.isActive`, opacity `launch.material` (0 in the bare style) |
+| Search favourites (`Masked`) | full screen | while the search window is present; re-renders every frame of the burst (the wall moves) |
+| Best match avatar (`Masked`) | avatar | while the profile picture is loaded and the avatar is shown |
+
+Cheap and kept in modules: `clip` (a scissor rectangle; search body, list and rows, the name pill, dashboard panels, idle pills, the title tip, the network page), plain `Rectangle` dim, and `Shape`s (`CurveRenderer`; paths re-processed on the render thread when their points change). Blur behind overlays is the compositor's (layer rules).
+
+**Quality** (`rendering.quality`, `config/Rendering.qml`): `Rendering.isLite` and `Rendering.blur(radius)`, the one precedence function for blur, like `Motion.pace` for durations. Under lite the liquid keeps its shapes and threshold, so bodies, necks (`LiquidBridge`) and lobes keep their outlines; it loses the rim line and the soft fusion of bodies that only touch through the blur.
+
+| | full | lite |
+|---|---|---|
+| motion normal | everything | no blur; motion as usual (bubbles still rise, cheap without blur) |
+| reduced motion | blur; transitions instant, no bubbles, splashes or crests | the cheapest: instant and no blur |
+
+Precedence: shown (`isShown`, opacity) gates every pass; quality decides which passes; motion only decides timing. Quality never changes durations and reduced motion never changes passes.
+
 ## Activity and notifications
 
 `state/Activity.qml` is the shared state of the activity bar (roadmap 1), the sideways channel its pieces will read: `openScreen`, `pinnedKind`, `entries` merged from services (`notifications` from `Notifications`, `tray` from `Tray`; each `{ kind, count, unread, isUrgent, latest }`), and `current`: the pinned entry, else the first urgent, else the first unread, else the first. `open(screen)` marks notifications read. Media and calls will join `entries` as services for them land.
@@ -149,11 +197,48 @@ Entry points before the bar exists: the Hyprland shortcut `vados:activity`, IPC 
 
 `state/Attention.qml` decides whether a notification may interrupt (`rules/interaction.md`). It listens to `Notifications.received`; `mayPeek` lets critical through always, holds low always, and holds normal ones under do-not-disturb (`attention.doNotDisturb`) or while the active window is fullscreen. Admitted notifications gather for `Motion.attention.batch` and then become one `peek` `{ notifications, isUrgent, screen }` on the focused screen, which expires after the longest own timeout (`expireTimeout`, seconds) or `Motion.attention.peek`; urgent peeks stay until dismissed, and a peek drops notifications as they are dismissed. The alert band will draw `peek`; held notifications are still counted by `Activity`.
 
+## Configuration
+
+`shell.json` (`~/.config/vados/shell.json`) is read and written only by `config/Config.qml`, whose `JsonAdapter` exposes it as `Config.data`. What a valid file is lives in one pure table, `utils/Schema.js`: each key (`group.name`) with its `type` (`boolean`, `string`, `colour`, `names`), its `fallback` and, for enumerations, its `choices`; plus `version` (1) and `migrations` (step `n` turns version `n` into `n + 1`).
+
+Load: `FileView.loaded` → next tick `Config.repairLoaded()` → `JSON.parse(file.text())` → `Schema.repair(raw)` = `migrate` (version 0 when missing, a broken version reads as 0, a newer one is read but never written) then `validate` (defaults first; each known key with a valid value is kept; a wrong type or a value outside its choices falls back with a problem; unknown groups and keys are reported and dropped). `Config` assigns the clean values that differ, logs each problem once (`console.warn("vados: config: …")`, with the file's path), and calls `writeAdapter()` only when `shouldWrite` (a migration or a repair). The written file validates clean, so the reload it triggers writes nothing. A file that is not JSON is logged and left alone; the settings stay as they were.
+
+Setters: each `set…` calls `accept(key, value)`, which asks `Schema.findProblem`; an invalid value is refused, logged, and the current value kept. `check-rules.py` holds the schema, the adapter (same keys and defaults) and the README Settings rows in step, and fails a setter that assigns a key it did not `accept`.
+
+The preview and the tests use the `Config` mock in `tools/preview/play.py`; `Schema.js` itself is tested pure in `tst_schema`.
+
 ## Persistence
 
 `services/StateFile.qml` is a reusable `Scope` for runtime state: `name` → `~/.cache/vados/<name>.json` as `{ version, data }`, `values` (defaults merged with the file), `update(next)` (debounced `Motion.store.write`), `flush()` (also on destruction), `isLoaded`. A file without `version` is read as plain data; a file that does not parse is copied to `.corrupt`, another version to `.version<N>`, and the defaults are used. Users: `Apps` (launch history, still `apps.json`), `Confinement` (`desktop.json`: parked windows).
 
 `Confinement` waits for `isReady` (state loaded and a driftwm canvas seen) before `recover()`: saved parked windows that still exist are adopted in Desktop mode (so `enter()` never parks them a second time at their parking spot), or put back in Canvas mode; windows that no longer exist are dropped. Every park and restore is saved.
+
+## Diagnostics and supervision
+
+Rules in `rules/reliability.md`.
+
+**Logging.** `utils/Log.js` is the one logger (a `.pragma library`, so one instance per engine and one ring for the whole shell). `Log.info` / `warn` / `error(subsystem, message)` print `vados: <subsystem>: <message>` through `console.*` (which Quickshell sends to its output and the journal). A message already printed within `Log.repeatWindow` (5 min) is not printed again: its entry counts `repeats` and keeps the `last` time, and the first print after the window adds `(repeated N more times)`. The last `Log.capacity` (100) entries stay in memory (`recent()`); the repeat memory is pruned past the same bound. Subsystems in use: `lifecycle` (stuck phases), `config` (schema problems), `weather`, and each supervisor's name.
+
+**Supervision.** `services/Supervisor.qml` is a reusable non-visual type (like `StateFile`), placed beside the work it keeps alive:
+
+- `process`: a `Process` it owns. It sets `running` itself (the host declares no `running:`), starts it while `isActive`, stops it and cancels a pending restart when `isActive` goes false. A stop it asked for is never a failure, even when the process exits only after the surface was shown again (`isStopping`; it then starts at once).
+- When the process stops while active, one zero-length timer later (so the `exited` code is in whichever order Quickshell emits `exited` and `runningChanged`) it is a failure: `exited with code N`, or `failed to start` without an exit.
+- `fail(reason)`: `failures` (in a row) goes up, the delay is `Backoff.delayOf(failures, Motion.supervision)` (`base` 1 s doubling by `factor` up to `cap` 60 s), it logs `<reason>, restarting in N s` and holds (`isHolding`, status `waiting`). When the hold ends it restarts the process (`restarts` goes up) and emits `restarted()`.
+- `succeed()`: after `Motion.supervision.healthy` (30 s) of running, or when the host reports success, `failures` resets and a recovery is logged (`recovered after N failures`).
+- Without a `process` it supervises any retried work: the host calls `fail` and `succeed` and redoes the work on `restarted()` (`Weather`'s fetches).
+- `status`: `stopped` (inactive), `waiting`, `failing` (restarted, not yet healthy), `healthy`. Every supervisor enrolls in `services/Supervision.qml` on creation and leaves on destruction.
+
+| Service | Supervised | `isActive` |
+|---|---|---|
+| `Compositor` | `driftwm msg --json subscribe` | not Hyprland and the probe found a canvas (`!hasNoCanvas`) |
+| `Network` | `nmcli monitor` | always (the taskbar shows the network) |
+| `Removable` | `udevadm monitor` | always (the taskbar shows removable drives) |
+| `Traffic` | `ping` | `Traffic.isActive` (dashboard open) |
+| `Weather` | the geocoding, IP and forecast requests (no process) | `Weather.isActive` (dashboard open) |
+
+Not supervised: one-shot queries that a poll already repeats (`Hardware` probe, `Network` and `Removable` queries, Hyprland `hyprctl`); a failed run is simply retried by the next poll.
+
+**Diagnostics.** IPC `diagnostics report` (`keybinds/Shortcuts.qml`) returns `Diagnostics.report(Compositor, Overlays, Supervision.supervisors, Log.recent())`, built by the pure `utils/Diagnostics.js`: compositor backend and level, present and missing capabilities, the overlay stack (`key on screen`, bottom first) and each screen's surface phases, every supervisor with status, restarts, failures in a row and the last failure, and the recent log with clock times and repeat counts. The backend name appears there for people only; no feature branches on it.
 
 ## Reduced motion
 

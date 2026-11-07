@@ -26,6 +26,7 @@ QtObject {
         property QtObject notifications: QtObject { property bool enabled: false }
         property QtObject attention: QtObject { property bool doNotDisturb: false }
         property QtObject motion: QtObject { property bool reduced: false }
+        property QtObject rendering: QtObject { property string quality: "full" }
     }
     function setTaskbarStyle(style) { data.taskbar.style = style }
     function setTaskbarSide(side) { data.taskbar.side = side }
@@ -36,6 +37,7 @@ QtObject {
     function setNotificationsEnabled(isEnabled) { data.notifications.enabled = isEnabled }
     function setDoNotDisturb(isQuiet) { data.attention.doNotDisturb = isQuiet }
     function setReducedMotion(isReduced) { data.motion.reduced = isReduced }
+    function setRenderQuality(quality) { data.rendering.quality = quality }
     function toggleFavorite(appId) {
         const favorites = data.search.favorites.slice()
         const at = favorites.indexOf(appId)
@@ -92,7 +94,7 @@ def mock_services():
 def build():
     shutil.rmtree(BUILD, ignore_errors=True)
     write_module("Quickshell", [("Singleton.qml", "import QtQml\nQtObject {\n    default property list<QtObject> data\n}\n")])
-    tokens = [(os.path.join(SHELL, "config", name), None) for name in ("Appearance.qml", "Motion.qml")]
+    tokens = [(os.path.join(SHELL, "config", name), None) for name in ("Appearance.qml", "Motion.qml", "Rendering.qml")]
     write_module("qs.config", tokens + [("Config.qml", CONFIG_MOCK)])
     write_module("qs.components", qml_files(os.path.join(SHELL, "components")))
     write_module("qs.state", qml_files(os.path.join(SHELL, "state")))

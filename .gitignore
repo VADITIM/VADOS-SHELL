@@ -3,3 +3,4 @@ cache/
 *.qmlc
 *.jsc
 .claude/settings.local.json
+__pycache__/

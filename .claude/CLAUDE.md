@@ -25,6 +25,7 @@ A Quickshell (Qt 6 / QML) desktop shell. **driftwm first**, compatible with Hypr
 @docs/rules/state.md
 @docs/rules/performance.md
 @docs/rules/testing.md
+@docs/rules/reliability.md
 
 ## Keeping `.claude` current
 
@@ -34,6 +35,7 @@ Update these docs in the same task as the change, without being asked (V/AS `gui
 |---|---|
 | File or folder added, moved, renamed | `docs/map.md` |
 | Layer, boundary, data flow | `docs/architecture.md` |
+| A layer's public interface, imports or callers | `docs/interfaces.md` (owner, imports, interface, callers per layer) |
 | Choice between real alternatives | `docs/decisions.md` |
 | Trap, workaround, unverified assumption | `docs/quirks.md` |
 | Bug or debt not fixed now | `docs/known-issues.md` |

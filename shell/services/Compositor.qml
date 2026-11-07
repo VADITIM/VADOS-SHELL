@@ -19,6 +19,7 @@ Singleton {
     property var activeWindow: null
     property string focusedScreen: Quickshell.screens[0]?.name ?? ""
     property string monitorsText: ""
+    property bool hasNoCanvas: false
     readonly property var hyprlandEvents: [
         "openwindow", "closewindow", "movewindow", "movewindowv2", "workspace", "workspacev2",
         "focusedmon", "focusedmonv2", "changefloatingmode", "fullscreen", "activewindowv2",
@@ -153,7 +154,7 @@ Singleton {
     }
 
     function send(argumentsList) {
-        if (isDriftwm)
+        if (capabilities.windowControl)
             Quickshell.execDetached(["driftwm", "msg"].concat(argumentsList))
     }
 
@@ -164,8 +165,6 @@ Singleton {
     Component.onCompleted: {
         if (isHyprland)
             refreshHyprland()
-        else
-            canvasStream.running = true
     }
 
     Connections {
@@ -245,15 +244,15 @@ Singleton {
         }
         onExited: {
             if (compositor.isDriftwm)
-                canvasRetry.restart()
-            else
-                compositor.readGeneric()
+                return
+            compositor.hasNoCanvas = true
+            compositor.readGeneric()
         }
     }
 
-    Timer {
-        id: canvasRetry
-        interval: 2000
-        onTriggered: canvasStream.running = true
+    Supervisor {
+        name: "compositor"
+        process: canvasStream
+        isActive: !compositor.isHyprland && !compositor.hasNoCanvas
     }
 }

@@ -54,7 +54,7 @@ Item {
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
         melt: Appearance.extension.melt
-        visible: extension.growth > 0.001
+        isShown: extension.growth > 0.001
 
         LiquidShape {
             parent: liquid.shapes

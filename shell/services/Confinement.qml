@@ -9,6 +9,8 @@ Singleton {
     readonly property string mode: Config.data.desktop.mode
     readonly property bool canConfine: Compositor.capabilities.freeCanvas && Compositor.capabilities.windowControl
     readonly property bool isConfined: canConfine && mode === "desktop"
+    readonly property bool canMinimize: isConfined && Compositor.capabilities.windowMinimize
+    readonly property bool canSnap: isConfined && Compositor.capabilities.windowSnap
     readonly property var layout: Appearance.desktop
 
     property var home: null
@@ -113,22 +115,24 @@ Singleton {
 
     function minimize() {
         const window = focusedWindow()
-        if (isConfined && window)
+        if (canMinimize && window)
             minimizeWindow(window)
     }
 
     function maximize() {
-        Compositor.action("fit-window")
+        if (Compositor.capabilities.windowControl)
+            Compositor.action("fit-window")
     }
 
     function fullscreen() {
-        Compositor.action("toggle-fullscreen")
+        if (Compositor.capabilities.windowControl)
+            Compositor.action("toggle-fullscreen")
     }
 
     function snap(direction) {
         const window = focusedWindow()
         const view = viewport()
-        if (!isConfined || !window || !view || !isMovable(window))
+        if (!canSnap || !window || !view || !isMovable(window))
             return
         const isHorizontal = direction === "left" || direction === "right"
         const width = isHorizontal ? view.width / 2 : view.width

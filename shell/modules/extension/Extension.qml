@@ -36,7 +36,7 @@ Item {
 
     Behavior on growth {
         NumberAnimation {
-            duration: extension.isOpen ? Motion.extension.grow : Motion.extension.shrink
+            duration: Motion.pace(extension.isOpen ? Motion.extension.grow : Motion.extension.shrink)
             easing.type: Easing.InOutCubic
         }
     }

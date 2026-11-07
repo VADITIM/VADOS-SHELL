@@ -47,25 +47,24 @@ Item {
             }
         }
 
-        MouseArea {
-            property real startX: 0
-
+        Gesture {
             anchors.fill: parent
             enabled: edgePull.isEnabled
+            threshold: Motion.reveal.pullThreshold
+            isVertical: false
             onPressed: mouse => {
-                startX = mouse.x
                 edgePull.beadY = mouse.y
                 pullRelease.stop()
             }
-            onPositionChanged: mouse => {
-                const distance = Math.max(0, mouse.x - startX)
-                edgePull.pull = Math.min(Motion.reveal.pullLimit, distance)
-                edgePull.beadY = mouse.y
-                if (distance >= Motion.reveal.pullThreshold)
+            onMoved: (travelX, travelY) => {
+                edgePull.pull = Math.min(Motion.reveal.pullLimit, Math.max(0, travelX))
+                edgePull.beadY = pressPoint.y + travelY
+            }
+            onCrossed: (travelX, travelY) => {
+                if (travelX > 0)
                     edgePull.summoned()
             }
-            onReleased: pullRelease.restart()
-            onCanceled: pullRelease.restart()
+            onEnded: pullRelease.restart()
         }
     }
 
@@ -84,7 +83,7 @@ Item {
         target: edgePull
         property: "dwell"
         to: 0
-        duration: Motion.hoverOut
+        duration: Motion.pace(Motion.hoverOut)
         easing.type: Easing.InQuad
     }
 
@@ -93,7 +92,7 @@ Item {
         target: edgePull
         property: "pull"
         to: 0
-        duration: Motion.stateDuration
+        duration: Motion.pace(Motion.stateDuration)
         easing.type: Easing.InBack
     }
 }

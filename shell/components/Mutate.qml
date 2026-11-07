@@ -26,26 +26,26 @@ QtObject {
     signal departed()
 
     readonly property SequentialAnimation spreadEnter: SequentialAnimation {
-        PauseAnimation { duration: mutate.enterDelay }
+        PauseAnimation { duration: Motion.pace(mutate.enterDelay) }
         ParallelAnimation {
             NumberAnimation {
                 target: mutate
                 property: "popTime"
                 to: mutate.popDuration
-                duration: mutate.popDuration
+                duration: Motion.pace(mutate.popDuration)
             }
             SequentialAnimation {
-                PauseAnimation { duration: Motion.pill.spreadDelay }
+                PauseAnimation { duration: Motion.pace(Motion.pill.spreadDelay) }
                 ParallelAnimation {
                     NumberAnimation {
                         target: mutate
                         property: "spread"
                         to: 1
-                        duration: Motion.pill.spread
+                        duration: Motion.pace(Motion.pill.spread)
                         easing.type: Easing.InOutCubic
                     }
                     SequentialAnimation {
-                        PauseAnimation { duration: mutate.innerLead }
+                        PauseAnimation { duration: Motion.pace(mutate.innerLead) }
                         ScriptAction { script: mutate.isInnerShown = true }
                     }
                 }
@@ -54,13 +54,13 @@ QtObject {
     }
 
     readonly property SequentialAnimation popEnter: SequentialAnimation {
-        PauseAnimation { duration: mutate.enterDelay }
+        PauseAnimation { duration: Motion.pace(mutate.enterDelay) }
         ScriptAction { script: mutate.isInnerShown = true }
         NumberAnimation {
             target: mutate
             property: "popTime"
             to: mutate.popDuration
-            duration: mutate.popDuration
+            duration: Motion.pace(mutate.popDuration)
         }
     }
 
@@ -71,7 +71,7 @@ QtObject {
             target: mutate
             property: "spread"
             to: 0
-            duration: mutate.hasSpread ? Motion.pill.leaveSpread : 0
+            duration: Motion.pace(mutate.hasSpread ? Motion.pill.leaveSpread : 0)
             easing.type: Easing.InOutCubic
         }
         ScriptAction { script: mutate.holdPop(true) }
@@ -79,7 +79,7 @@ QtObject {
             target: mutate
             property: "popRemaining"
             to: 0
-            duration: Motion.pill.leavePop
+            duration: Motion.pace(Motion.pill.leavePop)
             easing.type: Easing.InBack
         }
         ScriptAction { script: mutate.departed() }
@@ -105,7 +105,7 @@ QtObject {
         }
         spreadEnter.stop()
         popEnter.stop()
-        leavePause.duration = leaveDelay
+        leavePause.duration = Motion.pace(leaveDelay)
         leave.restart()
     }
 

@@ -28,15 +28,15 @@ Writes go out through `send([...])` / `action("spec")` as detached `driftwm msg`
 
 `Config.data.taskbar.side` anchors `TaskbarWindow` to the left or right edge. The `Taskbar` module is always laid out for the left edge. On the right, `isMirrored` flips the whole module with an `Upright` scale of -1 around its centre, and every readable leaf flips back with its own `Upright`: task icons, idle glyphs, idle expansions, the clock, the title tip text and the carried icon. Pointer coordinates and `mapToItem` go through the transform, so carry and neck logic is unchanged.
 
-**Compact idle column**: every idle circle's pointer area is a `FoldDrag` (`modules/taskbar/FoldDrag.qml`), a `MouseArea` that calls `Taskbar.foldIdles(isFolding)` once a press travels `Motion.fold.threshold` up or down, and swallows the click that follows. Down folds, up unfolds. `foldIdles` closes any open idle and emits `compactRequested`; `TaskbarWindow` writes `taskbar.compact` to `shell.json` and feeds it back as `Taskbar.isCompact`. While compact, only idles with `isKeptCompact` (audio, power) stay `isPresent`; the others close their slot (`room`) and pop out, and `FoldDot` (a small liquid bead with three specks, top of the column) pops in. A click on it, or a drag up on it or any idle, unfolds. The compact column is the seed of the activity bar (`roadmap.md`). The input mask lives in the window (`inputZone`, placed from `Taskbar.inputWidth`), not in the transformed module. `Occupancy` checks the edge the taskbar is on.
+**Compact idle column**: every idle circle's pointer area is a `FoldDrag` (`modules/taskbar/FoldDrag.qml`), a `Gesture` that calls `Taskbar.foldIdles(isFolding)` once a press travels `Motion.fold.threshold` up or down, and swallows the click that follows. Down folds, up unfolds. `foldIdles` closes any open idle and emits `compactRequested`; `TaskbarWindow` writes `taskbar.compact` to `shell.json` and feeds it back as `Taskbar.isCompact`. While compact, only idles with `isKeptCompact` (audio, power) stay `isPresent`; the others close their slot (`room`) and pop out, and `FoldDot` (a small liquid bead with three specks, top of the column) pops in. A click on it, or a drag up on it or any idle, unfolds. The compact column is the seed of the activity bar (`roadmap.md`). The input mask lives in the window (`inputZone`, placed from `Taskbar.inputWidth`), not in the transformed module. `Occupancy` checks the edge the taskbar is on.
 
 ## Overlays absorb the taskbar
 
-Search, settings and the dashboard sit on the overlay layer, above the taskbar, so their liquid can only react to the taskbar if they draw it themselves. Every `toggle*` in `Visibilities` calls `gatherTaskbar(screen)`: it emits `taskbarGathering(screen)` and sets `taskbarAwayScreen`. On that signal `TaskbarWindow` publishes `Taskbar.liquidParts()` (every shown pill body and idle circle except the gear, none for `bare`) with `placeTaskbarParts`, and the gear circle with `placeSettingsOrigin`.
+Search, settings and the dashboard sit on the overlay layer, above the taskbar, so their liquid can only react to the taskbar if they draw it themselves. `Overlays.open` calls `gatherTaskbar(screen)`: unless the taskbar on that screen is already away, it emits `taskbarGathering(screen)` and adds the screen to `awayScreens`. On that signal `TaskbarWindow` publishes `Taskbar.liquidParts()` (every shown pill body and idle circle except the gear, none for `bare`) with `placeTaskbarParts`, and the gear circle with `placeSettingsOrigin`.
 
 Both are in **edge-relative coordinates**: the taskbar's own left-edge layout, before mirroring, which equals the distance from the screen edge. Each overlay mirrors them itself from the live `taskbar.side`, so geometry never depends on when the layer-shell window re-anchors.
 
-While away the taskbar is cut to opacity 0 and unrevealed, and the overlay's `Gather` (`components/Gather.qml`) draws the same silhouettes in its own `LiquidLayer` and pulls them into one point, where they goo into the overlay's body. The overlay emits `landed()` at the end of its leave; `Visibilities.returnTaskbar(screen)` then brings the taskbar back unless another overlay is open on that screen.
+While away the taskbar is cut to opacity 0 and unrevealed, and the overlay's `Gather` (`components/Gather.qml`) draws the same silhouettes in its own `LiquidLayer` and pulls them into one point, where they goo into the overlay's body. The overlay emits `landed()` at the end of its leave; `Overlays.returnTaskbar(screen)` then brings the taskbar back unless another overlay is open on that screen.
 
 - **Settings**: parts gather into the gear, then the ball flies to the centre.
 - **Dashboard and search**: `Burst` streams the parts to the taskbar column, where they form a new ball fused to the screen edge, which explodes along the overlay away from the edge.
@@ -98,11 +98,44 @@ Closed-form rises and rings run on an ability's own clock (a linear phase in sec
 
 Entry points before the bar exists: the Hyprland shortcut `vados:activity`, IPC `activity toggle | close | pin <kind> | current` and `notifications enable | disable | status | count | clear`.
 
+## Overlay engine
+
+`state/Overlays.qml` is the one registry for full-screen surfaces (it replaced `Visibilities`, 2026-11-07). `kinds` declares each overlay and its `layer` (search, settings and dashboard share layer 1). State: `screens` (key → screen), `stack` (opening order; `top` is the last), `awayScreens` (screens whose taskbar is gathered), `taskbarParts`, `settingsOrigins`, `visitors` (screen → overlay → leaving ball).
+
+- `open(key, screen)` closes every overlay on the same layer or below, gathers the taskbar (once per screen: a switch keeps the first gather's parts), and pushes the key on the stack. `close`, `toggle`, `closeTop` (Escape, IPC `overlay close`).
+- `ownsKeyboard(key, screen)`: only the top overlay takes exclusive keyboard focus.
+- `returnTaskbar(screen)` (an overlay's `landed()`) brings that screen's taskbar back only when no overlay is left on it, whichever screen the next overlay opened on.
+- `placeVisitor(key, screen, ball)` / `visitorOn(screen)`: each leaving overlay owns its own entry, so one leaving never erases the other's ball.
+
+`windows/OverlayWindow.qml` is the window side: a full-screen `PanelWindow` on the overlay layer, namespace `vados-<key>`, keyboard from `ownsKeyboard`, with `isOpen`, `parts`, `requestClose()`, `land()` and `placeVisitor()` for its module. `SearchWindow`, `SettingsWindow` and `DashboardWindow` are an `OverlayWindow` plus their module. A new overlay is a `kinds` entry and an `OverlayWindow`.
+
+## Gesture engine
+
+`components/Gesture.qml` is a `MouseArea` ability for every drag: `threshold` (default `Motion.gesture.slop`), axes, `dragButtons`; it tracks `travelX/Y` from `pressPoint` and a smoothed velocity (`Motion.gesture.velocityBlend`). Signals: `moved` every move, `crossed` once when the travel passes the threshold, `thrown(travel, velocity)` on release after a drag, `tapped(mouse)` on a release without a drag, `ended` always. Built on it: `FoldDrag` (fold on crossing), `EdgePull` (pull length on `moved`, summon on `crossed`), the task carry in `Taskbar` (`crossed` picks up, `moved` carries, `thrown` lands, `tapped` activates or closes). Named `Gesture` because `Drag` is QtQuick's attached type and wins inside `qs.components` (`quirks.md`).
+
+## Attention engine
+
+`state/Attention.qml` decides whether a notification may interrupt (`rules/interaction.md`). It listens to `Notifications.received`; `mayPeek` lets critical through always, holds low always, and holds normal ones under do-not-disturb (`attention.doNotDisturb`) or while the active window is fullscreen. Admitted notifications gather for `Motion.attention.batch` and then become one `peek` `{ notifications, isUrgent, screen }` on the focused screen, which expires after the longest own timeout (`expireTimeout`, seconds) or `Motion.attention.peek`; urgent peeks stay until dismissed, and a peek drops notifications as they are dismissed. The alert band will draw `peek`; held notifications are still counted by `Activity`.
+
+## Persistence
+
+`services/StateFile.qml` is a reusable `Scope` for runtime state: `name` → `~/.cache/vados/<name>.json` as `{ version, data }`, `values` (defaults merged with the file), `update(next)` (debounced `Motion.store.write`), `flush()` (also on destruction), `isLoaded`. A file without `version` is read as plain data; a file that does not parse is copied to `.corrupt`, another version to `.version<N>`, and the defaults are used. Users: `Apps` (launch history, still `apps.json`), `Confinement` (`desktop.json`: parked windows).
+
+`Confinement` waits for `isReady` (state loaded and a driftwm canvas seen) before `recover()`: saved parked windows that still exist are adopted in Desktop mode (so `enter()` never parks them a second time at their parking spot), or put back in Canvas mode; windows that no longer exist are dropped. Every park and restore is saved.
+
+## Reduced motion
+
+`Motion.isReduced` (`motion.reduced`, settings System tab) and `Motion.pace(duration)`, the single precedence function: every duration in components and modules goes through it and is 0 under reduced motion. `Rising` stops emitting (`isEmitting`) and `Burst` has no splashes or crests. `TypedText` and finger-driven motion are content and keep their timing; `Motion.reveal.dwell` is an interaction timer, not motion.
+
+## Interruptions
+
+`Mutate` re-enters from its current pop (`holdPop`). `Burst` reopened during its leave, before the hand-off (`canRewind`), rewinds the leave (`rewinding`, exit back to 0 over the time already spent) and resumes the enter from the spread and impact it had reached (`resuming`), instead of converging from an empty ball again.
+
 ## Settings
 
 `SettingsWindow` is a full-screen overlay layer per screen (namespace `vados-settings`, exclusive keyboard while open), like search. It bridges `Config` into `modules/settings/Settings.qml` and its signals back to `Config.setAccent`, `setTaskbarSide`, `setTaskbarStyle` and `setWindowMode`.
 
-Opening: the gear (`SettingsIdle` → `settingsRequested` → `TaskbarWindow`) or `CTRL + P` (`GlobalShortcut` / IPC `settings toggle`, focused screen) calls `Visibilities.toggleSettings(screen)`, which also closes search and the dashboard.
+Opening: the gear (`SettingsIdle` → `settingsRequested` → `TaskbarWindow`) or `CTRL + P` (`GlobalShortcut` / IPC `settings toggle`, focused screen) calls `Overlays.toggle("settings", screen)`, which also closes search and the dashboard.
 
 Morph (the `Launch` ability, playing from `isOpen`: linear phase values; `enterForm`, `trailForm` and `splashForm` turn them into shapes in one `LiquidLayer`; the taskbar parts are a `Gather` inside it; `Settings` only binds `isContentShown` and the tab bar to `launch.isOpened` and `launch.isBudOut`):
 
@@ -111,7 +144,7 @@ Morph (the `Launch` ability, playing from `isOpen`: linear phase values; `enterF
 3. **Pop**: impact squash and inflate along the flight line, then the bubble bursts open into the panel. Width and height wobble in antiphase (the `launch` character, `Liquid.ring`), and splash droplets ride just ahead of the wave front and settle back into the edge. Content `Turn`s in at `contentShare`, and `Rising` bubbles start leaving the top and bottom edges for the screen edges.
 4. **Tab bar**: a circle buds out of the container's left edge (OutBack), then extends into the `TabBar` pill, and its items enter.
 
-Tab switch: the highlight slides, the panel jolts (`Jolt` haptic, fed into `Launch.jolt`), the old page leaves (`Motion.settings.pageSwap`) before the new one enters. Close (its own animation): content out, bubbles drain, the tab bar retracts into the panel, the panel implodes into the ball (InBack) from wherever it was, the ball is sucked back to the gear (InCubic, stretched), then `landed()` → `Visibilities.returnTaskbar` lets the taskbar re-enter with its own pill pop while the ball shrinks into the gear. The gear is mirrored by the live `taskbarSide`, so a side switch from the settings sends the ball to the new side.
+Tab switch: the highlight slides, the panel jolts (`Jolt` haptic, fed into `Launch.jolt`), the old page leaves (`Motion.settings.pageSwap`) before the new one enters. Close (its own animation): content out, bubbles drain, the tab bar retracts into the panel, the panel implodes into the ball (InBack) from wherever it was, the ball is sucked back to the gear (InCubic, stretched), then `landed()` → `Overlays.returnTaskbar` lets the taskbar re-enter with its own pill pop while the ball shrinks into the gear. The gear is mirrored by the live `taskbarSide`, so a side switch from the settings sends the ball to the new side.
 
 `Appearance.color.accent` reads `Config.data.appearance.accent`, so every accent in the shell recolours live. `setAccent` updates the adapter at once and writes `shell.json` `Motion.settings.write` ms after the last change, so a wheel drag does not write every frame.
 
@@ -131,7 +164,7 @@ Taskbar clicks go through `Toplevels.activate` to `Confinement.activate`, which 
 
 ## Dashboard
 
-`DashboardWindow` is a full-screen overlay layer per screen (namespace `vados-dashboard`, exclusive keyboard while open). It opens from a click on the taskbar clock (`Taskbar.dashboardRequested`), the Hyprland shortcut `vados:dashboard` or IPC `dashboard toggle`, all through `Visibilities.toggleDashboard`. Search, settings and dashboard are mutually exclusive.
+`DashboardWindow` is a full-screen overlay layer per screen (namespace `vados-dashboard`, exclusive keyboard while open). It opens from a click on the taskbar clock (`Taskbar.dashboardRequested`), the Hyprland shortcut `vados:dashboard` or IPC `dashboard toggle`, all through `Overlays.toggle("dashboard")`. Search, settings and dashboard are mutually exclusive.
 
 Data: two `Binding`s set `Hardware.isActive` and `Weather.isActive` while the window is open, so hardware polling (`Motion.dashboard.poll`) and the weather fetch (only when older than `weatherPoll`) run only then.
 
@@ -148,9 +181,9 @@ Enter (`components/Burst.qml`, about 0.8 s):
 
 **Root fused to the edge**: the whole root side is a `Lobe` (the search lobe shape) from past the screen edge (`edgePad`) to `rootSpan` inside the body, flaring wider at the edge by `rootSwell` (scaled by `swellShare` while small), so the dashboard curves into the screen edge the way the search band does. It follows the body through enter and leave. The crest track starts at the screen edge and runs over this flare (`Lobe.bendAt`, sampled `curveSamples` times) before the top and bottom edges, so the wave covers the curves at the screen edge too (dashboard and search).
 
-Leave (own, faster): content out, bubbles drain, a short hold, then `landed()` → `Visibilities.returnTaskbar`, so the taskbar pops back in on the same timeline while the body leaves in one motion (`exit`, linear over `Motion.burst.leave`): it scales down towards the `leaveBall` circle with its root side kept on the screen edge (OutCubic, done at `Motion.burst.leaveShrink`), and at the same time slides out past the edge (quadratic travel), so it never stops at the edge and never pulls towards its centre.
+Leave (own, faster): content out, bubbles drain, a short hold, then `landed()` → `Overlays.returnTaskbar`, so the taskbar pops back in on the same timeline while the body leaves in one motion (`exit`, linear over `Motion.burst.leave`): it scales down towards the `leaveBall` circle with its root side kept on the screen edge (OutCubic, done at `Motion.burst.leaveShrink`), and at the same time slides out past the edge (quadratic travel), so it never stops at the edge and never pulls towards its centre.
 
-**Touching the taskbar on leave**: while leaving, `Burst.visitor` (`{ x, y, width, height, isHandedOff }`, left-edge coordinates) goes `Dashboard.visitor` → the window → `Visibilities.placeVisitor` → `TaskbarWindow` → `Taskbar.visitor`. `Taskbar.touchOf(centerX, top, bottom, halfWidth)` gives each task pill and idle circle a 0–1 closeness to it (within `Appearance.taskbar.visitReach`), which swells the pill by up to `visitSwell`. Once it has become the ball (`exit >= leaveShrink`) it is handed off (`canHandOff`, off for the `bare` style, whose liquid is invisible): `Burst` stops drawing it and the taskbar draws the same ball and edge lobe in its own `LiquidLayer`, so it goos and necks with the pills it passes. The windows are separate layers, so a shape can only fuse with the pills inside the taskbar's own layer.
+**Touching the taskbar on leave**: while leaving, `Burst.visitor` (`{ x, y, width, height, isHandedOff }`, left-edge coordinates) goes `Dashboard.visitor` → the window → `Overlays.placeVisitor` → `TaskbarWindow` → `Taskbar.visitor`. `Taskbar.touchOf(centerX, top, bottom, halfWidth)` gives each task pill and idle circle a 0–1 closeness to it (within `Appearance.taskbar.visitReach`), which swells the pill by up to `visitSwell`. Once it has become the ball (`exit >= leaveShrink`) it is handed off (`canHandOff`, off for the `bare` style, whose liquid is invisible): `Burst` stops drawing it and the taskbar draws the same ball and edge lobe in its own `LiquidLayer`, so it goos and necks with the pills it passes. The windows are separate layers, so a shape can only fuse with the pills inside the taskbar's own layer.
 
 With no parts (another overlay was open first) the ball grows from nothing on `merge` alone.
 
@@ -166,7 +199,7 @@ Readings:
 
 ## Search
 
-`SearchWindow` (overlay layer, exclusive keyboard) hosts the `Search` module. Search is built on the dashboard's foundation: the same `Burst` ability inside an `Upright`-mirrored item, the same `bodyClip` content clip, the same leave and taskbar hand-off (`visitor` → `Visibilities.placeVisitor`, `canHandOff` off for `bare`). The `Burst` form is the base column: `Appearance.search.widthShare` (20 %) of the screen wide, the full screen height, `hasSteps: false`, `rootCorner` on the taskbar side, seeded at the taskbar column at mid-height.
+`SearchWindow` (overlay layer, exclusive keyboard) hosts the `Search` module. Search is built on the dashboard's foundation: the same `Burst` ability inside an `Upright`-mirrored item, the same `bodyClip` content clip, the same leave and taskbar hand-off (`visitor` → `Overlays.placeVisitor` (keyed by overlay, read back with `visitorOn(screen)`), `canHandOff` off for `bare`). The `Burst` form is the base column: `Appearance.search.widthShare` (20 %) of the screen wide, the full screen height, `hasSteps: false`, `rootCorner` on the taskbar side, seeded at the taskbar column at mid-height.
 
 The far wall (from the user's second sketch, 2026-11-06) is part of the `Burst` body: Search passes `wall` (points traced from the drawing, `Appearance.search.wall`, converted to `[x offset from the full far edge, y share]`) and `Burst` draws it in its own liquid. Each point sits at `formRight + offset × wallShare`, `formTop + share × form.height`, so the wall grows, squeezes and bounces with the body every frame. `wallShare` is the body's width progress after the impact (it overshoots with the bounce) and collapses with the leave. `Burst.traceSpline()` turns the points into one Catmull-Rom outline (`wallOutline`, `Appearance.burst.curveSamples` per segment), so the wall is a single S-wave: in past the favourites, out round the best match, in again near the bottom, flaring at both screen edges. The fill starts `form.right` inside the column edge, so the body's corner never shows a notch.
 

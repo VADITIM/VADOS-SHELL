@@ -133,8 +133,41 @@ QtObject {
     property bool hasUnread: false
     property bool isUrgent: false
     signal received(var notification)
+    function isCritical(notification) { return notification.urgency === 2 }
+    function isLow(notification) { return notification.urgency === 0 }
+    function isAlive(notification) { return list.indexOf(notification) >= 0 }
     function markRead() { unreadCount = 0 }
     function dismiss(notification) {}
     function clear() {}
     function invoke(notification, identifier) {}
+}
+Compositor|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isHyprland: false
+    property bool isDriftwm: false
+    property string name: "generic"
+    property var canvasState: null
+    property var activeWindow: null
+    property string focusedScreen: "play"
+    property var sent: []
+    signal canvasChanged()
+    function isListed(value, windowId) { return false }
+    function viewports() { return [] }
+    function send(argumentsList) { sent = sent.concat([argumentsList.join(" ")]) }
+    function action(spec) {}
+}
+Confinement|pragma Singleton
+import QtQuick
+QtObject {
+    property string mode: "canvas"
+    property bool canConfine: true
+    property bool isConfined: false
+    property var parked: ({})
+    function isParked(windowId) { return false }
+    function activate(toplevel) {}
+    function minimize() {}
+    function maximize() {}
+    function fullscreen() {}
+    function snap(direction) {}
 }

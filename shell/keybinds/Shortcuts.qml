@@ -10,26 +10,27 @@ Scope {
     id: shortcuts
 
     readonly property bool isServingNotifications: Notifications.isServing
+    readonly property bool isQuiet: Attention.isQuiet
 
     GlobalShortcut {
         appid: "vados"
         name: "search"
         description: "Open or close the app search"
-        onPressed: Visibilities.toggleSearch(Compositor.focusedScreen)
+        onPressed: Overlays.toggle("search", Compositor.focusedScreen)
     }
 
     GlobalShortcut {
         appid: "vados"
         name: "settings"
         description: "Open or close the settings"
-        onPressed: Visibilities.toggleSettings(Compositor.focusedScreen)
+        onPressed: Overlays.toggle("settings", Compositor.focusedScreen)
     }
 
     GlobalShortcut {
         appid: "vados"
         name: "dashboard"
         description: "Open or close the dashboard"
-        onPressed: Visibilities.toggleDashboard(Compositor.focusedScreen)
+        onPressed: Overlays.toggle("dashboard", Compositor.focusedScreen)
     }
 
     GlobalShortcut {
@@ -43,11 +44,11 @@ Scope {
         target: "dashboard"
 
         function toggle(): void {
-            Visibilities.toggleDashboard(Compositor.focusedScreen)
+            Overlays.toggle("dashboard", Compositor.focusedScreen)
         }
 
         function close(): void {
-            Visibilities.closeDashboard()
+            Overlays.close("dashboard")
         }
 
         function location(name: string): void {
@@ -59,11 +60,11 @@ Scope {
         target: "search"
 
         function toggle(): void {
-            Visibilities.toggleSearch(Compositor.focusedScreen)
+            Overlays.toggle("search", Compositor.focusedScreen)
         }
 
         function close(): void {
-            Visibilities.closeSearch()
+            Overlays.close("search")
         }
     }
 
@@ -71,11 +72,11 @@ Scope {
         target: "settings"
 
         function toggle(): void {
-            Visibilities.toggleSettings(Compositor.focusedScreen)
+            Overlays.toggle("settings", Compositor.focusedScreen)
         }
 
         function close(): void {
-            Visibilities.closeSettings()
+            Overlays.close("settings")
         }
     }
 
@@ -109,6 +110,22 @@ Scope {
     }
 
     IpcHandler {
+        target: "overlay"
+
+        function toggle(key: string): void {
+            Overlays.toggle(key, Compositor.focusedScreen)
+        }
+
+        function close(): void {
+            Overlays.closeTop()
+        }
+
+        function top(): string {
+            return Overlays.top
+        }
+    }
+
+    IpcHandler {
         target: "activity"
 
         function toggle(): void {
@@ -125,6 +142,26 @@ Scope {
 
         function current(): string {
             return Activity.current ? Activity.current.kind : ""
+        }
+    }
+
+    IpcHandler {
+        target: "attention"
+
+        function quiet(isOn: bool): void {
+            Attention.setQuiet(isOn)
+        }
+
+        function toggle(): void {
+            Attention.setQuiet(!shortcuts.isQuiet)
+        }
+
+        function status(): string {
+            return shortcuts.isQuiet ? "quiet" : "open"
+        }
+
+        function dismiss(): void {
+            Attention.dismissPeek()
         }
     }
 

@@ -130,7 +130,7 @@ Item {
         id: liftAnimation
         target: carried
         property: "lift"
-        duration: Motion.stateDuration
+        duration: Motion.pace(Motion.stateDuration)
         easing.type: Easing.OutBack
     }
 
@@ -139,7 +139,7 @@ Item {
         target: carried
         property: "hold"
         to: 0
-        duration: Motion.carry.release
+        duration: Motion.pace(Motion.carry.release)
         easing.type: Easing.OutCubic
     }
 
@@ -149,7 +149,7 @@ Item {
             target: carried
             property: "presence"
             to: 0
-            duration: Motion.pill.leaveElement
+            duration: Motion.pace(Motion.pill.leaveElement)
             easing.type: Easing.InBack
         }
         ScriptAction { script: carried.appId = "" }

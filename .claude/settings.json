@@ -21,6 +21,12 @@
             "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/docs-current.py\"",
             "timeout": 15,
             "statusMessage": "Checking .claude docs are current"
+          },
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/tools/check-rules.py\" --hook",
+            "timeout": 20,
+            "statusMessage": "Checking VAD/OS hard rules"
           }
         ]
       }

@@ -15,6 +15,8 @@ Singleton {
     property var parked: ({})
     property var known: ({})
     property int cascade: 0
+    property bool hasRecovered: false
+    readonly property bool isReady: store.isLoaded && Compositor.canvasState !== null
 
     function windows() {
         return Compositor.canvasState?.windows ?? []
@@ -153,6 +155,28 @@ Singleton {
         cascade = 0
     }
 
+    function recover() {
+        if (hasRecovered)
+            return
+        hasRecovered = true
+        const saved = store.values.parked ?? {}
+        const living = windows().map(window => String(window.id))
+        const alive = {}
+        for (const windowId of Object.keys(saved)) {
+            if (living.indexOf(windowId) >= 0)
+                alive[windowId] = saved[windowId]
+        }
+        if (isConfined) {
+            parked = Object.assign({}, alive, parked)
+            return
+        }
+        for (const windowId of Object.keys(alive)) {
+            moveWindow(windowId, alive[windowId])
+            Compositor.send(["opacity", "1", "--id", windowId])
+        }
+        store.update({ parked: {} })
+    }
+
     function leave() {
         for (const windowId of Object.keys(parked)) {
             moveWindow(windowId, parked[windowId])
@@ -191,7 +215,27 @@ Singleton {
         known = seen
     }
 
-    onIsConfinedChanged: isConfined ? enter() : leave()
+    onIsReadyChanged: {
+        if (!isReady)
+            return
+        recover()
+        if (isConfined)
+            enter()
+    }
+    onIsConfinedChanged: {
+        if (isReady)
+            isConfined ? enter() : leave()
+    }
+    onParkedChanged: {
+        if (hasRecovered)
+            store.update({ parked: parked })
+    }
+
+    StateFile {
+        id: store
+        name: "desktop"
+        defaults: ({ parked: {} })
+    }
 
     Connections {
         target: Compositor

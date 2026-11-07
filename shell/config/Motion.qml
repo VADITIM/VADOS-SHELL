@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 
 Singleton {
+    readonly property bool isReduced: Config.data.motion.reduced
     readonly property int stateDuration: 220
     readonly property QtObject press: QtObject {
         readonly property int down: 80
@@ -87,7 +88,6 @@ Singleton {
     }
 
     readonly property QtObject carry: QtObject {
-        readonly property real slop: 6
         readonly property real pinch: 64
         readonly property real capture: 18
         readonly property real spread: 0.62
@@ -211,6 +211,20 @@ Singleton {
         readonly property real nameHeightLead: 2.5
     }
 
+    readonly property QtObject store: QtObject {
+        readonly property int write: 400
+    }
+
+    readonly property QtObject attention: QtObject {
+        readonly property int peek: 5000
+        readonly property int batch: 600
+    }
+
+    readonly property QtObject gesture: QtObject {
+        readonly property real slop: 6
+        readonly property real velocityBlend: 0.4
+    }
+
     readonly property QtObject liquid: QtObject {
         readonly property real substep: 1 / 240
         readonly property real frameCap: 0.05
@@ -260,5 +274,9 @@ Singleton {
             readonly property real mergeKick: 3
             readonly property real separateKick: 5
         }
+    }
+
+    function pace(duration) {
+        return isReduced ? 0 : duration
     }
 }

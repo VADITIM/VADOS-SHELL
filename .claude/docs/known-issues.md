@@ -1,10 +1,6 @@
 # Known issues
 
-- **Switching straight from one overlay to another gathers an empty taskbar.** The taskbar is already away, its pills retracted, so the second overlay gets no parts: settings grows from its seed alone and the dashboard ball grows from nothing.
 - **The dashboard's leaving ball in the taskbar is unverified.** The hand-off assumes the dashboard and taskbar windows share the screen's top edge and full height, so their y coordinates match; with a taskbar margin or exclusive zone on top the ball would jump at the hand-off.
-- **Parked window positions in Desktop mode live only in memory.**
-  - A shell restart during Desktop mode leaves parked windows off-screen and transparent.
-  - Upgrade path: persist `Confinement.parked` to `~/.cache/vados/desktop.json`.
 - **Taskbar toplevels are matched to driftwm windows by `app_id` + title.**
   - Two windows with the same app and title can resolve to the wrong window.
   - Upgrade path: match by pid once Quickshell exposes pid on toplevels.
@@ -23,7 +19,9 @@
 - **Wi-Fi extension**: clicking a network runs `nmcli device wifi connect`, which only works for open networks and saved profiles; there is no password entry yet. The fused style has no `EdgeFuse` on the extension body. Not yet run on the Linux shell.
 - **System tray items have no place in the taskbar** since the `...` pill was removed (2026-11-05). `services/Tray.qml` feeds `Activity.entries` for the activity bar, which is planned to host them.
 - **Notifications have no surface yet.** `services/Notifications.qml` and `state/Activity.qml` exist, but nothing draws them until the activity bar and the alert band land; `notifications.enabled` stays off until then (`decisions.md`).
+- **Not yet on the gesture engine**: nothing left in the shell; new swipes (notifications, clipboard rows) must use `Gesture`.
+- **No lite mode yet**: reduced motion stops idle motion, but the `LiquidLayer` blur still runs; a lite mode without blur would join `Motion.pace` (`rules/performance.md`).
+- **Untested on real hardware (engines, 2026-11-07):** `OverlayWindow` keyboard hand-over between overlays, `StateFile` writes through `FileView.setText` and its `mkdir`, `Confinement.recover` on a live driftwm, `Notification.expireTimeout` being in seconds.
 - **Untested on real hardware (notifications, 2026-11-06):** the `NotificationServer` registering, actions and images, and replacing a running mako or dunst.
 - **Search has no rising bubbles**: its body spans the full screen height, so `Rising` (top and bottom surfaces to the screen edges) has no room.
-- **Search and the dashboard share `Visibilities.visitors`** per screen. Only one is open at a time, but if one leaves while the other is still leaving, the last writer wins and the other's ball can vanish from the taskbar early.
 - **The dashboard's top step is not a hit area**: the body `MouseArea` covers only the rectangle, so a click on the top step closes the dashboard. The bottom step (disk notch) has its own `MouseArea`.

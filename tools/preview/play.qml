@@ -20,7 +20,7 @@ Window {
     title: "VAD/OS Shell playground"
     color: "#2b3542"
 
-    Component.onCompleted: Visibilities.placeSettingsOrigin(screenName, taskbar.settingsOrigin)
+    Component.onCompleted: Overlays.placeSettingsOrigin(screenName, taskbar.settingsOrigin)
 
     Rectangle {
         anchors.fill: parent
@@ -57,21 +57,21 @@ Window {
         barStyle: Config.data.taskbar.style
         isCompact: Config.data.taskbar.compact
         onCompactRequested: isCompact => Config.setTaskbarCompact(isCompact)
-        isAway: Visibilities.taskbarAwayScreen === root.screenName
-        visitor: Visibilities.visitors[root.screenName] ?? null
-        onSettingsRequested: Visibilities.toggleSettings(root.screenName)
-        onDashboardRequested: Visibilities.toggleDashboard(root.screenName)
-        onSettingsOriginChanged: Visibilities.placeSettingsOrigin(root.screenName, settingsOrigin)
+        isAway: Overlays.isTaskbarAway(root.screenName)
+        visitor: Overlays.visitorOn(root.screenName)
+        onSettingsRequested: Overlays.toggle("settings", root.screenName)
+        onDashboardRequested: Overlays.toggle("dashboard", root.screenName)
+        onSettingsOriginChanged: Overlays.placeSettingsOrigin(root.screenName, settingsOrigin)
     }
 
     Connections {
-        target: Visibilities
+        target: Overlays
 
         function onTaskbarGathering(screenName) {
             if (screenName !== root.screenName)
                 return
-            Visibilities.placeSettingsOrigin(root.screenName, taskbar.settingsOrigin)
-            Visibilities.placeTaskbarParts(root.screenName, taskbar.liquidParts())
+            Overlays.placeSettingsOrigin(root.screenName, taskbar.settingsOrigin)
+            Overlays.placeTaskbarParts(root.screenName, taskbar.liquidParts())
         }
     }
 
@@ -79,14 +79,14 @@ Window {
         id: search
         anchors.fill: parent
         visible: isPresent
-        isOpen: Visibilities.searchScreen === root.screenName
+        isOpen: Overlays.isOpen("search", root.screenName)
         favoriteIds: Config.data.search.favorites
-        parts: Visibilities.taskbarParts[root.screenName] ?? []
+        parts: Overlays.taskbarParts[root.screenName] ?? []
         isMirrored: root.isRight
         canHandOff: Config.data.taskbar.style !== "bare"
-        onVisitorChanged: Visibilities.placeVisitor(root.screenName, visitor)
-        onCloseRequested: Visibilities.closeSearch()
-        onLanded: Visibilities.returnTaskbar(root.screenName)
+        onVisitorChanged: Overlays.placeVisitor("search", root.screenName, visitor)
+        onCloseRequested: Overlays.close("search")
+        onLanded: Overlays.returnTaskbar(root.screenName)
         onFavoriteToggled: appId => Config.toggleFavorite(appId)
     }
 
@@ -94,64 +94,68 @@ Window {
         id: settings
         anchors.fill: parent
         visible: isPresent
-        isOpen: Visibilities.settingsScreen === root.screenName
-        origin: Visibilities.settingsOrigins[root.screenName] ?? Qt.rect(0, 0, 0, 0)
-        parts: Visibilities.taskbarParts[root.screenName] ?? []
+        isOpen: Overlays.isOpen("settings", root.screenName)
+        origin: Overlays.settingsOrigins[root.screenName] ?? Qt.rect(0, 0, 0, 0)
+        parts: Overlays.taskbarParts[root.screenName] ?? []
         accent: Appearance.color.accent
         taskbarSide: Config.data.taskbar.side
         barStyle: Config.data.taskbar.style
         windowMode: Config.data.desktop.mode
         canSwitchMode: true
-        onCloseRequested: Visibilities.closeSettings()
-        onLanded: Visibilities.returnTaskbar(root.screenName)
+        onCloseRequested: Overlays.close("settings")
+        onLanded: Overlays.returnTaskbar(root.screenName)
         onAccentRequested: value => Config.setAccent(value.toString())
         onSideRequested: side => Config.setTaskbarSide(side)
         onStyleRequested: style => Config.setTaskbarStyle(style)
         onModeRequested: mode => Config.setWindowMode(mode)
+        isReducedMotion: Config.data.motion.reduced
+        isQuiet: Config.data.attention.doNotDisturb
+        onReducedMotionRequested: isReduced => Config.setReducedMotion(isReduced)
+        onQuietRequested: isQuiet => Config.setDoNotDisturb(isQuiet)
     }
 
     Dashboard {
         id: dashboard
         anchors.fill: parent
         visible: isPresent
-        isOpen: Visibilities.dashboardScreen === root.screenName
+        isOpen: Overlays.isOpen("dashboard", root.screenName)
         isMirrored: root.isRight
-        parts: Visibilities.taskbarParts[root.screenName] ?? []
+        parts: Overlays.taskbarParts[root.screenName] ?? []
         canHandOff: Config.data.taskbar.style !== "bare"
-        onVisitorChanged: Visibilities.placeVisitor(root.screenName, visitor)
-        onCloseRequested: Visibilities.closeDashboard()
-        onLanded: Visibilities.returnTaskbar(root.screenName)
+        onVisitorChanged: Overlays.placeVisitor("dashboard", root.screenName, visitor)
+        onCloseRequested: Overlays.close("dashboard")
+        onLanded: Overlays.returnTaskbar(root.screenName)
     }
 
     Shortcut {
         sequences: ["Ctrl+D"]
         context: Qt.ApplicationShortcut
-        onActivated: Visibilities.toggleDashboard(root.screenName)
+        onActivated: Overlays.toggle("dashboard", root.screenName)
     }
 
     Shortcut {
         sequence: "D"
-        enabled: Visibilities.searchScreen === "" && Visibilities.settingsScreen === "" && Visibilities.dashboardScreen === ""
+        enabled: !Overlays.isAnyOpen()
         context: Qt.ApplicationShortcut
-        onActivated: Visibilities.toggleDashboard(root.screenName)
+        onActivated: Overlays.toggle("dashboard", root.screenName)
     }
 
     Shortcut {
         sequences: ["Ctrl+P"]
         context: Qt.ApplicationShortcut
-        onActivated: Visibilities.toggleSettings(root.screenName)
+        onActivated: Overlays.toggle("settings", root.screenName)
     }
 
     Shortcut {
         sequences: ["Ctrl+G", "Alt+G", "Ctrl+Space", "F1"]
         context: Qt.ApplicationShortcut
-        onActivated: Visibilities.toggleSearch(root.screenName)
+        onActivated: Overlays.toggle("search", root.screenName)
     }
 
     Shortcut {
         sequence: "G"
-        enabled: Visibilities.searchScreen === "" && Visibilities.settingsScreen === ""
+        enabled: Overlays.screenOf("search") === "" && Overlays.screenOf("settings") === ""
         context: Qt.ApplicationShortcut
-        onActivated: Visibilities.toggleSearch(root.screenName)
+        onActivated: Overlays.toggle("search", root.screenName)
     }
 }

@@ -33,7 +33,7 @@ Item {
     Behavior on y {
         enabled: tip.presence > 0.5
         NumberAnimation {
-            duration: Motion.tip.follow
+            duration: Motion.pace(Motion.tip.follow)
             easing.type: Easing.OutCubic
         }
     }
@@ -41,7 +41,7 @@ Item {
     Behavior on width {
         enabled: tip.presence > 0.5
         NumberAnimation {
-            duration: Motion.tip.resize
+            duration: Motion.pace(Motion.tip.resize)
             easing.type: Easing.OutCubic
         }
     }
@@ -63,7 +63,7 @@ Item {
         target: tip
         property: "presence"
         to: 1
-        duration: Motion.tip.pop
+        duration: Motion.pace(Motion.tip.pop)
         easing.type: Easing.OutBack
     }
 
@@ -73,7 +73,7 @@ Item {
             target: tip
             property: "presence"
             to: 0
-            duration: Motion.pill.leaveElement
+            duration: Motion.pace(Motion.pill.leaveElement)
             easing.type: Easing.InBack
         }
         ScriptAction { script: label.clear() }

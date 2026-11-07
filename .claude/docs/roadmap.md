@@ -4,10 +4,10 @@ Ordered. Shipped items move to `decisions.md`. Mirrored to the Obsidian vault "V
 
 ## Next
 
+0. **Engines in place (2026-11-07)**: overlay, gesture, attention, persistence, reduced motion. New features build on them: the lock screen is an `OverlayWindow`-free `LockWindow` (`rules/security.md`), clipboard is an overlay with a `StateFile`, notifications draw `Attention.peek` with `Gesture` swipes.
 1. **Activity bar** (agreed 2026-11-05): a dynamic island that lives inside the taskbar, opened from the compact idle column. It shows what is happening now: the playing music, Discord calls, notifications, the system tray, and more over time. VAD/OS BUBBLE (`C:\Users\vn\source\VADOS-BUBBLE`) already has a first version of this; port it into the shell, improve it, and bring it in line with V/AS. Foundations shipped 2026-11-06: `state/Activity.qml` (what is current and where the bar is open) and `services/Notifications.qml` (off by default); still to build: the bar itself, a media (Mpris) source and calls, then turn `notifications.enabled` on by default.
 2. **Settings on the burst**: settings is the last overlay not growing out of the taskbar column with the dashboard's `Burst` (left alone on 2026-11-05 at the user's request).
 3. **Verify on driftwm.** Run the shell in a real session and check every assumption in `quirks.md` § Unverified driftwm assumptions: camera centre, Y-up, fullscreen/pinned shapes, negative `move`.
-4. **Persist Desktop mode parking** to `~/.cache/vados/desktop.json`, so a restart never strands windows (`known-issues.md`).
 5. **Desktop mode, Windows parity:**
    - Aero-snap by dragging a window to a screen edge or corner, with a liquid preview of the target region.
    - Super+Up/Down cycle (restore → maximize → minimize).

@@ -377,7 +377,7 @@ Item {
         target: shell
         property: "carryCloseness"
         to: 1
-        duration: Motion.carry.release
+        duration: Motion.pace(Motion.carry.release)
         easing.type: Easing.OutCubic
     }
 
@@ -469,7 +469,7 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: shell.isRevealed ? Motion.reveal.backdropEnter : Motion.reveal.backdropLeave
+                duration: Motion.pace(shell.isRevealed ? Motion.reveal.backdropEnter : Motion.reveal.backdropLeave)
                 easing.type: shell.isRevealed ? Easing.OutQuad : Easing.InQuad
             }
         }
@@ -477,14 +477,14 @@ Item {
 
     Behavior on inset {
         NumberAnimation {
-            duration: Motion.pill.sizeFollow
+            duration: Motion.pace(Motion.pill.sizeFollow)
             easing.type: Easing.InOutCubic
         }
     }
 
     Behavior on fuse {
         NumberAnimation {
-            duration: Motion.pill.sizeFollow
+            duration: Motion.pace(Motion.pill.sizeFollow)
             easing.type: Easing.InOutCubic
         }
     }
@@ -523,7 +523,7 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: shell.isAway ? 0 : Motion.stateDuration
+                duration: Motion.pace(shell.isAway ? 0 : Motion.stateDuration)
                 easing.type: Easing.OutQuad
             }
         }
@@ -554,11 +554,10 @@ Item {
         handle: Motion.carry.handle
     }
 
-    MouseArea {
+    Gesture {
         id: taskPointer
 
         property Item pressedTask: null
-        property point pressPoint: Qt.point(0, 0)
 
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -569,37 +568,31 @@ Item {
                 return
             }
             pressedTask = task
-            pressPoint = Qt.point(mouse.x, mouse.y)
             shell.pressedAppId = task.appId
         }
-        onPositionChanged: mouse => {
-            if (carried.isCarried) {
-                shell.moveCarry(mouse.x, mouse.y)
+        onCrossed: (travelX, travelY) => {
+            if (!pressedTask)
                 return
-            }
-            if (!pressedTask || !(mouse.buttons & Qt.LeftButton))
-                return
-            if (Math.hypot(mouse.x - pressPoint.x, mouse.y - pressPoint.y) > Motion.carry.slop) {
-                shell.beginCarry(pressedTask, mouse.x, mouse.y)
-                pressedTask = null
-                shell.moveCarry(mouse.x, mouse.y)
-            }
-        }
-        onReleased: mouse => {
-            if (carried.isCarried) {
-                shell.endCarry(mouse.y)
-            } else if (pressedTask && pressedTask.group) {
-                if (mouse.button === Qt.MiddleButton)
-                    Toplevels.close(pressedTask.group)
-                else
-                    Toplevels.activate(pressedTask.group)
-            }
+            shell.beginCarry(pressedTask, pressPoint.x + travelX, pressPoint.y + travelY)
             pressedTask = null
-            shell.pressedAppId = ""
         }
-        onCanceled: {
+        onMoved: (travelX, travelY) => {
             if (carried.isCarried)
-                shell.endCarry(carried.finger.y)
+                shell.moveCarry(pressPoint.x + travelX, pressPoint.y + travelY)
+        }
+        onThrown: (travelX, travelY) => {
+            if (carried.isCarried)
+                shell.endCarry(pressPoint.y + travelY)
+        }
+        onTapped: mouse => {
+            if (!pressedTask || !pressedTask.group)
+                return
+            if (mouse.button === Qt.MiddleButton)
+                Toplevels.close(pressedTask.group)
+            else
+                Toplevels.activate(pressedTask.group)
+        }
+        onEnded: {
             pressedTask = null
             shell.pressedAppId = ""
         }

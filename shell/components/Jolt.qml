@@ -1,4 +1,5 @@
 import QtQuick
+import qs.config
 
 QtObject {
     id: jolt
@@ -14,7 +15,7 @@ QtObject {
         property: "clock"
         from: 0
         to: jolt.total
-        duration: jolt.total
+        duration: Motion.pace(jolt.total)
     }
 
     function valueAt(time) {

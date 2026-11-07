@@ -24,6 +24,8 @@ QtObject {
         property QtObject search: QtObject { property var favorites: ["firefox.desktop", "kitty.desktop"] }
         property QtObject weather: QtObject { property string location: "" }
         property QtObject notifications: QtObject { property bool enabled: false }
+        property QtObject attention: QtObject { property bool doNotDisturb: false }
+        property QtObject motion: QtObject { property bool reduced: false }
     }
     function setTaskbarStyle(style) { data.taskbar.style = style }
     function setTaskbarSide(side) { data.taskbar.side = side }
@@ -32,6 +34,8 @@ QtObject {
     function setWindowMode(mode) { data.desktop.mode = mode }
     function setWeatherLocation(location) { data.weather.location = location }
     function setNotificationsEnabled(isEnabled) { data.notifications.enabled = isEnabled }
+    function setDoNotDisturb(isQuiet) { data.attention.doNotDisturb = isQuiet }
+    function setReducedMotion(isReduced) { data.motion.reduced = isReduced }
     function toggleFavorite(appId) {
         const favorites = data.search.favorites.slice()
         const at = favorites.indexOf(appId)
@@ -87,7 +91,7 @@ def mock_services():
 
 def build():
     shutil.rmtree(BUILD, ignore_errors=True)
-    write_module("Quickshell", [("Singleton.qml", "import QtQml\nQtObject {}\n")])
+    write_module("Quickshell", [("Singleton.qml", "import QtQml\nQtObject {\n    default property list<QtObject> data\n}\n")])
     tokens = [(os.path.join(SHELL, "config", name), None) for name in ("Appearance.qml", "Motion.qml")]
     write_module("qs.config", tokens + [("Config.qml", CONFIG_MOCK)])
     write_module("qs.components", qml_files(os.path.join(SHELL, "components")))

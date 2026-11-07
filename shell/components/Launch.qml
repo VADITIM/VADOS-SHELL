@@ -249,13 +249,13 @@ Item {
                 target: launch
                 property: "merge"
                 to: 1
-                duration: launch.pace.merge
+                duration: Motion.pace(launch.pace.merge)
             }
             NumberAnimation {
                 target: launch
                 property: "material"
                 to: 1
-                duration: launch.pace.merge
+                duration: Motion.pace(launch.pace.merge)
                 easing.type: Easing.OutQuad
             }
         }
@@ -263,13 +263,13 @@ Item {
             target: launch
             property: "shoot"
             to: 1
-            duration: launch.pace.shoot
+            duration: Motion.pace(launch.pace.shoot)
         }
         NumberAnimation {
             target: launch
             property: "pop"
             to: launch.pace.contentShare
-            duration: launch.pace.pop * launch.pace.contentShare
+            duration: Motion.pace(launch.pace.pop * launch.pace.contentShare)
         }
         ScriptAction { script: launch.isOpened = true }
         ParallelAnimation {
@@ -277,22 +277,22 @@ Item {
                 target: launch
                 property: "pop"
                 to: 1
-                duration: launch.pace.pop * (1 - launch.pace.contentShare)
+                duration: Motion.pace(launch.pace.pop * (1 - launch.pace.contentShare))
             }
             SequentialAnimation {
-                PauseAnimation { duration: launch.pace.budDelay }
+                PauseAnimation { duration: Motion.pace(launch.pace.budDelay) }
                 NumberAnimation {
                     target: launch
                     property: "bud"
                     to: 1
-                    duration: launch.pace.bud
+                    duration: Motion.pace(launch.pace.bud)
                     easing.type: Easing.OutBack
                 }
                 NumberAnimation {
                     target: launch
                     property: "extend"
                     to: 1
-                    duration: launch.pace.extend
+                    duration: Motion.pace(launch.pace.extend)
                     easing.type: Easing.OutBack
                 }
             }
@@ -307,14 +307,14 @@ Item {
                 target: launch
                 property: "extend"
                 to: 0
-                duration: launch.retractDuration
+                duration: Motion.pace(launch.retractDuration)
                 easing.type: Easing.InQuad
             }
             NumberAnimation {
                 target: launch
                 property: "bud"
                 to: 0
-                duration: launch.retractDuration
+                duration: Motion.pace(launch.retractDuration)
                 easing.type: Easing.InBack
             }
         }
@@ -322,14 +322,14 @@ Item {
             target: launch
             property: "collapse"
             to: 1
-            duration: launch.pace.collapse
+            duration: Motion.pace(launch.pace.collapse)
             easing.type: Easing.InBack
         }
         NumberAnimation {
             target: launch
             property: "back"
             to: 1
-            duration: launch.pace.flyBack
+            duration: Motion.pace(launch.pace.flyBack)
             easing.type: Easing.InCubic
         }
         ScriptAction { script: launch.landed() }
@@ -337,7 +337,7 @@ Item {
             target: launch
             property: "body"
             to: 0
-            duration: launch.pace.handBack
+            duration: Motion.pace(launch.pace.handBack)
             easing.type: Easing.InQuad
         }
     }

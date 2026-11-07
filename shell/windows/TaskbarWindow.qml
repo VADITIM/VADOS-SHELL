@@ -26,7 +26,7 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "vados-taskbar"
     color: "transparent"
-    Component.onCompleted: Visibilities.placeSettingsOrigin(screenName, taskbar.settingsOrigin)
+    Component.onCompleted: Overlays.placeSettingsOrigin(screenName, taskbar.settingsOrigin)
     mask: Region {
         item: inputZone
 
@@ -50,13 +50,13 @@ PanelWindow {
     }
 
     Connections {
-        target: Visibilities
+        target: Overlays
 
         function onTaskbarGathering(screenName) {
             if (screenName !== window.screenName)
                 return
-            Visibilities.placeSettingsOrigin(window.screenName, taskbar.settingsOrigin)
-            Visibilities.placeTaskbarParts(window.screenName, taskbar.liquidParts())
+            Overlays.placeSettingsOrigin(window.screenName, taskbar.settingsOrigin)
+            Overlays.placeTaskbarParts(window.screenName, taskbar.liquidParts())
         }
     }
 
@@ -68,11 +68,11 @@ PanelWindow {
         barStyle: Config.data.taskbar.style
         isCompact: Config.data.taskbar.compact
         onCompactRequested: isCompact => Config.setTaskbarCompact(isCompact)
-        onSettingsRequested: Visibilities.toggleSettings(window.screenName)
-        onDashboardRequested: Visibilities.toggleDashboard(window.screenName)
-        isAway: Visibilities.taskbarAwayScreen === window.screenName
-        visitor: Visibilities.visitors[window.screenName] ?? null
-        onSettingsOriginChanged: Visibilities.placeSettingsOrigin(window.screenName, settingsOrigin)
+        onSettingsRequested: Overlays.toggle("settings", window.screenName)
+        onDashboardRequested: Overlays.toggle("dashboard", window.screenName)
+        isAway: Overlays.isTaskbarAway(window.screenName)
+        visitor: Overlays.visitorOn(window.screenName)
+        onSettingsOriginChanged: Overlays.placeSettingsOrigin(window.screenName, settingsOrigin)
         isCovered: Occupancy.isCovered(window.screen?.name ?? "")
         isEaten: extension.isHolding
         onExtensionRequested: (key, origin) => {

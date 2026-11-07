@@ -38,7 +38,7 @@ Item {
             departure.stop()
             if (presence >= 1)
                 return
-            arrivalPause.duration = enterDelay + Math.random() * enterWindow
+            arrivalPause.duration = Motion.pace(enterDelay + Math.random() * enterWindow)
             arrival.restart()
             return
         }
@@ -47,7 +47,7 @@ Item {
             departed()
             return
         }
-        departurePause.duration = Math.random() * leaveWindow
+        departurePause.duration = Motion.pace(Math.random() * leaveWindow)
         departure.restart()
     }
 
@@ -67,7 +67,7 @@ Item {
             target: turn
             property: "presence"
             to: 1
-            duration: turn.enterDuration
+            duration: Motion.pace(turn.enterDuration)
             easing.type: turn.enterEasing
         }
     }
@@ -79,7 +79,7 @@ Item {
             target: turn
             property: "presence"
             to: 0
-            duration: turn.leaveDuration
+            duration: Motion.pace(turn.leaveDuration)
             easing.type: Easing.InQuad
         }
         ScriptAction { script: turn.departed() }

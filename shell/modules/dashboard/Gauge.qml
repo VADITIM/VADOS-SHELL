@@ -95,7 +95,7 @@ Item {
                 color: gauge.glyphColor
 
                 Behavior on color {
-                    ColorAnimation { duration: Motion.stateDuration }
+                    ColorAnimation { duration: Motion.pace(Motion.stateDuration) }
                 }
             }
 

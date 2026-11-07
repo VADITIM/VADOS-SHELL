@@ -78,7 +78,7 @@ Item {
                     color: index === drive.page ? Appearance.color.text : Appearance.color.textFaint
 
                     Behavior on color {
-                        ColorAnimation { duration: Motion.stateDuration }
+                        ColorAnimation { duration: Motion.pace(Motion.stateDuration) }
                     }
                 }
             }

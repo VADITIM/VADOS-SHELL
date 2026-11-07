@@ -9,6 +9,7 @@ A Quickshell (Qt 6 / QML) desktop shell. **driftwm first**, compatible with Hypr
 - Quickshell QML; entry `shell/shell.qml`; config `shell.json` (live-reloaded).
 - Run on Linux: `qs -p ~/.config/vados/shell`.
 - Preview on Windows: the PySide6 harness with mock `qs.*` modules (auto-memory `qml-preview-harness`). Services that talk to a compositor are not previewable; syntax-check them with `C:\Users\vn\dependencies\pyside6\PySide6\qmlformat.exe <file>`.
+- Hard rules: `python tools/check-rules.py` (also runs as a Stop hook). Tests: `python tools/tests/run.py` (PySide6 Qt Quick tests). Both pass before every commit (`docs/rules/testing.md`).
 - Releases: on command.
 - Changelog: `CHANGELOGS.md` at the repo root, one section per version. On each push the user states when to bump the version and to what; then move `Unreleased` entries under the new version heading. Add entries to `Unreleased` as changes land.
 
@@ -19,6 +20,11 @@ A Quickshell (Qt 6 / QML) desktop shell. **driftwm first**, compatible with Hypr
 @docs/rules/animations.md
 @docs/rules/frontend.md
 @docs/rules/code-quality.md
+@docs/rules/interaction.md
+@docs/rules/security.md
+@docs/rules/state.md
+@docs/rules/performance.md
+@docs/rules/testing.md
 
 ## Keeping `.claude` current
 

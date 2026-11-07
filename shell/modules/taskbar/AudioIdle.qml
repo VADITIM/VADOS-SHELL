@@ -27,7 +27,7 @@ IdlePill {
 
             Behavior on reveal {
                 NumberAnimation {
-                    duration: audioIdle.isUnfolded ? Motion.pill.slide : Motion.pill.leaveElement
+                    duration: Motion.pace(audioIdle.isUnfolded ? Motion.pill.slide : Motion.pill.leaveElement)
                     easing.type: audioIdle.isUnfolded ? Easing.OutCubic : Easing.InCubic
                 }
             }

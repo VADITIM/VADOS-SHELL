@@ -21,7 +21,7 @@ Item {
 
     Behavior on mutation {
         NumberAnimation {
-            duration: Motion.search.mutate
+            duration: Motion.pace(Motion.search.mutate)
             easing.type: card.isSearching ? Easing.OutBack : Easing.OutCubic
         }
     }
@@ -50,9 +50,9 @@ Item {
 
     Behavior on bloom {
         SequentialAnimation {
-            PauseAnimation { duration: card.isNamed && frame.presence < 1 ? card.enterDelay : 0 }
+            PauseAnimation { duration: Motion.pace(card.isNamed && frame.presence < 1 ? card.enterDelay : 0) }
             NumberAnimation {
-                duration: card.isNamed ? Motion.search.nameGrow : Motion.search.nameShrink
+                duration: Motion.pace(card.isNamed ? Motion.search.nameGrow : Motion.search.nameShrink)
                 easing.type: card.isNamed ? Easing.OutBack : Easing.InQuad
             }
         }
@@ -81,7 +81,7 @@ Item {
             border.color: card.isSelected ? Appearance.color.accent : Appearance.color.hairline
 
             Behavior on border.color {
-                ColorAnimation { duration: Motion.hoverIn }
+                ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
             }
         }
 
@@ -213,7 +213,7 @@ Item {
                 font.bold: true
 
                 Behavior on color {
-                    ColorAnimation { duration: Motion.hoverIn }
+                    ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
                 }
             }
 

@@ -1,5 +1,11 @@
 # Quirks
 
+- **Never name a component `Drag`.** QtQuick's attached `Drag` type wins over a same-named file inside `qs.components` itself ("Drag is only available via attached properties"), while files importing `qs.components` later get the local one. The gesture ability is `Gesture` for that reason (2026-11-07).
+- **A `Scope` or `Singleton` must not declare `property var data`.** `data` is their default property; shadowing it sends every child (`FileView`, `Timer`) nowhere. `StateFile` calls its state `values`.
+- **`Config` must not bind to `Motion` at construction.** `Motion.isReduced` reads `Config`, so `Config`'s write timer takes `Motion.settings.write` when `setAccent` runs instead of in a binding, to avoid a singleton construction cycle.
+- **Singletons are created on first use**, so anything that must listen from startup is touched by `Shortcuts` (`Notifications`, `Attention`). The tests touch `Attention` the same way before sending notifications.
+- **Preview: the fake `Singleton` needs a default property** (`tools/preview/play.py`), or a state singleton with child `Timer`s fails to load.
+- **Tests: QML `XMLHttpRequest` cannot read files synchronously**, so the fake `FileView` reads and writes through a Python `Disk` singleton registered by `tools/tests/run.py`.
 - **Liquid characters must be underdamped** (`damping` below 1). `Liquid.swing` takes `√(1 − damping²)`; at 1 or above it is NaN and the body vanishes. Liquid always overshoots, so a non-overshooting motion is an easing, not a character.
 - **`Mutate`'s pop snaps the last 1.2 %.** The spring has not fully settled when the pop clock (`Motion.pill.pop`) ends, so `pop` reads 1 from then on; the snap is under half a pixel on a task pill.
 - **Characters are in seconds.** `Burst` and `Launch` convert their phase share to seconds (`openTime`, `spreadTime`) before calling the engine. Retuning `Motion.burst.spread` or `Motion.settings.pop` now changes how much of the spring plays, not the spring.

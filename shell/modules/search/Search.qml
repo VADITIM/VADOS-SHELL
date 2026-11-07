@@ -176,9 +176,9 @@ FocusScope {
 
     Behavior on dim {
         SequentialAnimation {
-            PauseAnimation { duration: search.isOpen ? 0 : Motion.burst.leaveHold }
+            PauseAnimation { duration: Motion.pace(search.isOpen ? 0 : Motion.burst.leaveHold) }
             NumberAnimation {
-                duration: search.isOpen ? Motion.search.dim : Motion.search.dimOut
+                duration: Motion.pace(search.isOpen ? Motion.search.dim : Motion.search.dimOut)
                 easing.type: search.isOpen ? Easing.OutQuad : Easing.InQuad
             }
         }
@@ -186,7 +186,7 @@ FocusScope {
 
     Behavior on bud {
         NumberAnimation {
-            duration: burst.isOpened ? Motion.search.bud : Motion.search.budOut
+            duration: Motion.pace(burst.isOpened ? Motion.search.bud : Motion.search.budOut)
             easing.type: burst.isOpened ? Easing.OutBack : Easing.InQuad
         }
     }

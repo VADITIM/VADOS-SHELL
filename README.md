@@ -100,7 +100,20 @@ Bars and rings are colour-coded in bands: blue, yellow, orange, red. GPU reading
 The activity bar (coming) will show what is happening now inside the taskbar. Its state and the notification service exist already:
 
 - `qs -p ~/.config/vados/shell ipc call activity toggle` (or the Hyprland global shortcut `vados:activity`), `... activity current`, `... activity pin notifications`.
+- `... ipc call overlay toggle <search|settings|dashboard>`, `... overlay close` (closes the topmost), `... overlay top`.
+- `... ipc call attention quiet true` (do not disturb), `... attention toggle`, `status`, `dismiss` (hides the current pop-up).
 - `... ipc call notifications enable` makes the shell your notification daemon, `... disable` gives it back; `status`, `count` and `clear` report and dismiss.
+
+## Network
+
+The shell reaches the network only from these files, and only while the feature that needs it is on screen:
+
+| File | Host | When |
+|---|---|---|
+| `services/Weather.qml` | api.open-meteo.com, geocoding-api.open-meteo.com; ipinfo.io when `weather.location` is empty | while the dashboard is open, at most every 15 minutes |
+| `services/Traffic.qml` | `ping` to 1.1.1.1 | while the dashboard is open |
+
+Nothing else talks to the network. `tools/check-rules.py` fails when another file does.
 
 ## Layout
 
@@ -132,8 +145,16 @@ shell.json        user config
 | `profile.name` | your name; its initial shows in the search circle when there is no picture | `""` |
 | `profile.picture` | path to your profile picture, shown in the search circle until you type | `""` |
 | `weather.location` | city for the dashboard weather, e.g. `"Berlin"`; `""` guesses from your IP | `""` |
+| `motion.reduced` | `true`: transitions are instant and idle bubbles and splashes stop; typed text and drags stay (also in settings, System tab)<br>`false`: full motion | `false` |
+| `attention.doNotDisturb` | `true`: only critical notifications may pop up; the rest wait in the activity bar (also in settings, System tab)<br>`false`: notifications may pop up unless a window is fullscreen | `false` |
 | `notifications.enabled` | `true`: the shell becomes the notification daemon (replaces mako, dunst, swaync); nothing shows them yet, so leave it off until the activity bar lands<br>`false`: your existing daemon keeps them | `false` |
 
 Changes apply live.
+
+## Development
+
+- `python tools/check-rules.py` checks the hard rules (also a Claude Code Stop hook).
+- `python tools/tests/run.py` runs the Qt Quick tests (needs PySide6): the liquid engine, overlays, gestures, attention, the burst, persistence and Desktop-mode recovery, and a check that the whole preview loads without a warning.
+- `python tools/preview/play.py` opens the playground (Windows paths; see `.claude/CLAUDE.md`).
 
 Agent-facing docs (architecture, decisions, quirks, roadmap) live in [.claude/](.claude/CLAUDE.md).

@@ -28,6 +28,9 @@ Item {
     property real exit: 0
     property real impact: 0
     property bool isLeaving: false
+    property real leaveSpread: 0
+    property real leaveImpact: 0
+    property int rewindDuration: 0
     property var leaveFrom: ({ x: 0, y: 0, width: 0, height: 0, left: 0, right: 0 })
 
     readonly property var look: Appearance.burst
@@ -35,8 +38,9 @@ Item {
     readonly property var character: Motion.liquid.burst
     readonly property real openTime: pace.spread * (1 - pace.impactShare) / 1000
     readonly property bool isActive: isShown || leave.running
+    readonly property bool canRewind: isLeaving && !isHandedOff && exit < pace.leaveShrink
     readonly property bool isOpened: isShown && !isLeaving && spread >= pace.openShare
-    readonly property bool isSplashing: isShown && !isLeaving && spread > pace.impactShare
+    readonly property bool isSplashing: !Motion.isReduced && isShown && !isLeaving && spread > pace.impactShare
 
     readonly property real halfHeight: formHeight / 2
     readonly property real farX: rootX + formWidth
@@ -485,7 +489,25 @@ Item {
         return { x: seedX + cosine * distance, y: seedY + sine * distance, size: look.spray * (1 - Math.max(caught, fade)) }
     }
 
+    function rewind() {
+        leave.stop()
+        rewindDuration = Math.round(Motion.burst.leave * exit)
+        rewinding.restart()
+    }
+
+    function reopen() {
+        isLeaving = false
+        merge = 1
+        spread = leaveSpread
+        impact = leaveImpact
+        resuming.restart()
+    }
+
     function start() {
+        if (canRewind) {
+            rewind()
+            return
+        }
         leave.stop()
         isLeaving = false
         merge = 0
@@ -497,6 +519,10 @@ Item {
 
     function finish() {
         enter.stop()
+        rewinding.stop()
+        resuming.stop()
+        leaveSpread = spread
+        leaveImpact = impact
         leaveWallShare = wallShare
         leaveFlare = flare
         leaveFrom = form
@@ -646,7 +672,7 @@ Item {
             target: burst
             property: "merge"
             to: 1
-            duration: Motion.burst.converge
+            duration: Motion.pace(Motion.burst.converge)
             easing.type: Easing.InQuad
         }
         ParallelAnimation {
@@ -654,30 +680,60 @@ Item {
                 target: burst
                 property: "spread"
                 to: 1
-                duration: Motion.burst.spread
+                duration: Motion.pace(Motion.burst.spread)
             }
             SequentialAnimation {
-                PauseAnimation { duration: Math.round(Motion.burst.spread * burst.meetShare) }
+                PauseAnimation { duration: Motion.pace(Math.round(Motion.burst.spread * burst.meetShare)) }
                 NumberAnimation {
                     target: burst
                     property: "impact"
                     to: 1
-                    duration: Motion.burst.impact
+                    duration: Motion.pace(Motion.burst.impact)
                 }
             }
         }
     }
 
     SequentialAnimation {
+        id: rewinding
+
+        NumberAnimation {
+            target: burst
+            property: "exit"
+            to: 0
+            duration: Motion.pace(burst.rewindDuration)
+            easing.type: Easing.OutCubic
+        }
+        ScriptAction { script: burst.reopen() }
+    }
+
+    ParallelAnimation {
+        id: resuming
+
+        NumberAnimation {
+            target: burst
+            property: "spread"
+            to: 1
+            duration: Motion.pace(Math.round(Motion.burst.spread * (1 - burst.leaveSpread)))
+        }
+        NumberAnimation {
+            target: burst
+            property: "impact"
+            to: 1
+            duration: Motion.pace(Math.round(Motion.burst.impact * (1 - burst.leaveImpact)))
+        }
+    }
+
+    SequentialAnimation {
         id: leave
 
-        PauseAnimation { duration: Motion.burst.leaveHold }
+        PauseAnimation { duration: Motion.pace(Motion.burst.leaveHold) }
         ScriptAction { script: burst.landed() }
         NumberAnimation {
             target: burst
             property: "exit"
             to: 1
-            duration: Motion.burst.leave
+            duration: Motion.pace(Motion.burst.leave)
         }
     }
 }

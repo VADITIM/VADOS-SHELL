@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11-07 (engines and enforced hard rules)
+
+- **All four engines and the rules at once, enforced by a checker** (user: introduce all of it and enforce these hard rules; a polished desktop like Caelestia, but thought further). Rules that can be checked mechanically are in `tools/check-rules.py` and run as a Stop hook; the rest are marked as review rules in `docs/rules/`. A Stop hook rather than a pre-commit hook, because the user commits from Windows and the hook already runs for every agent turn.
+- **Overlay engine replaces `Visibilities`**, not a wrapper around it. The per-overlay functions are gone; overlays are keys in `Overlays.kinds` on layers. It fixed two known issues on the way: switching overlays gathered an empty taskbar (now the first gather's parts are kept), and two leaving overlays overwrote each other's ball (now one entry per overlay). It also fixed one nobody had hit: the taskbar on screen A never came back when an overlay opened on screen B (`awayScreens` instead of one `taskbarAwayScreen`).
+- **`OverlayWindow` base instead of a registry of window instances.** Windows stay thin layer-shell hosts per screen, as the architecture rules want; the base carries only what every overlay repeated (anchors, layer, namespace, keyboard, the `Overlays` bridges).
+- **Gesture: one ability, release decides.** Built on `MouseArea` so hosts keep `onPressed` for hit tests (the task carry rejects presses off a task). `tapped` replaces `clicked` because `MouseArea.clicked` also fires after a drag; that is why `FoldDrag` needed a `hasFolded` flag before.
+- **Attention is policy in `state/`, not in the notification service.** The service owns the D-Bus role; whether to interrupt depends on the compositor (fullscreen), the user's quiet setting and later the lock screen, which a service should not combine.
+- **Persistence: `StateFile` as a reusable type, not one store singleton.** Each feature owns its file and its version, so a corrupt clipboard history can never take the launch history with it.
+- **Reduced motion is instant, not slower** (V/AS `animation/08-degradation.md`): `Motion.pace` returns 0. A shortened time scale would make idle motion shake. Do-not-disturb and reduced motion got a SYSTEM tab in settings; taking over the notification daemon stays IPC only, because turning it on replaces the user's daemon.
+- **Tests run in Qt Quick Test through PySide6**, on the same mock tree as the preview, with fakes for the Quickshell types an engine needs. Writing them found three bugs the preview alone hid: `Drag` colliding with QtQuick's type, `StateFile.data` shadowing `Scope.data`, and `Jolt` missing its config import.
+
 ## 2026-11-06 (liquid engine, activity state, notifications)
 
 - **One liquid engine, not physics per feature** (user: one reusable system with configurable parameters, so VAD/OS has one physical identity). The material, shapes and the burst were already shared; the physics were four hand-written oscillators with their own names (`Burst` bounce and impact, `Launch` wave, `Carried` springs). They are now characters in `Motion.liquid` run through `utils/Liquid.js`.
@@ -66,7 +77,7 @@
 - **The root side is a `Lobe`, not an `EdgeFuse` neck** (user: the whole left side merges with the edge like the search curve). The neck tokens are gone.
 - **The explosion is a damped spring, not a clipped circle with cubic ease** (user: more punch, faster, bouncing the container out of the taskbar and back). The height leads the width so it stands up first, then the width overshoots and snaps back; wall surges are replaced by the spring's own overshoot. Spread 720 → 560 ms, converge 300 → 240 ms.
 - **The leave hands the taskbar back at its start** (user: the dashboard becomes a smaller circle and moves off the screen while the taskbar appears in the same timeline), not after the ball has landed.
-- **The leaving ball crosses into the taskbar's liquid** (user: it touches pills on the way out and they must react). Windows cannot goo across layers, so the ball's geometry goes through `Visibilities.visitors` and the taskbar draws it for the exit slide; pills swell by closeness. The hand-off is skipped for the `bare` style, where the taskbar's liquid is invisible and the ball would vanish. Not verified in the preview.
+- **The leaving ball crosses into the taskbar's liquid** (user: it touches pills on the way out and they must react). Windows cannot goo across layers, so the ball's geometry goes through `Visibilities.visitors` (now `Overlays.visitors`) and the taskbar draws it for the exit slide; pills swell by closeness. The hand-off is skipped for the `bare` style, where the taskbar's liquid is invisible and the ball would vanish. Not verified in the preview.
 
 ## 2026-11-05 (dashboard burst from the edge)
 

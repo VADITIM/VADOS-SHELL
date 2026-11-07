@@ -63,7 +63,7 @@ FocusScope {
 
     Behavior on dim {
         NumberAnimation {
-            duration: dashboard.isOpen ? Motion.dashboard.dim : Motion.dashboard.dimOut
+            duration: Motion.pace(dashboard.isOpen ? Motion.dashboard.dim : Motion.dashboard.dimOut)
             easing.type: dashboard.isOpen ? Easing.OutQuad : Easing.InQuad
         }
     }

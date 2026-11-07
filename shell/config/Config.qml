@@ -23,6 +23,7 @@ Singleton {
 
     function setAccent(color) {
         adapter.appearance.accent = color
+        pendingWrite.interval = Motion.settings.write
         pendingWrite.restart()
     }
 
@@ -33,6 +34,16 @@ Singleton {
 
     function setWeatherLocation(location) {
         adapter.weather.location = location
+        file.writeAdapter()
+    }
+
+    function setReducedMotion(isReduced) {
+        adapter.motion.reduced = isReduced
+        file.writeAdapter()
+    }
+
+    function setDoNotDisturb(isQuiet) {
+        adapter.attention.doNotDisturb = isQuiet
         file.writeAdapter()
     }
 
@@ -60,7 +71,6 @@ Singleton {
 
     Timer {
         id: pendingWrite
-        interval: Motion.settings.write
         onTriggered: file.writeAdapter()
     }
 
@@ -96,6 +106,12 @@ Singleton {
             }
             property JsonObject notifications: JsonObject {
                 property bool enabled: false
+            }
+            property JsonObject motion: JsonObject {
+                property bool reduced: false
+            }
+            property JsonObject attention: JsonObject {
+                property bool doNotDisturb: false
             }
         }
     }

@@ -1,0 +1,10 @@
+# Interaction rules
+
+Enforced by `tools/check-rules.py` where marked ✓; the rest is checked in review.
+
+- **Every full-screen surface is an overlay** ✓. It is an `OverlayWindow` (`windows/OverlayWindow.qml`) with a key in `Overlays.kinds` (`state/Overlays.qml`). Overlays on the same layer exclude each other; opening one closes the others on its layer or below. Nothing else sets `WlrLayershell.keyboardFocus` or the overlay layer.
+- **One keyboard owner.** The topmost overlay (`Overlays.top`) owns the keyboard; Escape closes the topmost first; closing hands focus back to the window that had it (the compositor does this once the exclusive layer lets go). Every overlay is fully usable from the keyboard: arrows, Tab, Enter, Escape.
+- **The taskbar is gathered and returned only by `Overlays`.** Switching overlays keeps the parts of the first gather; the taskbar comes back only when no overlay is left on its screen.
+- **Every drag, pull, swipe or fling is a `Gesture`** ✓ (`components/Gesture.qml`) or a type built on it (`FoldDrag`). The finger drives; release only decides (`thrown` carries the velocity). Taps are `onTapped`, never `onClicked`, which also fires after a drag ✓. No hand-written press tracking in `onPositionChanged` ✓.
+- **Everything is interruptible.** Any ability can be re-triggered mid-flight and continues from where it is: `Mutate` keeps its pop, `Burst` rewinds a leave. Nothing visibly snaps back to zero.
+- **Only `Attention` decides what may interrupt** ✓ (`state/Attention.qml`). Critical notifications always peek; do-not-disturb holds the rest; a fullscreen window holds normal ones; low ones never peek; arrivals within `Motion.attention.batch` share one peek; a peek lasts the notification's own timeout or `Motion.attention.peek`, and a critical one until dismissed. Held notifications wait in the activity bar, never lost.

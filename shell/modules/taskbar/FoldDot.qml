@@ -24,14 +24,14 @@ Item {
 
     Behavior on room {
         NumberAnimation {
-            duration: Motion.stateDuration
+            duration: Motion.pace(Motion.stateDuration)
             easing.type: Easing.InOutCubic
         }
     }
 
     Behavior on swell {
         NumberAnimation {
-            duration: Motion.stateDuration
+            duration: Motion.pace(Motion.stateDuration)
             easing.type: Easing.OutBack
         }
     }
@@ -99,7 +99,7 @@ Item {
                     color: area.containsMouse ? Appearance.color.accent : Appearance.color.textMuted
 
                     Behavior on color {
-                        ColorAnimation { duration: Motion.hoverIn }
+                        ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
                     }
                 }
             }
@@ -112,9 +112,6 @@ Item {
         width: dot.width
         height: dot.height
         enabled: dot.isShown
-        onClicked: {
-            if (!hasFolded)
-                dot.host.foldIdles(false)
-        }
+        onTapped: dot.host.foldIdles(false)
     }
 }

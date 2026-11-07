@@ -40,7 +40,7 @@ Item {
     Behavior on room {
         enabled: !task.isRoomSnapping
         NumberAnimation {
-            duration: Motion.stateDuration
+            duration: Motion.pace(Motion.stateDuration)
             easing.type: Easing.InOutCubic
         }
     }
@@ -88,7 +88,7 @@ Item {
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: task.isHovered ? Motion.hoverIn : Motion.hoverOut
+                        duration: Motion.pace(task.isHovered ? Motion.hoverIn : Motion.hoverOut)
                         easing.type: Easing.OutQuad
                     }
                 }
@@ -133,7 +133,7 @@ Item {
 
                 Behavior on height {
                     NumberAnimation {
-                        duration: Motion.stateDuration
+                        duration: Motion.pace(Motion.stateDuration)
                         easing.type: Easing.OutBack
                     }
                 }

@@ -1,14 +1,12 @@
 pragma Singleton
 import QtQuick
 import Quickshell
-import Quickshell.Io
 import "../utils/Fuzzy.js" as Fuzzy
 
 Singleton {
     id: apps
 
-    readonly property string cacheDirectory: Quickshell.env("HOME") + "/.cache/vados"
-    readonly property var usage: adapter.usage || {}
+    readonly property var usage: store.values.usage || {}
     readonly property var all: {
         const list = []
         for (const entry of DesktopEntries.applications.values) {
@@ -47,20 +45,12 @@ Singleton {
         app.entry.execute()
         const next = Object.assign({}, usage)
         next[appId] = { count: (next[appId]?.count ?? 0) + 1, last: Date.now() }
-        adapter.usage = next
-        file.writeAdapter()
+        store.update(Object.assign({}, store.values, { usage: next }))
     }
 
-    Component.onCompleted: Quickshell.execDetached(["mkdir", "-p", cacheDirectory])
-
-    FileView {
-        id: file
-        path: apps.cacheDirectory + "/apps.json"
-        printErrors: false
-
-        JsonAdapter {
-            id: adapter
-            property var usage: ({})
-        }
+    StateFile {
+        id: store
+        name: "apps"
+        defaults: ({ usage: {} })
     }
 }

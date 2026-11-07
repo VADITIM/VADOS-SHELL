@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.config
+import "../utils/Geometry.js" as Geometry
 
 Column {
     id: picker
@@ -48,7 +49,7 @@ Column {
     }
 
     function slideTo(pointX) {
-        value = Math.max(0, Math.min(1, pointX / slider.width))
+        value = Geometry.clampUnit(pointX / slider.width)
         emit()
     }
 

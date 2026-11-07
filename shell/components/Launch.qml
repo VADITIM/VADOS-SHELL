@@ -1,6 +1,7 @@
 import QtQuick
 import qs.config
 import "../utils/Liquid.js" as Liquid
+import "../utils/Geometry.js" as Geometry
 
 Item {
     id: launch
@@ -28,12 +29,13 @@ Item {
     property real collapse: 0
     property real back: 0
     property real body: 1
-    property bool isLeaving: false
-    property bool isOpened: false
     property int retractDuration: 0
     property var leaveFrom: ({ x: 0, y: 0, width: 0, height: 0, radius: 0, rotation: 0 })
 
-    readonly property bool isActive: isShown || leave.running
+    readonly property bool isActive: lifecycle.isPresent
+    readonly property bool isLeaving: lifecycle.isLeaving
+    readonly property bool isOpened: lifecycle.isShowing && !isLeaving && pop >= pace.contentShare
+    readonly property string phase: lifecycle.phase
     readonly property bool hasMerged: isShown && !isLeaving && merge >= 1
     readonly property bool isBudOut: isOpened && extend > 0.6
     readonly property real seedX: seed.x + seed.width / 2
@@ -55,10 +57,6 @@ Item {
     readonly property real formHeight: form.height * body
 
     signal landed()
-
-    function clampUnit(value) {
-        return Math.max(0, Math.min(1, value))
-    }
 
     function capsule(centerX, centerY, size, stretch, heading) {
         const along = size * (1 + stretch)
@@ -103,7 +101,7 @@ Item {
             const point = flightPoint(flight)
             return capsule(point.x, point.y, look.ball, stretch, heading)
         }
-        const gathered = merge * merge * (3 - 2 * merge)
+        const gathered = Geometry.smooth(merge)
         return capsule(seedX, seedY, seed.width + (look.ball - seed.width) * gathered, 0, heading)
     }
 
@@ -144,15 +142,13 @@ Item {
         const angle = 2 * Math.PI * (index + 0.5) / look.splashCount
         const edge = Math.min(look.width / 2 / Math.max(0.001, Math.abs(Math.cos(angle))), look.height / 2 / Math.max(0.001, Math.abs(Math.sin(angle))))
         const opening = 1 - Math.pow(1 - Math.min(1, spread / pace.expandShare), 3)
-        const settle = clampUnit((spread - pace.expandShare) / (pace.splashShare - pace.expandShare))
+        const settle = Geometry.clampUnit((spread - pace.expandShare) / (pace.splashShare - pace.expandShare))
         const distance = (popStart / 2 + (edge - popStart / 2) * opening) * (1 + (look.splashReach - 1) * (1 - settle))
         return { x: panelCenterX + Math.cos(angle) * distance, y: panelCenterY + Math.sin(angle) * distance, size: look.splash * (1 - settle) }
     }
 
-    function start() {
+    function prepare() {
         leave.stop()
-        isLeaving = false
-        isOpened = false
         merge = 0
         shoot = 0
         pop = 0
@@ -165,19 +161,49 @@ Item {
         enter.restart()
     }
 
-    function finish() {
-        enter.stop()
+    function holdLeave() {
         leaveFrom = form
         retractDuration = bud > 0 ? pace.retract : 0
-        isOpened = false
-        isLeaving = true
+    }
+
+    function startLeave() {
+        enter.stop()
         collapse = 0
         back = 0
         leave.restart()
     }
 
-    onIsShownChanged: isShown ? start() : finish()
-    Component.onCompleted: if (isShown) start()
+    function settle(phase) {
+        enter.stop()
+        leave.stop()
+        if (phase === "active") {
+            merge = 1
+            shoot = 1
+            pop = 1
+            bud = 1
+            extend = 1
+            material = 1
+        }
+    }
+
+    property Lifecycle lifecycle: Lifecycle {
+        name: "launch"
+        onMoving: (from, to, event) => {
+            if (to === "exiting")
+                launch.holdLeave()
+        }
+        onMoved: (from, to, event) => {
+            if (event === "settle")
+                launch.settle(to)
+            else if (to === "preparing")
+                launch.prepare()
+            else if (to === "exiting")
+                launch.startLeave()
+        }
+    }
+
+    onIsShownChanged: lifecycle.send(isShown ? "show" : "hide")
+    Component.onCompleted: if (isShown) lifecycle.send("show")
 
     anchors.fill: parent
 
@@ -259,6 +285,7 @@ Item {
                 easing.type: Easing.OutQuad
             }
         }
+        ScriptAction { script: launch.lifecycle.send("prepared") }
         NumberAnimation {
             target: launch
             property: "shoot"
@@ -271,7 +298,6 @@ Item {
             to: launch.pace.contentShare
             duration: Motion.pace(launch.pace.pop * launch.pace.contentShare)
         }
-        ScriptAction { script: launch.isOpened = true }
         ParallelAnimation {
             NumberAnimation {
                 target: launch
@@ -297,6 +323,7 @@ Item {
                 }
             }
         }
+        ScriptAction { script: launch.lifecycle.send("entered") }
     }
 
     SequentialAnimation {
@@ -340,5 +367,6 @@ Item {
             duration: Motion.pace(launch.pace.handBack)
             easing.type: Easing.InQuad
         }
+        ScriptAction { script: launch.lifecycle.send("exited") }
     }
 }

@@ -1,6 +1,31 @@
 # Architecture
 
-Layers: `config → services → components → modules → windows → shell.qml`, plus `state/` (sideways) and `keybinds/` (state flips). Rules in `rules/architecture.md`.
+Layers: `config → services → components → modules → windows → shell.qml`, plus `state/` (sideways) and `keybinds/` (state flips). Rules in `rules/architecture.md`. The product direction and its phases are `direction.md` (user, 2026-11-07).
+
+## Engine map
+
+How the subsystems of `direction.md` land in this tree:
+
+| Direction | Here |
+|---|---|
+| Experience layer | `modules/` (taskbar, search, dashboard, settings), hosted by `windows/` |
+| Liquid interaction engine: orchestration, interruption | `components/Lifecycle.qml` + `utils/Phases.js` (transition phases), `state/Overlays.qml` (which surface is up), `components/Gesture.qml` (gestures and velocity) |
+| Motion system | `config/Motion.qml` (tokens, `pace`), `utils/Liquid.js` (springs) |
+| Geometry system | `utils/Geometry.js` (clamps, easing, mixing, splines), `Compositor.toScreen` (backend to screen coordinates) |
+| State machine | `Lifecycle` per surface; `Overlays` for surfaces against each other; `Attention` for interruptions by notifications |
+| Rendering system | `components/LiquidLayer.qml` and the liquid primitives (`LiquidShape`, `LiquidBridge`, `EdgeFuse`, `Lobe`) |
+| Platform adapters | `services/Compositor.qml` with `capabilities` and `level` (`utils/Platform.js`) |
+| System services | `services/` |
+
+## Transition lifecycle
+
+`components/Lifecycle.qml` runs one surface's phases: `idle → preparing → entering → active → exiting → idle`, with `recovering` for a reopen during the leave. The moves are a pure table in `utils/Phases.js` (`next(phase, event, canRecover)`); an event a phase does not accept changes nothing, so rapid or out-of-order input can never reach an invalid phase.
+
+- The host sends `show` and `hide` (from `isShown`) and its animations send `prepared`, `entered`, `recovered` and `exited` from a final `ScriptAction`, so an animation that was stopped never reports.
+- `show` during `exiting` is an interruption (`interrupted`): it goes to `recovering` when the host can rewind (`canRecover`), else back to `preparing`.
+- `moving(from, to, event)` fires before the phase changes (the host captures its leave form there, while it still reads the old phase); `moved` fires after it (the host starts animations there).
+- **Recovery**: a watchdog (`Motion.lifecycle.stuck`, longer than any real phase) runs only while a phase is moving. If it fires it logs `vados: <name> stuck in <phase>` and sends `settle`: entering phases land on `active`, `exiting` on `idle`, and the host snaps its values to that end. No surface can stay orphaned half-open.
+- Hosts: `Burst` (dashboard, search; recovers by rewinding) and `Launch` (settings; restarts). Their `isActive`, `isLeaving` and `phase` read the lifecycle.
 
 ## Compositor boundary
 
@@ -19,6 +44,8 @@ It publishes:
 - the `canvasChanged` signal
 
 Writes go out through `send([...])` / `action("spec")` as detached `driftwm msg` calls.
+
+**Capabilities** (`utils/Platform.js`): features ask `Compositor.capabilities` (`activeWindow`, `windowGeometry`, `windowControl`, `freeCanvas`, `workspaces`, `layerShell`) and never which compositor runs. `Compositor.level` is `core` (generic), `extended` (Hyprland: geometry, no window control) or `native` (driftwm: free canvas and control, so Desktop mode). `Confinement.canConfine` is `freeCanvas && windowControl`.
 
 ## Taskbar hiding
 
@@ -129,7 +156,7 @@ Entry points before the bar exists: the Hyprland shortcut `vados:activity`, IPC 
 
 ## Interruptions
 
-`Mutate` re-enters from its current pop (`holdPop`). `Burst` reopened during its leave, before the hand-off (`canRewind`), rewinds the leave (`rewinding`, exit back to 0 over the time already spent) and resumes the enter from the spread and impact it had reached (`resuming`), instead of converging from an empty ball again.
+Surfaces go through their `Lifecycle` (§ Transition lifecycle). `Mutate` re-enters from its current pop (`holdPop`). `Burst` reopened during its leave, before the hand-off (`canRewind`), rewinds the leave (`rewinding`, exit back to 0 over the time already spent) and resumes the enter from the spread and impact it had reached (`resuming`), instead of converging from an empty ball again.
 
 ## Settings
 

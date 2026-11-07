@@ -3,6 +3,7 @@ import qs.config
 import qs.services
 import qs.components
 import "../../utils/Liquid.js" as Liquid
+import "../../utils/Geometry.js" as Geometry
 
 Item {
     id: shell
@@ -59,7 +60,7 @@ Item {
             return 0
         const awayX = Math.max(0, Math.abs(visitor.x - centerX) - visitor.width / 2 - halfWidth)
         const awayY = Math.max(0, Math.abs(visitor.y - (top + bottom) / 2) - visitor.height / 2 - (bottom - top) / 2)
-        return Math.max(0, Math.min(1, 1 - Math.hypot(awayX, awayY) / Appearance.taskbar.visitReach))
+        return Geometry.clampUnit(1 - Math.hypot(awayX, awayY) / Appearance.taskbar.visitReach)
     }
 
     function liquidParts() {
@@ -257,11 +258,11 @@ Item {
         if (!carried.isCarried)
             return
         const appId = carried.appId
-        const reach = nearest ? Math.max(0, Math.min(1, 1 - nearest.gap / Motion.carry.pinch)) : 0
+        const reach = nearest ? Geometry.clampUnit(1 - nearest.gap / Motion.carry.pinch) : 0
         const target = nearest && nearest.gap < Motion.carry.pinch ? nearest.pill : null
         if (target !== carryTarget && carryTarget)
             carryTarget.freezeGhost(appId)
-        carryCloseness = reach * reach * (3 - 2 * reach)
+        carryCloseness = Geometry.smooth(reach)
         const isNowNecked = Liquid.isMerged(isNecked, reach, Motion.liquid.neck)
         if (isNowNecked !== isNecked) {
             isNecked = isNowNecked
@@ -541,7 +542,7 @@ Item {
     LiquidBridge {
         id: neck
         readonly property var line: shell.neckLine
-        readonly property real share: line ? Math.max(0, Math.min(1, 1 - line.gap / Motion.carry.pinch)) : 0
+        readonly property real share: line ? Geometry.clampUnit(1 - line.gap / Motion.carry.pinch) : 0
         parent: shell.liquidShapes
         fromX: line ? line.fromX : 0
         fromY: line ? line.fromY : 0
@@ -549,7 +550,7 @@ Item {
         toX: carried.meniscusX
         toY: carried.meniscusY
         toRadius: carried.size / 2 * carried.dropletScale
-        readonly property real hold: Math.max(0, Math.min(1, (share - Motion.liquid.neck.separate) / (1 - Motion.liquid.neck.separate)))
+        readonly property real hold: Geometry.clampUnit((share - Motion.liquid.neck.separate) / (1 - Motion.liquid.neck.separate))
         spread: shell.isNecked || carried.isLanding ? Motion.carry.spread * (Motion.carry.snapSpread + (1 - Motion.carry.snapSpread) * Math.sqrt(hold)) : 0
         handle: Motion.carry.handle
     }

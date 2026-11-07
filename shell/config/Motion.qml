@@ -211,6 +211,10 @@ Singleton {
         readonly property real nameHeightLead: 2.5
     }
 
+    readonly property QtObject lifecycle: QtObject {
+        readonly property int stuck: 3000
+    }
+
     readonly property QtObject store: QtObject {
         readonly property int write: 400
     }

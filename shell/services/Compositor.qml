@@ -4,6 +4,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Wayland
+import "../utils/Platform.js" as Platform
 
 Singleton {
     id: compositor
@@ -11,6 +12,8 @@ Singleton {
     readonly property bool isHyprland: Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") !== null && Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") !== ""
     property bool isDriftwm: false
     readonly property string name: isHyprland ? "hyprland" : isDriftwm ? "driftwm" : "generic"
+    readonly property var capabilities: Platform.capabilitiesOf(name)
+    readonly property string level: Platform.levelOf(capabilities)
 
     property var canvasState: null
     property var activeWindow: null

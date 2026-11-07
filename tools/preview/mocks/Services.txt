@@ -143,10 +143,13 @@ QtObject {
 }
 Compositor|pragma Singleton
 import QtQuick
+import "../utils/Platform.js" as Platform
 QtObject {
     property bool isHyprland: false
     property bool isDriftwm: false
-    property string name: "generic"
+    readonly property string name: isHyprland ? "hyprland" : isDriftwm ? "driftwm" : "generic"
+    readonly property var capabilities: Platform.capabilitiesOf(name)
+    readonly property string level: Platform.levelOf(capabilities)
     property var canvasState: null
     property var activeWindow: null
     property string focusedScreen: "play"

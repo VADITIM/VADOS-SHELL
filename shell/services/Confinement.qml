@@ -7,7 +7,7 @@ Singleton {
     id: confinement
 
     readonly property string mode: Config.data.desktop.mode
-    readonly property bool canConfine: Compositor.isDriftwm
+    readonly property bool canConfine: Compositor.capabilities.freeCanvas && Compositor.capabilities.windowControl
     readonly property bool isConfined: canConfine && mode === "desktop"
     readonly property var layout: Appearance.desktop
 

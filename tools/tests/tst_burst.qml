@@ -42,6 +42,29 @@ Item {
             verify(burst.isOpened)
         }
 
+        function test_rapidTogglingEndsInAValidState() {
+            for (let step = 0; step < 9; step++) {
+                burst.isShown = !burst.isShown
+                wait(step * 23)
+            }
+            verify(burst.isShown)
+            tryCompare(burst, "phase", "active", 3000)
+            verify(burst.isOpened)
+            compare(burst.exit, 0)
+            burst.isShown = false
+            tryCompare(burst, "phase", "idle", 3000)
+            verify(!burst.isActive, "no orphaned surface after the leave")
+        }
+
+        function test_stuckBurstSettles() {
+            burst.lifecycle.watchdog.interval = 40
+            burst.isShown = true
+            ignoreWarning(new RegExp("vados: burst stuck in"))
+            tryCompare(burst, "phase", "active", 1000)
+            compare(burst.spread, 1)
+            burst.lifecycle.watchdog.interval = Motion.lifecycle.stuck
+        }
+
         function test_reducedMotionOpensAtOnce() {
             Config.setReducedMotion(true)
             burst.isShown = true

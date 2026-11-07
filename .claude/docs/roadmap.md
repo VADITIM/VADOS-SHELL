@@ -1,6 +1,23 @@
 # Roadmap
 
-Ordered. Shipped items move to `decisions.md`. Mirrored to the Obsidian vault "VADOS SHELL", note `Shell.md`.
+Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, then one complete vertical slice, then daily-driver features, compositor support and productization. Progress is measured by the foundations, not the feature count. Shipped items move to `decisions.md`. Mirrored to the Obsidian vault "VADOS SHELL", note `Shell.md`.
+
+## Phase 1: engine integrity (now)
+
+Exit: transitions can be created, interrupted, reversed and chained without inconsistent visual or logical states.
+
+- Shipped: liquid engine, motion tokens and reduced motion, overlay engine, gesture engine, transition lifecycle with recovery, shared geometry, compositor capabilities, persistence, enforced rules and tests.
+- Left: join overlay state and lifecycles; geometry that follows screen changes mid-transition; a measured frame budget in the preview (`known-issues.md`).
+
+## Phase 2: vertical slice (taskbar and search)
+
+Exit: search works as a finished daily-use feature, not an animation demonstration.
+
+- Taskbar-to-search morph and return, keyboard and pointer, rapid input, error and recovery behaviour; then **verify on driftwm** (item 3 below).
+
+## Phase 3 onwards: daily driver, compositors, productization
+
+The numbered list below is the daily-driver backlog (phase 3: settings, notifications, controls, clipboard, tray, multi-monitor). Phase 4 completes the driftwm adapter and other backends on `Compositor.capabilities`; phase 5 is installation, config validation and migration, logging and diagnostics.
 
 ## Next
 

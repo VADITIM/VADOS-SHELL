@@ -14,6 +14,11 @@ ENGINE_TESTS = {
     "shell/components/Burst.qml": "tst_burst.qml",
     "shell/services/StateFile.qml": "tst_statefile.qml",
     "shell/services/Confinement.qml": "tst_confinement.qml",
+    "shell/utils/Phases.js": "tst_lifecycle.qml",
+    "shell/components/Lifecycle.qml": "tst_lifecycle.qml",
+    "shell/components/Launch.qml": "tst_launch.qml",
+    "shell/utils/Geometry.js": "tst_geometry.qml",
+    "shell/utils/Platform.js": "tst_geometry.qml",
 }
 
 TIMERS_NOT_MOTION = {"Motion.reveal.dwell"}
@@ -72,6 +77,11 @@ def check(files):
     only_in("compositor", r"^import Quickshell\.Hyprland|hyprctl|\"driftwm\"",
             {"shell/services/Compositor.qml", "shell/keybinds/Shortcuts.qml"},
             "window-manager access goes through services/Compositor.qml (rules/compositor.md)")
+    only_in("compositor", r"Compositor\.(isDriftwm|isHyprland|name)\b", {"shell/services/Compositor.qml"},
+            "features ask Compositor.capabilities, never which compositor runs (rules/compositor.md)")
+    only_in("geometry", r"function (clampUnit|smooth|mix|splineAt|traceSpline)\(|(\w+) \* \2 \* \(3 - 2 \* \2\)|Math\.max\(0, Math\.min\(1,",
+            {"shell/utils/Geometry.js"},
+            "shared geometry lives in utils/Geometry.js (rules/animations.md)", scope="shell/components/")
     only_in("modules", r"^import Quickshell|\bConfig\.|^import qs\.modules", set(),
             "modules take settings as properties and never import Quickshell, Config or another module (rules/architecture.md)",
             scope="shell/modules/")
@@ -93,6 +103,10 @@ def check(files):
             "user settings are written only by config/Config.qml (rules/architecture.md)")
     only_in("attention", r"function onReceived\(", {"shell/state/Attention.qml"},
             "only state/Attention.qml decides whether a notification may interrupt (rules/interaction.md)")
+
+    for path, text in files:
+        if path.startswith("shell/components/") and re.search(r"^\s*id: leave$", text, re.M) and "Lifecycle {" not in text:
+            flag("lifecycle", path, 1, "a surface with an enter and a leave runs its phases through a Lifecycle (rules/interaction.md)")
 
     gesture_types = {"Gesture"} | {
         os.path.basename(path)[:-4] for path, text in files

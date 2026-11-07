@@ -1,5 +1,9 @@
 # Quirks
 
+- **A `Lifecycle` host captures in `moving`, starts in `moved`.** Reading `form` after the phase changed already gives the leave form, and a reduced-motion animation started before the phase changed reports to the old phase and is lost (2026-11-07).
+- **Never stop an animation from its own final `ScriptAction`.** The lifecycle hosts only stop animations on `settle`, never on `entered` or `exited`.
+- **Never name a component `Transition` or `State`** (like `Drag`): QtQuick types win inside `qs.components`. The lifecycle component is `Lifecycle`, and inside it the move table is imported as `Phases`.
+
 - **Never name a component `Drag`.** QtQuick's attached `Drag` type wins over a same-named file inside `qs.components` itself ("Drag is only available via attached properties"), while files importing `qs.components` later get the local one. The gesture ability is `Gesture` for that reason (2026-11-07).
 - **A `Scope` or `Singleton` must not declare `property var data`.** `data` is their default property; shadowing it sends every child (`FileView`, `Timer`) nowhere. `StateFile` calls its state `values`.
 - **`Config` must not bind to `Motion` at construction.** `Motion.isReduced` reads `Config`, so `Config`'s write timer takes `Motion.settings.write` when `setAccent` runs instead of in a binding, to avoid a singleton construction cycle.

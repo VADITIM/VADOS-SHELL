@@ -4,6 +4,9 @@ Newest version first. The version and its number are set by the user on each pus
 
 ## Unreleased
 
+- Transition lifecycle (`components/Lifecycle.qml`, `utils/Phases.js`): the dashboard, search and settings bodies run explicit phases (idle, preparing, entering, active, exiting, recovering). Rapid toggling always ends in a valid state, and a transition stuck longer than 3 s settles and logs instead of leaving a half-open surface.
+- Shared geometry (`utils/Geometry.js`) replaces the clamps, smoothsteps and splines copied across components.
+- Compositor capabilities (`Compositor.capabilities`, `Compositor.level`): features ask what the compositor can do instead of which one it is; Desktop mode needs a free canvas and window control.
 - Overlay engine (`state/Overlays.qml`, `windows/OverlayWindow.qml`) replaces `Visibilities`: one registry, layer exclusion, one keyboard owner, Escape closes the topmost. Fixes the empty taskbar when switching overlays, leaving balls overwriting each other, and the taskbar not returning on one screen when an overlay opened on another. IPC target `overlay`.
 - Gesture engine (`components/Gesture.qml`): the fold drag, the edge pull and the task carry run on it.
 - Attention engine (`state/Attention.qml`): which notifications may pop up (critical always, do-not-disturb, fullscreen, batching, own timeouts). `attention.doNotDisturb` in `shell.json`, IPC target `attention`.

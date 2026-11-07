@@ -32,6 +32,7 @@
 | `shell/components/Launch.qml` | Ability: the settings body; taskbar merges into the gear, the ball flies to the centre and pops into the panel with trail, splashes and tab bar bud; its own leave |
 | `shell/components/Lobe.qml` | Cubic `Shape` flaring into the screen edge: the root side of a `Burst` body and of the handed-off leaving ball |
 | `shell/components/Gesture.qml` | **Gesture engine**: drag ability with threshold, travel, velocity, `moved` / `crossed` / `thrown` / `tapped` / `ended` |
+| `shell/components/Lifecycle.qml` | **Transition lifecycle**: a surface's phases (`phase`, `send(event)`, `moving` / `moved` / `interrupted`), with the stuck-phase watchdog |
 | `shell/components/Mutate.qml` | Ability: pill pop and spread enter, own leave, inner reveal cue (task pills, idle circles) |
 | `shell/components/ColorWheel.qml` | Hue/saturation wheel, value slider, swatch and hex field (port of vados-notes `ColorPanel`) |
 | `shell/components/Upright.qml` | Counter-flip transform that keeps text and icons readable inside the mirrored taskbar |
@@ -45,17 +46,22 @@
 | `shell/windows/` | `TaskbarWindow`; `OverlayWindow` (the overlay base: layer, namespace, keyboard, bridges to `Overlays`) and the `SearchWindow`, `SettingsWindow`, `DashboardWindow` built on it |
 | `shell/keybinds/Shortcuts.qml` | Hyprland global shortcuts `search`, `settings`, `dashboard`, `activity` + IPC targets `overlay`, `search`, `settings`, `dashboard`, `desktop`, `activity`, `attention` and `notifications`; touches `Notifications` and `Attention` at startup so they listen |
 | `shell/utils/Fuzzy.js` | Match scoring, frecency, ranking |
+| `shell/utils/Phases.js` | The lifecycle's move table: `next(phase, event, canRecover)` and phase predicates |
+| `shell/utils/Geometry.js` | **Geometry**: `clampUnit`, `smooth`, `mix`, `centerOf`, `headingOf`, `splineAt`, `traceSpline` |
+| `shell/utils/Platform.js` | Compositor capabilities per backend and the support level (`core`, `extended`, `native`) |
 | `shell/utils/Liquid.js` | **The liquid engine**: springs from a character (`rise`, `ring`, `arrival`, `pull`) and the neck's merge and separation (`isMerged`, `neckKick`) |
 | `shell/modules/{alerts,canvas,notifications,widgets}/` | Empty, planned (`roadmap.md`) |
 | `shelf/dashboard-wave/` | Shelved: the dashboard's pour-out wave with idle ripple (`Wave.qml`, the old `Dashboard.qml`, `README.md` with its tokens); not loaded |
 | `tools/preview/` | Windows playground: `play.py` builds a mock `qs.*` tree (real config, components, state and modules; mocked `Config`, services) and runs `play.qml` with taskbar, search, settings and dashboard together (`D` / `Ctrl+D`) |
 | `.claude/hooks/docs-current.py` | Stop hook that keeps these docs current |
-| `tools/check-rules.py` | Hard-rule checker (Stop hook and CLI): compositor boundary, module imports, liquid physics, paced durations, tokens, overlays, gestures, attention, state, network list, lock, mocks, engine tests, settings rows |
+| `tools/check-rules.py` | Hard-rule checker (Stop hook and CLI): compositor boundary and capabilities, shared geometry, surface lifecycles, module imports, liquid physics, paced durations, tokens, overlays, gestures, attention, state, network list, lock, mocks, engine tests, settings rows |
 | `tools/tests/` | Qt Quick tests (`run.py`, `tst_*.qml`, `fakes/` for Quickshell `Singleton`, `Scope`, `Quickshell`, `FileView`) |
 
 Where to change things:
 
 - When the taskbar hides: `Occupancy.qml` (the rule) and `Compositor.qml` (the geometry).
 - Any speed: `Motion.qml`.
+- How a surface enters, leaves or recovers from an interruption: its `Lifecycle` handlers (`Burst`, `Launch`); the allowed moves in `utils/Phases.js`.
+- What a compositor can do: `utils/Platform.js`.
 - How anything liquid bounces, wobbles or settles: its character in `Motion.liquid`; the maths in `utils/Liquid.js`.
 - Adding a WM: a backend branch in `Compositor.qml` only.

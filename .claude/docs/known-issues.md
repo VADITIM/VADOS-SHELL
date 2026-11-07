@@ -6,6 +6,10 @@
   - Upgrade path: match by pid once Quickshell exposes pid on toplevels.
 - **Confinement clamps windows the user drags partly off-screen.** The clamp fires after the 140 ms settle, so a slow drag past the edge can fight it.
 - **The generic backend has no geometry.** There the taskbar hides only for fullscreen or maximized windows.
+- **Phase 1 of `direction.md` is not finished:**
+  - Overlays and lifecycles are separate state: `Overlays` knows which surface is up, each `Lifecycle` how far it is. Joining them (an overlay's phase visible in `Overlays`) is next.
+  - Geometry does not yet follow changes during a transition: a screen resized mid-burst keeps the old form until the next open.
+  - The frame budget is a review rule; no tool measures it yet.
 - **Untested on real hardware:**
   - driftwm IPC
   - Hyprland `GlobalShortcut`

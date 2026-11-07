@@ -40,4 +40,6 @@ Update these docs in the same task as the change, without being asked (V/AS `gui
 | Planned work agreed or shipped | `docs/roadmap.md` (also mirrored to the Obsidian vault "VADOS SHELL", note `Shell.md`) |
 | A rule the user states | `docs/rules/<domain>.md` |
 
+`docs/direction.md` is the product direction (user, 2026-11-07): one coherent interaction engine as independently testable subsystems, built in phases (engine integrity first). Measure progress by the foundations, not the feature count.
+
 `docs/project-notes.md` holds the early design chats (Hyprland era); it is history, not rules.

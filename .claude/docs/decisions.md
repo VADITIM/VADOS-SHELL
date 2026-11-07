@@ -1,5 +1,15 @@
 # Decisions
 
+## 2026-11-07 (direction: engine integrity first)
+
+- **The user's direction document is the product plan** (`direction.md`): one coherent interaction engine built as independently testable subsystems, progress measured by the foundations, Phase 1 (engine integrity) and a complete taskbar-and-search slice before more features. The roadmap is reordered into its phases.
+- **The transition state machine is a pure move table plus a small component**, not a state machine per surface. `utils/Phases.js` holds the table, so it can be fuzzed without QML; `Lifecycle.qml` holds the phase, the signals and the watchdog. `Burst` and `Launch` keep their choreography and only report phase ends, so the motion did not change. Qt's `StateMachine` was not used: it lives in a separate module (`QtQml.StateMachine`), its states are objects that are hard to read as data, and it gives no help with the recovery we need.
+- **Two signals, `moving` and `moved`.** A host must capture its leave form while it still renders the enter (before the phase reads `exiting`), and must start animations only after the phase changed, because a zero-length animation under reduced motion reports its end at once and would otherwise be ignored by the old phase.
+- **`settle` snaps, natural ends do not.** Stopping an animation from its own final `ScriptAction` is unsafe, so the host only stops and snaps on the watchdog's `settle`.
+- **Recovery by watchdog, 3 s.** The longest real phase is about 1.3 s (the settings enter). The timer runs only while a phase moves, so idle still costs nothing.
+- **Capabilities are a table per backend, not probed.** Each backend's abilities are fixed by how `Compositor` talks to it (only driftwm takes `send`), so a table is exact and testable; probing can replace a row once a backend's features vary by version.
+- **`Mutate`, `Turn` and `Press` stay without a lifecycle.** They are small abilities that already re-enter from where they are; the rule covers surfaces with a separate leave animation.
+
 ## 2026-11-07 (engines and enforced hard rules)
 
 - **All four engines and the rules at once, enforced by a checker** (user: introduce all of it and enforce these hard rules; a polished desktop like Caelestia, but thought further). Rules that can be checked mechanically are in `tools/check-rules.py` and run as a Stop hook; the rest are marked as review rules in `docs/rules/`. A Stop hook rather than a pre-commit hook, because the user commits from Windows and the hook already runs for every agent turn.

@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-11-07 (Phase 1 closed: overlays meet lifecycles, live leave geometry, frame budget)
+
+- **`Overlays` keeps phases but does not drive the lifecycles.** The window reports the module's phase; `Overlays` uses it only as a safety net (an idle screen gets its taskbar back) and for queries. Driving the lifecycle from `Overlays` would have moved choreography into state; the modules still decide from `isOpen`.
+- **A lost `landed()` is fixed twice, on purpose**: the host lands on `settle`, and `Overlays` returns the taskbar on `idle`. The first keeps the host's own leave side effects (search clears its field), the second covers any future surface that forgets.
+- **Refit the kept leave form instead of recapturing it.** Recapturing on every screen change would need the old phase values; scaling the kept form from the frame it was drawn in to the current frame is one pure function, testable in `tst_geometry`.
+- **Screens that go away are pruned from `shell.qml`, not inside `Overlays`.** `Overlays` is loaded by the preview, which has no `Quickshell.screens`; `shell.qml` is not previewed and already owns the `Variants` over screens.
+- **The frame budget is measured by stepping the real search module**, not by timing live frames. Offscreen frame timing mixes rendering, the test runner and timer jitter; stepping `spread`, `impact` and `exit` and timing the bindings and `trace()` together with a Python `perf_counter` clock measures exactly the script work the rule budgets. Best of three sweeps at the 95th percentile, because this container's timings vary by a factor of two between runs.
+- **The first measurement failed** (4.3–5.6 ms): the wall outline was a binding chain over arrays, re-traced on every property write, twice per frame (`spread` and `impact`). It is now traced once per frame in `trace()` (1.9–2.3 ms). The wall and the body outline now update in the same pass, which they did not before.
+
 ## 2026-11-07 (direction: engine integrity first)
 
 - **The user's direction document is the product plan** (`direction.md`): one coherent interaction engine built as independently testable subsystems, progress measured by the foundations, Phase 1 (engine integrity) and a complete taskbar-and-search slice before more features. The roadmap is reordered into its phases.

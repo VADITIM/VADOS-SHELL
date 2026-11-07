@@ -6,8 +6,8 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 
 Exit: transitions can be created, interrupted, reversed and chained without inconsistent visual or logical states.
 
-- Shipped: liquid engine, motion tokens and reduced motion, overlay engine, gesture engine, transition lifecycle with recovery, shared geometry, compositor capabilities, persistence, enforced rules and tests.
-- Left: join overlay state and lifecycles; geometry that follows screen changes mid-transition; a measured frame budget in the preview (`known-issues.md`).
+- Shipped: liquid engine, motion tokens and reduced motion, overlay engine, gesture engine, transition lifecycle with recovery, shared geometry, compositor capabilities, persistence, enforced rules and tests; overlays joined with the lifecycles, leave geometry that follows screen changes, a measured script frame budget (2026-11-07).
+- Left: verify on hardware and budget the render cost there (`known-issues.md`). Phase 2 can start.
 
 ## Phase 2: vertical slice (taskbar and search)
 

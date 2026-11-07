@@ -9,6 +9,7 @@ OverlayWindow {
 
     overlayKey: "settings"
     isPresent: settings.isPresent
+    phase: settings.phase
 
     Settings {
         id: settings

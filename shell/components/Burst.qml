@@ -31,7 +31,9 @@ Item {
     property real leaveSpread: 0
     property real leaveImpact: 0
     property int rewindDuration: 0
-    property var leaveFrom: ({ x: 0, y: 0, width: 0, height: 0, left: 0, right: 0 })
+    property var heldForm: ({ x: 0, y: 0, width: 0, height: 0, left: 0, right: 0 })
+    property var heldFrame: ({ x: 0, y: 0, width: 0, height: 0 })
+    property bool hasLanded: false
 
     readonly property var look: Appearance.burst
     readonly property var pace: Motion.burst
@@ -44,6 +46,8 @@ Item {
     readonly property bool isOpened: isShown && !isLeaving && spread >= pace.openShare
     readonly property bool isSplashing: !Motion.isReduced && isShown && !isLeaving && spread > pace.impactShare
 
+    readonly property var frame: ({ x: seedX, y: seedY, width: formWidth, height: formHeight })
+    readonly property var leaveFrom: Geometry.refit(heldForm, heldFrame, frame)
     readonly property real halfHeight: formHeight / 2
     readonly property real farX: rootX + formWidth
     readonly property real farDistance: farX - seedX
@@ -85,14 +89,13 @@ Item {
     readonly property real flare: !isActive ? 0
         : isLeaving ? leaveFlare * (1 - Geometry.smooth(Geometry.clampUnit(exit / pace.flareRetract)))
         : Geometry.smooth(Geometry.clampUnit((opening - pace.flareStart) / (1 - pace.flareStart)))
-    readonly property var wallPoints: wall.map((point, index) => Qt.point(formRight + flaredX(index) * wallShare, formTop + point.y * form.height))
-    readonly property var wallOutline: hasWall ? Geometry.traceSpline(wallPoints, look.curveSamples) : []
+    property var wallOutline: []
     readonly property bool hasTracks: isSplashing || hasWall
     property var topTrack: null
     property var bottomTrack: null
     property var bodyOutline: []
     property var crests: [[], []]
-    readonly property real farFront: hasWall ? wallXAt(form.y) : formRight
+    property real farFront: 0
     readonly property var visitor:isActive && isLeaving ? ({ x: form.x, y: form.y, width: form.width, height: form.height, isHandedOff: isHandedOff }) : null
 
     signal landed()
@@ -305,7 +308,13 @@ Item {
                         form.y + side * (segment.depth + (segment.toDepth - segment.depth) * share + segment.normalDepth * offset))
     }
 
+    function wallPoints() {
+        return wall.map((point, index) => Qt.point(formRight + flaredX(index) * wallShare, formTop + point.y * form.height))
+    }
+
     function trace() {
+        wallOutline = hasWall ? Geometry.traceSpline(wallPoints(), look.curveSamples) : []
+        farFront = wallOutline.length > 0 ? wallXAt(form.y) : formRight
         if (!hasTracks) {
             topTrack = null
             bottomTrack = null
@@ -443,7 +452,7 @@ Item {
         const side = index === 0 ? -1 : 1
         const since = sinceCross(1)
         const arc = since < 0 ? 0 : Math.sin(Math.PI * Geometry.clampUnit(since / pace.splashSpan))
-        if (hasWall) {
+        if (hasWall && wallOutline.length > 0) {
             const corner = index === 0 ? wallOutline[0] : wallOutline[wallOutline.length - 1]
             const reach = look.cornerReach * arc * Math.SQRT1_2
             return { x: corner.x + reach, y: corner.y + side * reach, size: look.cornerSplash * arc }
@@ -497,7 +506,16 @@ Item {
         leaveImpact = impact
         leaveWallShare = wallShare
         leaveFlare = flare
-        leaveFrom = form
+        const shape = form
+        heldFrame = frame
+        heldForm = shape
+    }
+
+    function land() {
+        if (hasLanded)
+            return
+        hasLanded = true
+        landed()
     }
 
     function startLeave() {
@@ -505,6 +523,7 @@ Item {
         rewinding.stop()
         resuming.stop()
         exit = 0
+        hasLanded = false
         leave.restart()
     }
 
@@ -516,6 +535,8 @@ Item {
             impact = 1
         }
         exit = phase === "active" ? 0 : 1
+        if (phase === "idle")
+            land()
     }
 
     property Lifecycle lifecycle: Lifecycle {
@@ -542,8 +563,8 @@ Item {
     onIsShownChanged: lifecycle.send(isShown ? "show" : "hide")
     onFormChanged: queueTrace()
     onImpactChanged: queueTrace()
-    onWallOutlineChanged: queueTrace()
     onHasTracksChanged: queueTrace()
+    onWallChanged: queueTrace()
     Component.onCompleted: if (isShown) lifecycle.send("show")
 
     anchors.fill: parent
@@ -741,7 +762,7 @@ Item {
         id: leave
 
         PauseAnimation { duration: Motion.pace(Motion.burst.leaveHold) }
-        ScriptAction { script: burst.landed() }
+        ScriptAction { script: burst.land() }
         NumberAnimation {
             target: burst
             property: "exit"

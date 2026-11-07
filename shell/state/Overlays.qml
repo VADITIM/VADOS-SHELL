@@ -16,6 +16,7 @@ Singleton {
     property var settingsOrigins: ({})
     property var taskbarParts: ({})
     property var visitors: ({})
+    property var phases: ({})
     readonly property string top: stack.length > 0 ? stack[stack.length - 1] : ""
 
     signal taskbarGathering(string screenName)
@@ -38,6 +39,51 @@ Singleton {
 
     function ownsKeyboard(key, screenName) {
         return top === key && isOpen(key, screenName)
+    }
+
+    function phaseOf(key, screenName) {
+        return (phases[screenName] ?? {})[key] ?? "idle"
+    }
+
+    function isSettled(screenName) {
+        const onScreen = phases[screenName] ?? {}
+        return Object.keys(onScreen).every(key => onScreen[key] === "active")
+    }
+
+    function reportPhase(key, screenName, phase) {
+        if (!kinds[key] || screenName.length === 0)
+            return
+        const placed = Object.assign({}, phases)
+        const onScreen = Object.assign({}, placed[screenName] ?? {})
+        if (phase === "idle")
+            delete onScreen[key]
+        else
+            onScreen[key] = phase
+        placed[screenName] = onScreen
+        phases = placed
+        if (phase === "idle")
+            returnTaskbar(screenName)
+    }
+
+    function keepScreens(screenNames) {
+        for (const key of stack.slice()) {
+            if (screenNames.indexOf(screens[key]) < 0)
+                close(key)
+        }
+        awayScreens = awayScreens.filter(screenName => screenNames.indexOf(screenName) >= 0)
+        settingsOrigins = keepOnly(settingsOrigins, screenNames)
+        taskbarParts = keepOnly(taskbarParts, screenNames)
+        visitors = keepOnly(visitors, screenNames)
+        phases = keepOnly(phases, screenNames)
+    }
+
+    function keepOnly(byScreen, screenNames) {
+        const kept = {}
+        for (const screenName of Object.keys(byScreen)) {
+            if (screenNames.indexOf(screenName) >= 0)
+                kept[screenName] = byScreen[screenName]
+        }
+        return kept
     }
 
     function isTaskbarAway(screenName) {

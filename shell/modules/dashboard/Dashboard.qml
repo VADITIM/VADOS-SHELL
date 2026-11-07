@@ -11,6 +11,7 @@ FocusScope {
     property var parts: []
     property bool canHandOff: false
     readonly property bool isPresent: isOpen || burst.isActive || rising.living > 0
+    readonly property string phase: burst.phase
 
     property real dim: isOpen ? 1 : 0
     property int diskPage: 0

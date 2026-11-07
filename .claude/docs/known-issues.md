@@ -6,10 +6,10 @@
   - Upgrade path: match by pid once Quickshell exposes pid on toplevels.
 - **Confinement clamps windows the user drags partly off-screen.** The clamp fires after the 140 ms settle, so a slow drag past the edge can fight it.
 - **The generic backend has no geometry.** There the taskbar hides only for fullscreen or maximized windows.
-- **Phase 1 of `direction.md` is not finished:**
-  - Overlays and lifecycles are separate state: `Overlays` knows which surface is up, each `Lifecycle` how far it is. Joining them (an overlay's phase visible in `Overlays`) is next.
-  - Geometry does not yet follow changes during a transition: a screen resized mid-burst keeps the old form until the next open.
-  - The frame budget is a review rule; no tool measures it yet.
+- **Phase 1 of `direction.md` is done in the preview, not on hardware:**
+  - Render cost (blur, `Shape` tessellation) is not budgeted; `tst_budget` measures script work only. Profile on real hardware (QML profiler, `QSG_RENDER_TIMING=1`).
+  - `keepScreens` on a real monitor unplug, and the phase reports from `OverlayWindow`, have not run in Quickshell.
+  - The dashboard and settings are not in `tst_budget`; the search burst is the heaviest, so they are assumed to fit.
 - **Untested on real hardware:**
   - driftwm IPC
   - Hyprland `GlobalShortcut`

@@ -2,6 +2,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 
 TESTS = os.path.dirname(os.path.abspath(__file__))
 PROJECT = os.path.dirname(os.path.dirname(TESTS))
@@ -29,11 +30,18 @@ def disk_setup():
             with open(path, "w", encoding="utf-8", newline="\n") as handle:
                 handle.write(text)
 
+    class Clock(QObject):
+        @Slot(result=float)
+        def now(self):
+            return time.perf_counter() * 1000
+
     class Setup(QObject):
         def __init__(self):
             super().__init__()
             self.disk = Disk()
+            self.clock = Clock()
             qmlRegisterSingletonInstance(Disk, "VadosTest", 1, 0, "Disk", self.disk)
+            qmlRegisterSingletonInstance(Clock, "VadosTest", 1, 0, "Clock", self.clock)
 
     return Setup
 

@@ -4,6 +4,11 @@ Newest version first. The version and its number are set by the user on each pus
 
 ## Unreleased
 
+- Overlays know each surface's phase (`Overlays.phaseOf`, `isSettled`): a screen whose overlays are all closed always gets its taskbar back, and an unplugged monitor closes its overlays instead of holding the keyboard.
+- A leave cut short by the stuck-transition recovery still hands the taskbar back (it stayed hidden before) and clears the search field.
+- A screen resized while the dashboard, search or settings is leaving reshapes the leaving body instead of drawing it in the old size.
+- Faster search burst: its wall is traced once per frame instead of on every property change (script time per frame about halved). A frame budget test (`tools/tests/tst_budget.qml`) keeps it under 4 ms.
+
 - Transition lifecycle (`components/Lifecycle.qml`, `utils/Phases.js`): the dashboard, search and settings bodies run explicit phases (idle, preparing, entering, active, exiting, recovering). Rapid toggling always ends in a valid state, and a transition stuck longer than 3 s settles and logs instead of leaving a half-open surface.
 - Shared geometry (`utils/Geometry.js`) replaces the clamps, smoothsteps and splines copied across components.
 - Compositor capabilities (`Compositor.capabilities`, `Compositor.level`): features ask what the compositor can do instead of which one it is; Desktop mode needs a free canvas and window control.

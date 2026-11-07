@@ -211,6 +211,11 @@ Singleton {
         readonly property real nameHeightLead: 2.5
     }
 
+    readonly property QtObject budget: QtObject {
+        readonly property real frame: 4
+        readonly property real sampleShare: 0.95
+    }
+
     readonly property QtObject lifecycle: QtObject {
         readonly property int stuck: 3000
     }

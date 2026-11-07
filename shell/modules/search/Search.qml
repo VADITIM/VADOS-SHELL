@@ -16,6 +16,7 @@ FocusScope {
     property bool isMirrored: false
     property bool canHandOff: false
     readonly property bool isPresent: isOpen || burst.isActive
+    readonly property string phase: burst.phase
     readonly property bool isContentShown: burst.isOpened
     readonly property var visitor: burst.visitor
     property real dim: isOpen ? 1 : 0

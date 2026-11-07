@@ -6,7 +6,7 @@
 | `shell/config/Config.qml` | `shell.json` adapter and setters (`setTaskbarStyle`, `setTaskbarSide`, `setTaskbarCompact`, `setAccent`, `setWindowMode`, `setWeatherLocation`, `setReducedMotion`, `setDoNotDisturb`, `setNotificationsEnabled`, `toggleFavorite`) |
 | `shell/config/Appearance.qml` | V/AS tokens: colour (accent read live from `Config`, level bands), font, radius, `liquid` (the goo material: fill, rim and core thresholds), `taskbar`, `settings`, `desktop`, `burst`, `dashboard` (+ `gauge`, `memory`, `weather`), `search`; `bandColor(value, limits)` |
 | `shell/config/Motion.qml` | Every duration and physics constant: `pill`, `hover`, `fold`, `reveal`, `carry`, `settings`, `desktop`, `dashboard` (dim, reveal, polling), `burst`, `press`, `search`, `store`, `attention`, `gesture`, `liquid` (the liquid engine's characters and clock); `isReduced` and `pace()` for reduced motion |
-| `shell/state/Overlays.qml` | **Overlay engine**: registry (`kinds`), open/close/toggle with layer exclusion, keyboard owner (`top`), taskbar gather and per-screen return, parts, gear origins, per-overlay leaving balls (`visitorOn`) |
+| `shell/state/Overlays.qml` | **Overlay engine**: registry (`kinds`), open/close/toggle with layer exclusion, keyboard owner (`top`), taskbar gather and per-screen return, parts, gear origins, per-overlay leaving balls (`visitorOn`), each surface's lifecycle phase (`phaseOf`, `isSettled`), screens that went away (`keepScreens`) |
 | `shell/state/Attention.qml` | **Attention engine**: whether a notification may interrupt (critical, quiet, fullscreen, low), batching into one `peek`, its expiry |
 | `shell/state/Activity.qml` | Activity bar state: which screen it is open on, the pinned activity, and the merged `entries` (notifications, tray) with the `current` one to show |
 | `shell/services/Compositor.qml` | **The WM boundary**: backend detection, driftwm subscribe stream, Hyprland queries, generic fallback, `send`/`action` |
@@ -47,7 +47,7 @@
 | `shell/keybinds/Shortcuts.qml` | Hyprland global shortcuts `search`, `settings`, `dashboard`, `activity` + IPC targets `overlay`, `search`, `settings`, `dashboard`, `desktop`, `activity`, `attention` and `notifications`; touches `Notifications` and `Attention` at startup so they listen |
 | `shell/utils/Fuzzy.js` | Match scoring, frecency, ranking |
 | `shell/utils/Phases.js` | The lifecycle's move table: `next(phase, event, canRecover)` and phase predicates |
-| `shell/utils/Geometry.js` | **Geometry**: `clampUnit`, `smooth`, `mix`, `centerOf`, `headingOf`, `splineAt`, `traceSpline` |
+| `shell/utils/Geometry.js` | **Geometry**: `clampUnit`, `smooth`, `mix`, `centerOf`, `headingOf`, `splineAt`, `traceSpline`, `refit` (a shape kept in one frame redrawn in another) |
 | `shell/utils/Platform.js` | Compositor capabilities per backend and the support level (`core`, `extended`, `native`) |
 | `shell/utils/Liquid.js` | **The liquid engine**: springs from a character (`rise`, `ring`, `arrival`, `pull`) and the neck's merge and separation (`isMerged`, `neckKick`) |
 | `shell/modules/{alerts,canvas,notifications,widgets}/` | Empty, planned (`roadmap.md`) |
@@ -55,7 +55,7 @@
 | `tools/preview/` | Windows playground: `play.py` builds a mock `qs.*` tree (real config, components, state and modules; mocked `Config`, services) and runs `play.qml` with taskbar, search, settings and dashboard together (`D` / `Ctrl+D`) |
 | `.claude/hooks/docs-current.py` | Stop hook that keeps these docs current |
 | `tools/check-rules.py` | Hard-rule checker (Stop hook and CLI): compositor boundary and capabilities, shared geometry, surface lifecycles, module imports, liquid physics, paced durations, tokens, overlays, gestures, attention, state, network list, lock, mocks, engine tests, settings rows |
-| `tools/tests/` | Qt Quick tests (`run.py`, `tst_*.qml`, `fakes/` for Quickshell `Singleton`, `Scope`, `Quickshell`, `FileView`) |
+| `tools/tests/` | Qt Quick tests (`run.py`, `tst_*.qml`, `fakes/` for Quickshell `Singleton`, `Scope`, `Quickshell`, `FileView`; `run.py` also gives tests `VadosTest.Disk` and a high-resolution `VadosTest.Clock`). `tst_budget.qml` measures the search burst's script time per frame against `Motion.budget` |
 
 Where to change things:
 

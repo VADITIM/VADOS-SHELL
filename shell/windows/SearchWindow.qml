@@ -7,6 +7,7 @@ OverlayWindow {
 
     overlayKey: "search"
     isPresent: search.isPresent
+    phase: search.phase
 
     Search {
         id: search

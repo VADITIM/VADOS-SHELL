@@ -1,5 +1,8 @@
 # Quirks
 
+- **`Burst.wallOutline` is traced, not bound** (2026-11-07). It is set in `trace()` once per frame, so for one frame after the wall appears it can be empty while `hasWall` is already true; read it with a length check (`cornerSplashForm` does). `farFront` is traced with it.
+- **`tst_budget` numbers are from this container, offscreen.** They budget script work only; a slower CPU or the real compositor's rendering are not in them. The suite prints the measured 95th percentile and worst frame on every run.
+
 - **A `Lifecycle` host captures in `moving`, starts in `moved`.** Reading `form` after the phase changed already gives the leave form, and a reduced-motion animation started before the phase changed reports to the old phase and is lost (2026-11-07).
 - **Never stop an animation from its own final `ScriptAction`.** The lifecycle hosts only stop animations on `settle`, never on `entered` or `exited`.
 - **Never name a component `Transition` or `State`** (like `Drag`): QtQuick types win inside `qs.components`. The lifecycle component is `Lifecycle`, and inside it the move table is imported as `Phases`.

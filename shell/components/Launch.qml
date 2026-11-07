@@ -30,7 +30,9 @@ Item {
     property real back: 0
     property real body: 1
     property int retractDuration: 0
-    property var leaveFrom: ({ x: 0, y: 0, width: 0, height: 0, radius: 0, rotation: 0 })
+    property var heldForm: ({ x: 0, y: 0, width: 0, height: 0, radius: 0, rotation: 0 })
+    property var heldFrame: ({ x: 0, y: 0, width: 0, height: 0 })
+    property bool hasLanded: false
 
     readonly property bool isActive: lifecycle.isPresent
     readonly property bool isLeaving: lifecycle.isLeaving
@@ -42,6 +44,8 @@ Item {
     readonly property real seedY: seed.y + seed.height / 2
     readonly property real panelCenterX: panelX + look.width / 2
     readonly property real panelCenterY: panelY + look.height / 2
+    readonly property var frame: ({ x: panelCenterX, y: panelCenterY, width: look.width, height: look.height })
+    readonly property var leaveFrom: Geometry.refit(heldForm, heldFrame, frame)
 
     readonly property real flightDistance: Math.max(1, Math.hypot(panelCenterX - seedX, panelCenterY - seedY))
     readonly property real headingX: (panelCenterX - seedX) / flightDistance
@@ -162,7 +166,9 @@ Item {
     }
 
     function holdLeave() {
-        leaveFrom = form
+        const shape = form
+        heldFrame = frame
+        heldForm = shape
         retractDuration = bud > 0 ? pace.retract : 0
     }
 
@@ -170,6 +176,7 @@ Item {
         enter.stop()
         collapse = 0
         back = 0
+        hasLanded = false
         leave.restart()
     }
 
@@ -184,6 +191,15 @@ Item {
             extend = 1
             material = 1
         }
+        if (phase === "idle")
+            land()
+    }
+
+    function land() {
+        if (hasLanded)
+            return
+        hasLanded = true
+        landed()
     }
 
     property Lifecycle lifecycle: Lifecycle {
@@ -359,7 +375,7 @@ Item {
             duration: Motion.pace(launch.pace.flyBack)
             easing.type: Easing.InCubic
         }
-        ScriptAction { script: launch.landed() }
+        ScriptAction { script: launch.land() }
         NumberAnimation {
             target: launch
             property: "body"

@@ -18,6 +18,7 @@ FocusScope {
     property string tab: "appearance"
     property string shownTab: tab
     readonly property bool isPresent: isOpen || launch.isActive || rising.living > 0
+    readonly property string phase: launch.phase
     readonly property bool isContentShown: launch.isOpened
     property real dim: isOpen ? 1 : 0
 

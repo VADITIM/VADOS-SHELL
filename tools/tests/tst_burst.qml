@@ -7,6 +7,12 @@ Item {
     width: 1600
     height: 900
 
+    SignalSpy {
+        id: landings
+        target: burst
+        signalName: "landed"
+    }
+
     Burst {
         id: burst
         rootX: 0
@@ -26,6 +32,10 @@ Item {
             burst.isShown = false
             tryCompare(burst, "isActive", false, 3000)
             Config.setReducedMotion(false)
+            burst.lifecycle.watchdog.interval = Motion.lifecycle.stuck
+            burst.seedY = 450
+            burst.formHeight = 900
+            landings.clear()
         }
 
         function test_reopenDuringLeaveRewinds() {
@@ -63,6 +73,41 @@ Item {
             tryCompare(burst, "phase", "active", 1000)
             compare(burst.spread, 1)
             burst.lifecycle.watchdog.interval = Motion.lifecycle.stuck
+        }
+
+        function test_everyLeaveLandsOnce() {
+            burst.isShown = true
+            tryCompare(burst, "phase", "active", 3000)
+            landings.clear()
+            burst.isShown = false
+            tryCompare(burst, "phase", "idle", 3000)
+            compare(landings.count, 1)
+        }
+
+        function test_stuckLeaveStillLands() {
+            burst.isShown = true
+            tryCompare(burst, "phase", "active", 3000)
+            landings.clear()
+            burst.lifecycle.watchdog.interval = 20
+            ignoreWarning(new RegExp("vados: burst stuck in exiting"))
+            burst.isShown = false
+            tryCompare(burst, "phase", "idle", 1000)
+            compare(landings.count, 1, "a settled leave hands the taskbar back")
+            wait(Motion.burst.leaveHold * 2)
+            compare(landings.count, 1, "and only once")
+        }
+
+        function test_leaveFollowsScreenChanges() {
+            burst.isShown = true
+            tryCompare(burst, "phase", "active", 3000)
+            burst.isShown = false
+            verify(burst.isLeaving)
+            const before = burst.leaveFrom.height
+            burst.seedY = 300
+            burst.formHeight = 600
+            fuzzyCompare(burst.leaveFrom.height, before * 600 / 900, 0.01)
+            fuzzyCompare(burst.leaveFrom.y, 300, 0.01)
+            tryCompare(burst, "phase", "idle", 3000)
         }
 
         function test_reducedMotionOpensAtOnce() {

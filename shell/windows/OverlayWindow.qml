@@ -8,6 +8,7 @@ PanelWindow {
 
     required property string overlayKey
     property bool isPresent: false
+    property string phase: "idle"
     readonly property string screenName: screen?.name ?? ""
     readonly property bool isOpen: Overlays.isOpen(overlayKey, screenName)
     readonly property var parts: Overlays.taskbarParts[screenName] ?? []
@@ -23,6 +24,8 @@ PanelWindow {
     function placeVisitor(visitor) {
         Overlays.placeVisitor(overlayKey, screenName, visitor)
     }
+
+    onPhaseChanged: Overlays.reportPhase(overlayKey, screenName, phase)
 
     anchors {
         left: true

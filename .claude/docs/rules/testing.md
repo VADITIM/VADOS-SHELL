@@ -6,6 +6,7 @@ Enforced by `tools/check-rules.py` where marked ✓.
 - **Every engine has a test** ✓: Liquid, Overlays, Attention, Gesture, Burst, Launch, Lifecycle (and `Phases`), Geometry (and `Platform`), StateFile, Confinement (the list is `ENGINE_TESTS` in `tools/check-rules.py`; a new engine joins it).
 - **Every singleton service has a preview mock** ✓ (`tools/preview/mocks`), so every module stays previewable.
 - **The whole preview loads without a single warning** (`tst_preview.qml`); a warning is a failure.
-- **Transitions are tested under rapid input**: toggling a surface faster than its animations must end in a valid phase with nothing orphaned (`tst_burst`, `tst_launch`), and the move table is fuzzed (`tst_lifecycle`).
+- **Transitions are tested under rapid input**: toggling a surface faster than its animations must end in a valid phase with nothing orphaned (`tst_burst`, `tst_launch`), and the move table is fuzzed (`tst_lifecycle`). A leave settled by the watchdog still lands, and leave geometry follows a screen change (`tst_burst`, `tst_launch`).
+- **The frame budget is a test** (`tst_budget`, `rules/performance.md`); a change that pushes the search burst over it fails the suite.
 - **A fixed bug gets a test that fails without the fix.** Check that it does by breaking the fix once.
 - Fakes for Quickshell types live in `tools/tests/fakes` and follow the real API; when a fake and Quickshell disagree, the fake is wrong.

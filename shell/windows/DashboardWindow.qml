@@ -8,6 +8,7 @@ OverlayWindow {
 
     overlayKey: "dashboard"
     isPresent: dashboard.isPresent
+    phase: dashboard.phase
 
     Binding {
         target: Hardware

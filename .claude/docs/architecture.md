@@ -26,6 +26,9 @@ How the subsystems of `direction.md` land in this tree:
 - `moving(from, to, event)` fires before the phase changes (the host captures its leave form there, while it still reads the old phase); `moved` fires after it (the host starts animations there).
 - **Recovery**: a watchdog (`Motion.lifecycle.stuck`, longer than any real phase) runs only while a phase is moving. If it fires it logs `vados: <name> stuck in <phase>` and sends `settle`: entering phases land on `active`, `exiting` on `idle`, and the host snaps its values to that end. No surface can stay orphaned half-open.
 - Hosts: `Burst` (dashboard, search; recovers by rewinding) and `Launch` (settings; restarts). Their `isActive`, `isLeaving` and `phase` read the lifecycle.
+- **Every leave lands exactly once.** The hosts emit `landed()` through `land()` (guarded by `hasLanded`, reset when a leave starts), from the leave's `ScriptAction` or, when the watchdog settles a leave to `idle`, from `settle`. A settled leave still hands the taskbar back.
+- **Leave geometry follows the screen.** At the leave start the host keeps its form with the frame it was drawn in (`heldForm`, `heldFrame`; Burst: seed point and form size, Launch: panel centre and size). `leaveFrom` is `Geometry.refit(heldForm, heldFrame, frame)`, so a screen resized or a panel moved mid-leave reshapes the leaving body instead of drawing it in the old screen's coordinates. The enter already binds to the live geometry.
+- **Overlays sees the phases.** Each overlay module exposes its `phase`; `OverlayWindow` reports it to `Overlays.reportPhase(key, screen, phase)` (§ Overlay engine).
 
 ## Compositor boundary
 
@@ -133,6 +136,8 @@ Entry points before the bar exists: the Hyprland shortcut `vados:activity`, IPC 
 - `ownsKeyboard(key, screen)`: only the top overlay takes exclusive keyboard focus.
 - `returnTaskbar(screen)` (an overlay's `landed()`) brings that screen's taskbar back only when no overlay is left on it, whichever screen the next overlay opened on.
 - `placeVisitor(key, screen, ball)` / `visitorOn(screen)`: each leaving overlay owns its own entry, so one leaving never erases the other's ball.
+- `phases` (screen → overlay → lifecycle phase, idle ones dropped), `phaseOf(key, screen)`, `isSettled(screen)` (every surface on it is `active` or gone). When a surface reports `idle`, `Overlays` calls `returnTaskbar` for its screen: the taskbar comes back once nothing is on the screen, even if a `landed()` was lost.
+- `keepScreens(names)` (from `shell.qml` on `Quickshell.screens` changes) closes overlays on screens that went away and drops their away flag, parts, gear origin, leaving balls and phases, so an unplugged monitor leaves no exclusive keyboard or gathered taskbar behind.
 
 `windows/OverlayWindow.qml` is the window side: a full-screen `PanelWindow` on the overlay layer, namespace `vados-<key>`, keyboard from `ownsKeyboard`, with `isOpen`, `parts`, `requestClose()`, `land()` and `placeVisitor()` for its module. `SearchWindow`, `SettingsWindow` and `DashboardWindow` are an `OverlayWindow` plus their module. A new overlay is a `kinds` entry and an `OverlayWindow`.
 

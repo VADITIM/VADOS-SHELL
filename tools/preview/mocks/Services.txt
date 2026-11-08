@@ -160,3 +160,63 @@ QtObject {
         }
     }
 }
+Notifications|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isServing: false
+    property var list: []
+    property var latest: null
+    property int unreadCount: 0
+    property bool hasUnread: false
+    property bool isUrgent: false
+    signal received(var notification)
+    function isCritical(notification) { return notification.urgency === 2 }
+    function isLow(notification) { return notification.urgency === 0 }
+    function isAlive(notification) { return list.indexOf(notification) >= 0 }
+    function markRead() { unreadCount = 0 }
+    function dismiss(notification) {}
+    function clear() {}
+    function invoke(notification, identifier) {}
+}
+Compositor|pragma Singleton
+import QtQuick
+import "../utils/Platform.js" as Platform
+QtObject {
+    property bool isHyprland: false
+    property bool isDriftwm: false
+    readonly property string name: isHyprland ? "hyprland" : isDriftwm ? "driftwm" : "generic"
+    readonly property var capabilities: Platform.capabilitiesOf(name)
+    readonly property string level: Platform.levelOf(capabilities)
+    property var canvasState: null
+    property var activeWindow: null
+    property string focusedScreen: "play"
+    property var sent: []
+    signal canvasChanged()
+    function isListed(value, windowId) { return false }
+    function viewports() { return [] }
+    function send(argumentsList) { sent = sent.concat([argumentsList.join(" ")]) }
+    function action(spec) {}
+}
+Confinement|pragma Singleton
+import QtQuick
+QtObject {
+    property string mode: "canvas"
+    property bool canConfine: true
+    property bool isConfined: false
+    property bool canMinimize: false
+    property bool canSnap: false
+    property var parked: ({})
+    function isParked(windowId) { return false }
+    function activate(toplevel) {}
+    function minimize() {}
+    function maximize() {}
+    function fullscreen() {}
+    function snap(direction) {}
+}
+Supervision|pragma Singleton
+import QtQuick
+QtObject {
+    property var supervisors: []
+    function enroll(supervisor) {}
+    function release(supervisor) {}
+}

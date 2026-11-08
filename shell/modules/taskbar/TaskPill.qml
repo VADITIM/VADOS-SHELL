@@ -172,7 +172,7 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: Motion.stateDuration
+                duration: Motion.pace(Motion.stateDuration)
                 easing.type: Easing.OutQuad
             }
         }
@@ -186,7 +186,7 @@ Item {
         move: Transition {
             NumberAnimation {
                 property: "y"
-                duration: Motion.stateDuration
+                duration: Motion.pace(Motion.stateDuration)
                 easing.type: Easing.OutCubic
             }
         }
@@ -204,7 +204,7 @@ Item {
         id: topSlide
         target: taskPill
         property: "washTop"
-        duration: Motion.highlight.slide
+        duration: Motion.pace(Motion.highlight.slide)
         easing.type: Easing.OutQuad
     }
 
@@ -212,7 +212,7 @@ Item {
         id: bottomSlide
         target: taskPill
         property: "washBottom"
-        duration: Motion.highlight.slide
+        duration: Motion.pace(Motion.highlight.slide)
         easing.type: Easing.OutQuad
     }
 }

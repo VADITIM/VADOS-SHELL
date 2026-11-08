@@ -58,7 +58,12 @@ Item {
         id: reshape
         targetWidth: pill.targetWidth
         targetHeight: pill.targetHeight
-        growDuration: pill.face === "expanded" ? Motion.activity.expand : Motion.activity.spread
+        growDuration: Motion.pace(pill.face === "expanded" ? Motion.activity.expand : Motion.activity.spread)
+        shrinkDuration: Motion.pace(Motion.activity.shrink)
+        shrinkDelay: Motion.pace(Motion.activity.shrinkDelay)
+        lag: Motion.pace(Motion.activity.lag)
+        overshoot: Motion.activity.overshoot
+        arriveShare: Motion.activity.arriveShare
     }
 
     EdgeFuse {
@@ -85,13 +90,13 @@ Item {
     }
 
     Repeater {
+        parent: pill.host.liquidShapes
         model: pill.satellites.length
 
         LiquidShape {
             id: satellite
             required property int index
             readonly property real size: Appearance.activity.satellite * satellitePop.pop * pill.popScale
-            parent: pill.host.liquidShapes
             visible: size > 0.5
             width: size
             height: size

@@ -1,6 +1,8 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.config
+import "../utils/Liquid.js" as Liquid
+import "../utils/Geometry.js" as Geometry
 
 Item {
     id: burst
@@ -26,24 +28,35 @@ Item {
     property real spread: 0
     property real exit: 0
     property real impact: 0
-    property bool isLeaving: false
-    property var leaveFrom: ({ x: 0, y: 0, width: 0, height: 0, left: 0, right: 0 })
+    property real leaveSpread: 0
+    property real leaveImpact: 0
+    property int rewindDuration: 0
+    property var heldForm: ({ x: 0, y: 0, width: 0, height: 0, left: 0, right: 0 })
+    property var heldFrame: ({ x: 0, y: 0, width: 0, height: 0 })
+    property bool hasLanded: false
 
     readonly property var look: Appearance.burst
     readonly property var pace: Motion.burst
-    readonly property bool isActive: isShown || leave.running
+    readonly property var character: Motion.liquid.burst
+    readonly property real openTime: pace.spread * (1 - pace.impactShare) / 1000
+    readonly property bool isActive: lifecycle.isPresent
+    readonly property bool isLeaving: lifecycle.isLeaving
+    readonly property string phase: lifecycle.phase
+    readonly property bool canRewind: isLeaving && !isHandedOff && exit < pace.leaveShrink
     readonly property bool isOpened: isShown && !isLeaving && spread >= pace.openShare
-    readonly property bool isSplashing: isShown && !isLeaving && spread > pace.impactShare
+    readonly property bool isSplashing: !Motion.isReduced && isShown && !isLeaving && spread > pace.impactShare
 
+    readonly property var frame: ({ x: seedX, y: seedY, width: formWidth, height: formHeight })
+    readonly property var leaveFrom: Geometry.refit(heldForm, heldFrame, frame)
     readonly property real halfHeight: formHeight / 2
     readonly property real farX: rootX + formWidth
     readonly property real farDistance: farX - seedX
     readonly property real startReach: look.ball * (1 + pace.inflate) / 2
-    readonly property real opening: clampUnit((spread - pace.impactShare) / (1 - pace.impactShare))
-    readonly property real widthShare: bounce(opening)
-    readonly property real heightShare: bounce(opening * pace.heightLead)
+    readonly property real opening: Geometry.clampUnit((spread - pace.impactShare) / (1 - pace.impactShare))
+    readonly property real widthShare: Liquid.rise(character, opening * openTime)
+    readonly property real heightShare: Liquid.rise(character, opening * pace.heightLead * openTime)
     readonly property real front: startReach + (farDistance - startReach) * widthShare
-    readonly property real crossShare: 1 / (4 * pace.bounceCycles * pace.heightLead)
+    readonly property real crossShare: crossOf(pace.heightLead)
     readonly property real meetShare: pace.impactShare + (crossShare + pace.crestRun * (1 - crossShare)) * (1 - pace.impactShare)
 
     readonly property var flights: (parts || []).map(part => flightOf(part))
@@ -52,7 +65,7 @@ Item {
     readonly property real totalArea: flights.reduce((sum, flight) => sum + flight.area, 0)
     readonly property real arrived: totalArea > 0
         ? flights.reduce((sum, flight) => sum + flight.area * absorbedShare(flight), 0) / totalArea
-        : merge * merge * (3 - 2 * merge)
+        : Geometry.smooth(merge)
 
     readonly property var closed: ({ x: seedX, y: seedY, width: 0, height: 0, left: 0, right: 0 })
     readonly property var form: !isActive ? closed : isLeaving ? leaveForm(exit, leaveFrom) : enterForm(spread)
@@ -69,60 +82,31 @@ Item {
     readonly property real rootInner: (form.height + aboveRise + belowRise) / 2
     readonly property real rootOuter: rootInner + Math.min(look.rootSwell, form.height * look.swellShare)
     readonly property real wallShare: wall.length === 0 || !isActive ? 0
-        : isLeaving ? leaveWallShare * clampUnit((form.width - look.leaveBall) / Math.max(1, leaveFrom.width - look.leaveBall))
+        : isLeaving ? leaveWallShare * Geometry.clampUnit((form.width - look.leaveBall) / Math.max(1, leaveFrom.width - look.leaveBall))
         : spread < pace.impactShare ? 0
         : Math.max(0, (form.width - 2 * startReach) / Math.max(1, farX - rootX - 2 * startReach))
     readonly property bool hasWall: wallShare > 0 && !isHandedOff && form.height > 0.5
     readonly property real flare: !isActive ? 0
-        : isLeaving ? leaveFlare * (1 - smooth(clampUnit(exit / pace.flareRetract)))
-        : smooth(clampUnit((opening - pace.flareStart) / (1 - pace.flareStart)))
-    readonly property var wallPoints: wall.map((point, index) => Qt.point(formRight + flaredX(index) * wallShare, formTop + point.y * form.height))
-    readonly property var wallOutline: hasWall ? traceSpline(wallPoints) : []
+        : isLeaving ? leaveFlare * (1 - Geometry.smooth(Geometry.clampUnit(exit / pace.flareRetract)))
+        : Geometry.smooth(Geometry.clampUnit((opening - pace.flareStart) / (1 - pace.flareStart)))
+    property var wallOutline: []
     readonly property bool hasTracks: isSplashing || hasWall
     property var topTrack: null
     property var bottomTrack: null
     property var bodyOutline: []
     property var crests: [[], []]
-    readonly property real farFront: hasWall ? wallXAt(form.y) : formRight
+    property real farFront: 0
     readonly property var visitor:isActive && isLeaving ? ({ x: form.x, y: form.y, width: form.width, height: form.height, isHandedOff: isHandedOff }) : null
 
     signal landed()
 
-    function clampUnit(value) {
-        return Math.max(0, Math.min(1, value))
-    }
-
-    function smooth(value) {
-        return value * value * (3 - 2 * value)
-    }
-
-    function bounce(time) {
-        return 1 - Math.exp(-pace.bounceDamping * time) * Math.cos(2 * Math.PI * pace.bounceCycles * time)
+    function crossOf(lead) {
+        return Liquid.arrival(character) / (lead * openTime)
     }
 
     function sinceCross(lead) {
-        const cross = 1 / (4 * pace.bounceCycles * lead)
+        const cross = crossOf(lead)
         return opening < cross ? -1 : (opening - cross) / (1 - cross)
-    }
-
-    function splineAt(before, from, to, after, time) {
-        const square = time * time
-        return 0.5 * (2 * from + (to - before) * time + (2 * before - 5 * from + 4 * to - after) * square + (3 * from - before - 3 * to + after) * square * time)
-    }
-
-    function traceSpline(points) {
-        const outline = [points[0]]
-        for (let index = 0; index < points.length - 1; index++) {
-            const before = points[Math.max(0, index - 1)]
-            const from = points[index]
-            const to = points[index + 1]
-            const after = points[Math.min(points.length - 1, index + 2)]
-            for (let sample = 1; sample <= look.curveSamples; sample++) {
-                const time = sample / look.curveSamples
-                outline.push(Qt.point(splineAt(before.x, from.x, to.x, after.x, time), splineAt(before.y, from.y, to.y, after.y, time)))
-            }
-        }
-        return outline
     }
 
     function flaredX(index) {
@@ -155,7 +139,7 @@ Item {
             const narrow = size * (1 - squash) / 2
             return { x: seedX, y: seedY, width: size * (1 + squash), height: size * (1 - squash), left: narrow, right: narrow }
         }
-        const grip = smooth(clampUnit(opening / pace.rootShare))
+        const grip = Geometry.smooth(Geometry.clampUnit(opening / pace.rootShare))
         const wobble = look.impactPush * impactWobble()
         const left = seedX - startReach + (rootX - seedX + startReach) * grip
         const right = seedX + front + wobble
@@ -169,13 +153,13 @@ Item {
             width: width,
             height: height,
             left: Math.min(limit, limit + (leftCorner - limit) * grip),
-            right: Math.min(limit, limit + (rightCorner - limit) * clampUnit(widthShare))
+            right: Math.min(limit, limit + (rightCorner - limit) * Geometry.clampUnit(widthShare))
         }
     }
 
     function leaveForm(exit, from) {
         const size = look.leaveBall
-        const collapse = 1 - Math.pow(1 - clampUnit(exit / pace.leaveShrink), 3)
+        const collapse = 1 - Math.pow(1 - Geometry.clampUnit(exit / pace.leaveShrink), 3)
         const width = from.width + (size - from.width) * collapse
         const height = from.height + (size - from.height) * collapse
         const limit = Math.min(width, height) / 2
@@ -205,7 +189,7 @@ Item {
             height: part.height,
             area: part.width * part.height,
             isUpright: isUpright,
-            lean: clampUnit(along / lengthwise),
+            lean: Geometry.clampUnit(along / lengthwise),
             distance: Math.hypot(seedX - fromX, seedY - fromY),
             heading: Math.atan2(seedY - fromY, seedX - fromX) * 180 / Math.PI
         }
@@ -221,16 +205,16 @@ Item {
 
     function progressOf(flight) {
         const order = farthest > nearest ? (flight.distance - nearest) / (farthest - nearest) : 0
-        return clampUnit((merge - pace.convergeLag * order) / (1 - pace.convergeLag))
+        return Geometry.clampUnit((merge - pace.convergeLag * order) / (1 - pace.convergeLag))
     }
 
     function absorbedShare(flight) {
-        return clampUnit((progressOf(flight) - (1 - pace.absorbShare)) / pace.absorbShare)
+        return Geometry.clampUnit((progressOf(flight) - (1 - pace.absorbShare)) / pace.absorbShare)
     }
 
     function streamForm(flight) {
         const progress = progressOf(flight)
-        const tilt = smooth(clampUnit(progress / pace.tiltShare)) * flight.lean
+        const tilt = Geometry.smooth(Geometry.clampUnit(progress / pace.tiltShare)) * flight.lean
         const travel = progress * progress
         const remaining = 1 - absorbedShare(flight)
         const thin = flight.isUpright ? flight.width : flight.height
@@ -336,7 +320,13 @@ Item {
                         form.y + side * (segment.depth + (segment.toDepth - segment.depth) * share + segment.normalDepth * offset))
     }
 
+    function wallPoints() {
+        return wall.map((point, index) => Qt.point(formRight + flaredX(index) * wallShare, formTop + point.y * form.height))
+    }
+
     function trace() {
+        wallOutline = hasWall ? Geometry.traceSpline(wallPoints(), look.curveSamples) : []
+        farFront = wallOutline.length > 0 ? wallXAt(form.y) : formRight
         if (!hasTracks) {
             topTrack = null
             bottomTrack = null
@@ -359,7 +349,7 @@ Item {
     }
 
     function waveHead(total) {
-        return total * smooth(clampUnit(sinceCross(pace.heightLead) / pace.crestRun))
+        return total * Geometry.smooth(Geometry.clampUnit(sinceCross(pace.heightLead) / pace.crestRun))
     }
 
     function troughDepth(distance, head, scale) {
@@ -430,12 +420,12 @@ Item {
         if (since < 0)
             return 0
         const swell = impact < pace.moundPeak ? Math.sin(Math.PI / 2 * impact / pace.moundPeak) : 1
-        const sink = smooth(clampUnit((impact - pace.moundPeak) / pace.moundSink))
-        return look.crest * clampUnit(since / pace.crestRise) * (1 + pace.moundRise * swell) * (1 - sink)
+        const sink = Geometry.smooth(Geometry.clampUnit((impact - pace.moundPeak) / pace.moundSink))
+        return look.crest * Geometry.clampUnit(since / pace.crestRise) * (1 + pace.moundRise * swell) * (1 - sink)
     }
 
     function jetForm() {
-        const flight = clampUnit(impact / pace.jetShare)
+        const flight = Geometry.clampUnit(impact / pace.jetShare)
         const isFlying = impact > 0 && flight < 1
         return {
             x: farFront + look.jetReach * 4 * flight * (1 - flight),
@@ -445,13 +435,13 @@ Item {
     }
 
     function impactWobble() {
-        return impact <= 0 || impact >= 1 ? 0 : -Math.exp(-pace.impactDamping * impact) * Math.sin(2 * Math.PI * pace.impactCycles * impact)
+        return impact >= 1 ? 0 : -Liquid.ring(Motion.liquid.crash, impact * pace.impact / 1000)
     }
 
     function stepForm(kind) {
-        const grow = clampUnit(form.height / Math.max(1, formHeight))
+        const grow = Geometry.clampUnit(form.height / Math.max(1, formHeight))
         if (kind === "side") {
-            const rise = look.stepSide * grow * smooth(clampUnit((spread - meetShare) / (1 - meetShare)))
+            const rise = look.stepSide * grow * Geometry.smooth(Geometry.clampUnit((spread - meetShare) / (1 - meetShare)))
             const height = look.stepSideHeight * grow
             return {
                 x: formRight - look.stepSideCorner,
@@ -473,8 +463,8 @@ Item {
     function cornerSplashForm(index) {
         const side = index === 0 ? -1 : 1
         const since = sinceCross(1)
-        const arc = since < 0 ? 0 : Math.sin(Math.PI * clampUnit(since / pace.splashSpan))
-        if (hasWall) {
+        const arc = since < 0 ? 0 : Math.sin(Math.PI * Geometry.clampUnit(since / pace.splashSpan))
+        if (hasWall && wallOutline.length > 0) {
             const corner = index === 0 ? wallOutline[0] : wallOutline[wallOutline.length - 1]
             const reach = look.cornerReach * arc * Math.SQRT1_2
             return { x: corner.x + reach, y: corner.y + side * reach, size: look.cornerSplash * arc }
@@ -489,14 +479,20 @@ Item {
         const sine = Math.sin(angle)
         const edge = Math.min(farDistance / Math.max(0.001, cosine), halfHeight / Math.max(0.001, Math.abs(sine)))
         const distance = Math.min(front * pace.sprayLead, edge - look.spray / 2)
-        const caught = clampUnit((front - edge * pace.catchShare) / (edge * (1 - pace.catchShare)))
-        const fade = clampUnit((spread - pace.sprayFade) / (1 - pace.sprayFade))
+        const caught = Geometry.clampUnit((front - edge * pace.catchShare) / (edge * (1 - pace.catchShare)))
+        const fade = Geometry.clampUnit((spread - pace.sprayFade) / (1 - pace.sprayFade))
         return { x: seedX + cosine * distance, y: seedY + sine * distance, size: look.spray * (1 - Math.max(caught, fade)) }
     }
 
-    function start() {
+    function stopAll() {
+        enter.stop()
+        rewinding.stop()
+        resuming.stop()
         leave.stop()
-        isLeaving = false
+    }
+
+    function prepare() {
+        stopAll()
         merge = 0
         spread = 0
         impact = 0
@@ -504,22 +500,84 @@ Item {
         enter.restart()
     }
 
-    function finish() {
-        enter.stop()
+    function rewind() {
+        leave.stop()
+        rewindDuration = Math.round(Motion.burst.leave * exit)
+        rewinding.restart()
+    }
+
+    function reopen() {
+        merge = 1
+        spread = leaveSpread
+        impact = leaveImpact
+        resuming.restart()
+    }
+
+    function holdLeave() {
+        leaveSpread = spread
+        leaveImpact = impact
         leaveWallShare = wallShare
         leaveFlare = flare
-        leaveFrom = form
-        isLeaving = true
+        const shape = form
+        heldFrame = frame
+        heldForm = shape
+    }
+
+    function land() {
+        if (hasLanded)
+            return
+        hasLanded = true
+        landed()
+    }
+
+    function startLeave() {
+        enter.stop()
+        rewinding.stop()
+        resuming.stop()
         exit = 0
+        hasLanded = false
         leave.restart()
     }
 
-    onIsShownChanged: isShown ? start() : finish()
+    function settle(phase) {
+        stopAll()
+        if (phase === "active") {
+            merge = 1
+            spread = 1
+            impact = 1
+        }
+        exit = phase === "active" ? 0 : 1
+        if (phase === "idle")
+            land()
+    }
+
+    property Lifecycle lifecycle: Lifecycle {
+        name: "burst"
+        canRecover: burst.canRewind
+        onMoving: (from, to, event) => {
+            if (to === "exiting")
+                burst.holdLeave()
+        }
+        onMoved: (from, to, event) => {
+            if (event === "settle")
+                burst.settle(to)
+            else if (to === "preparing")
+                burst.prepare()
+            else if (to === "recovering")
+                burst.rewind()
+            else if (to === "entering" && from === "recovering")
+                burst.reopen()
+            else if (to === "exiting")
+                burst.startLeave()
+        }
+    }
+
+    onIsShownChanged: lifecycle.send(isShown ? "show" : "hide")
     onFormChanged: queueTrace()
     onImpactChanged: queueTrace()
-    onWallOutlineChanged: queueTrace()
     onHasTracksChanged: queueTrace()
-    Component.onCompleted: if (isShown) start()
+    onWallChanged: queueTrace()
+    Component.onCompleted: if (isShown) lifecycle.send("show")
 
     anchors.fill: parent
 
@@ -655,38 +713,74 @@ Item {
             target: burst
             property: "merge"
             to: 1
-            duration: Motion.burst.converge
+            duration: Motion.pace(Motion.burst.converge)
             easing.type: Easing.InQuad
         }
+        ScriptAction { script: burst.lifecycle.send("prepared") }
         ParallelAnimation {
             NumberAnimation {
                 target: burst
                 property: "spread"
                 to: 1
-                duration: Motion.burst.spread
+                duration: Motion.pace(Motion.burst.spread)
             }
             SequentialAnimation {
-                PauseAnimation { duration: Math.round(Motion.burst.spread * burst.meetShare) }
+                PauseAnimation { duration: Motion.pace(Math.round(Motion.burst.spread * burst.meetShare)) }
                 NumberAnimation {
                     target: burst
                     property: "impact"
                     to: 1
-                    duration: Motion.burst.impact
+                    duration: Motion.pace(Motion.burst.impact)
                 }
             }
         }
+        ScriptAction { script: burst.lifecycle.send("entered") }
+    }
+
+    SequentialAnimation {
+        id: rewinding
+
+        NumberAnimation {
+            target: burst
+            property: "exit"
+            to: 0
+            duration: Motion.pace(burst.rewindDuration)
+            easing.type: Easing.OutCubic
+        }
+        ScriptAction { script: burst.lifecycle.send("recovered") }
+    }
+
+    SequentialAnimation {
+        id: resuming
+
+        ParallelAnimation {
+            NumberAnimation {
+                target: burst
+                property: "spread"
+                to: 1
+                duration: Motion.pace(Math.round(Motion.burst.spread * (1 - burst.leaveSpread)))
+            }
+            NumberAnimation {
+                target: burst
+                property: "impact"
+                to: 1
+                duration: Motion.pace(Math.round(Motion.burst.impact * (1 - burst.leaveImpact)))
+            }
+        }
+        ScriptAction { script: burst.lifecycle.send("entered") }
     }
 
     SequentialAnimation {
         id: leave
 
-        PauseAnimation { duration: Motion.burst.leaveHold }
-        ScriptAction { script: burst.landed() }
+        PauseAnimation { duration: Motion.pace(Motion.burst.leaveHold) }
+        ScriptAction { script: burst.land() }
         NumberAnimation {
             target: burst
             property: "exit"
             to: 1
-            duration: Motion.burst.leave
+            duration: Motion.pace(Motion.burst.leave)
         }
+        ScriptAction { script: burst.lifecycle.send("exited") }
     }
 }

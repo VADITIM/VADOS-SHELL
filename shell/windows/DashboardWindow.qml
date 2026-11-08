@@ -1,29 +1,14 @@
 import QtQuick
-import Quickshell
-import Quickshell.Wayland
 import qs.config
-import qs.state
 import qs.services
 import qs.modules.dashboard
 
-PanelWindow {
+OverlayWindow {
     id: window
 
-    readonly property string screenName: screen?.name ?? ""
-    readonly property bool isOpen: Visibilities.dashboardScreen === screenName
-
-    anchors {
-        left: true
-        right: true
-        top: true
-        bottom: true
-    }
-    visible: dashboard.isPresent
-    exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "vados-dashboard"
-    WlrLayershell.keyboardFocus: isOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    color: "transparent"
+    overlayKey: "dashboard"
+    isPresent: dashboard.isPresent
+    phase: dashboard.phase
 
     Binding {
         target: Hardware
@@ -54,10 +39,10 @@ PanelWindow {
         anchors.fill: parent
         isOpen: window.isOpen
         isMirrored: Config.data.taskbar.side === "right"
-        parts: Visibilities.taskbarParts[window.screenName] ?? []
+        parts: window.parts
         canHandOff: Config.data.taskbar.style !== "bare"
-        onVisitorChanged: Visibilities.placeVisitor(window.screenName, visitor)
-        onCloseRequested: Visibilities.closeDashboard()
-        onLanded: Visibilities.returnTaskbar(window.screenName)
+        onVisitorChanged: window.placeVisitor(visitor)
+        onCloseRequested: window.requestClose()
+        onLanded: window.land()
     }
 }

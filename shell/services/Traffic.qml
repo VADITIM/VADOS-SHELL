@@ -84,10 +84,16 @@ Singleton {
     }
 
     Process {
+        id: pinger
         command: ["ping", "-n", "-i", "1", traffic.pingHost]
-        running: traffic.isActive
         stdout: SplitParser {
             onRead: line => traffic.readPing(line)
         }
+    }
+
+    Supervisor {
+        name: "traffic"
+        process: pinger
+        isActive: traffic.isActive
     }
 }

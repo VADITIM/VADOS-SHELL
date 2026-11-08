@@ -1,28 +1,13 @@
 import QtQuick
-import Quickshell
-import Quickshell.Wayland
 import qs.config
-import qs.state
 import qs.modules.search
 
-PanelWindow {
+OverlayWindow {
     id: window
 
-    readonly property string screenName: screen?.name ?? ""
-    readonly property bool isOpen: Visibilities.searchScreen === screenName
-
-    anchors {
-        left: true
-        right: true
-        top: true
-        bottom: true
-    }
-    visible: search.isPresent
-    exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.namespace: "vados-search"
-    WlrLayershell.keyboardFocus: isOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    color: "transparent"
+    overlayKey: "search"
+    isPresent: search.isPresent
+    phase: search.phase
 
     Search {
         id: search
@@ -31,12 +16,12 @@ PanelWindow {
         favoriteIds: Config.data.search.favorites
         profileName: Config.data.profile.name
         profilePicture: Config.data.profile.picture
-        parts: Visibilities.taskbarParts[window.screenName] ?? []
+        parts: window.parts
         isMirrored: Config.data.taskbar.side === "right"
         canHandOff: Config.data.taskbar.style !== "bare"
-        onVisitorChanged: Visibilities.placeVisitor(window.screenName, visitor)
-        onCloseRequested: Visibilities.closeSearch()
-        onLanded: Visibilities.returnTaskbar(window.screenName)
+        onVisitorChanged: window.placeVisitor(visitor)
+        onCloseRequested: window.requestClose()
+        onLanded: window.land()
         onFavoriteToggled: appId => Config.toggleFavorite(appId)
     }
 }

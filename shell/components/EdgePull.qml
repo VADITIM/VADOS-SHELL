@@ -4,6 +4,8 @@ import qs.config
 Item {
     id: edgePull
 
+    required property var look
+    required property var pace
     property bool isEnabled: true
     property Item shapes: null
     property real pull: 0
@@ -21,16 +23,16 @@ Item {
     }
 
     LiquidShape {
-        readonly property real reach: Math.max(edgePull.pull, edgePull.dwell * Motion.reveal.beadReach)
+        readonly property real reach: Math.max(edgePull.pull, edgePull.dwell * edgePull.pace.beadReach)
         parent: edgePull.shapes
-        height: Appearance.taskbar.bead + Math.min(Appearance.taskbar.bead, reach * Appearance.taskbar.beadGrowth)
+        height: edgePull.look.bead + Math.min(edgePull.look.bead, reach * edgePull.look.beadGrowth)
         width: reach + height
         x: -height
         y: edgePull.beadY - height / 2
     }
 
     Item {
-        width: Appearance.taskbar.edgeStrip
+        width: edgePull.look.edgeStrip
         height: parent.height
 
         HoverHandler {
@@ -47,25 +49,24 @@ Item {
             }
         }
 
-        MouseArea {
-            property real startX: 0
-
+        Gesture {
             anchors.fill: parent
             enabled: edgePull.isEnabled
+            threshold: edgePull.pace.pullThreshold
+            isVertical: false
             onPressed: mouse => {
-                startX = mouse.x
                 edgePull.beadY = mouse.y
                 pullRelease.stop()
             }
-            onPositionChanged: mouse => {
-                const distance = Math.max(0, mouse.x - startX)
-                edgePull.pull = Math.min(Motion.reveal.pullLimit, distance)
-                edgePull.beadY = mouse.y
-                if (distance >= Motion.reveal.pullThreshold)
+            onMoved: (travelX, travelY) => {
+                edgePull.pull = Math.min(edgePull.pace.pullLimit, Math.max(0, travelX))
+                edgePull.beadY = pressPoint.y + travelY
+            }
+            onCrossed: (travelX, travelY) => {
+                if (travelX > 0)
                     edgePull.summoned()
             }
-            onReleased: pullRelease.restart()
-            onCanceled: pullRelease.restart()
+            onEnded: pullRelease.restart()
         }
     }
 
@@ -74,7 +75,7 @@ Item {
         target: edgePull
         property: "dwell"
         to: 1
-        duration: Motion.reveal.dwell
+        duration: edgePull.pace.dwell
         easing.type: Easing.InOutSine
         onFinished: edgePull.summoned()
     }
@@ -84,7 +85,7 @@ Item {
         target: edgePull
         property: "dwell"
         to: 0
-        duration: Motion.hoverOut
+        duration: Motion.pace(Motion.hoverOut)
         easing.type: Easing.InQuad
     }
 
@@ -93,7 +94,7 @@ Item {
         target: edgePull
         property: "pull"
         to: 0
-        duration: Motion.stateDuration
+        duration: Motion.pace(Motion.stateDuration)
         easing.type: Easing.InBack
     }
 }

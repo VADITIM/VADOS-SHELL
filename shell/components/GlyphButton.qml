@@ -26,7 +26,7 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: area.containsMouse ? Motion.hoverIn : Motion.hoverOut
+                duration: Motion.pace(area.containsMouse ? Motion.hoverIn : Motion.hoverOut)
                 easing.type: Easing.OutQuad
             }
         }

@@ -14,7 +14,7 @@ Rectangle {
 
     Behavior on drawn {
         NumberAnimation {
-            duration: Motion.dashboard.level
+            duration: Motion.pace(Motion.dashboard.level)
             easing.type: Easing.OutCubic
         }
     }
@@ -28,7 +28,7 @@ Rectangle {
         color: bar.fill
 
         Behavior on color {
-            ColorAnimation { duration: Motion.stateDuration }
+            ColorAnimation { duration: Motion.pace(Motion.stateDuration) }
         }
     }
 }

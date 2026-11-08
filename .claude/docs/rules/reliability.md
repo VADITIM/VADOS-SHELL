@@ -1,0 +1,9 @@
+# Reliability rules
+
+Enforced by `tools/check-rules.py` where marked ✓ (direction, 2026-11-07: "surfaces recover cleanly after service failures", "useful logs and actionable error reporting").
+
+- **One logger** ✓. Everything the shell says goes through `utils/Log.js` (`Log.info`, `Log.warn`, `Log.error`); no `console.*` anywhere else in `shell/`. One format, `vados: <subsystem>: <message>`, where the subsystem is the service or engine (`compositor`, `weather`, `lifecycle`, `config`). A message says what failed and what the shell does about it (`exited with code 2, restarting in 4 s`).
+- **Repeats are held back, not lost.** The same message within `Log.repeatWindow` is counted instead of printed and printed again with its count after the window, so a failing poll cannot flood the journal. The last `Log.capacity` entries stay in memory for diagnostics.
+- **Long-lived work is supervised** (review; the supervisor itself is an engine with a test ✓). A process that must keep running (an event stream, a monitor, `ping`) or a fetch that must eventually succeed runs under a `Supervisor` (`services/Supervisor.qml`): it restarts with exponential backoff (`Motion.supervision`: `base`, `factor`, `cap`), resets after a healthy run (`healthy`), logs each failure and each recovery, and enrolls in `Supervision` so diagnostics can list it. No hand-written retry timers.
+- **Supervision respects idle.** A `Supervisor` runs and restarts only while `isActive`; a service whose surface is hidden binds `isActive` to it, and going inactive stops the process and cancels a pending restart. A stop the shell asked for is never a failure.
+- **Every failure is visible from outside.** `qs ipc call diagnostics report` gives the compositor backend and level, the overlay stack and phases, every supervisor with its status and restarts, and the recent log; the text is built by the pure `utils/Diagnostics.js`.

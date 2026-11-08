@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import "../utils/Liquid.js" as Liquid
 
 QtObject {
     id: mutate
@@ -9,7 +10,14 @@ QtObject {
     property int enterDelay: 0
     property int leaveDelay: Motion.pill.leaveWindow + Motion.pill.leaveElement / 4
     property int popDuration: Motion.pill.pop
-    property real pop: 0
+    property var character: Motion.liquid.pill
+    property real popTime: 0
+    property real popFrom: 0
+    property real popRemaining: 1
+    property bool isPopLeaving: false
+    readonly property real pop: isPopLeaving ? popFrom * popRemaining
+        : popTime >= popDuration ? 1
+        : popFrom + (1 - popFrom) * Liquid.rise(character, popTime / 1000)
     property real spread: 0
     property bool isInnerShown: false
     readonly property int innerLead: Motion.pill.spread / 2
@@ -18,27 +26,26 @@ QtObject {
     signal departed()
 
     readonly property SequentialAnimation spreadEnter: SequentialAnimation {
-        PauseAnimation { duration: mutate.enterDelay }
+        PauseAnimation { duration: Motion.pace(mutate.enterDelay) }
         ParallelAnimation {
             NumberAnimation {
                 target: mutate
-                property: "pop"
-                to: 1
-                duration: mutate.popDuration
-                easing.type: Easing.OutBack
+                property: "popTime"
+                to: mutate.popDuration
+                duration: Motion.pace(mutate.popDuration)
             }
             SequentialAnimation {
-                PauseAnimation { duration: Motion.pill.spreadDelay }
+                PauseAnimation { duration: Motion.pace(Motion.pill.spreadDelay) }
                 ParallelAnimation {
                     NumberAnimation {
                         target: mutate
                         property: "spread"
                         to: 1
-                        duration: Motion.pill.spread
+                        duration: Motion.pace(Motion.pill.spread)
                         easing.type: Easing.InOutCubic
                     }
                     SequentialAnimation {
-                        PauseAnimation { duration: mutate.innerLead }
+                        PauseAnimation { duration: Motion.pace(mutate.innerLead) }
                         ScriptAction { script: mutate.isInnerShown = true }
                     }
                 }
@@ -47,14 +54,13 @@ QtObject {
     }
 
     readonly property SequentialAnimation popEnter: SequentialAnimation {
-        PauseAnimation { duration: mutate.enterDelay }
+        PauseAnimation { duration: Motion.pace(mutate.enterDelay) }
         ScriptAction { script: mutate.isInnerShown = true }
         NumberAnimation {
             target: mutate
-            property: "pop"
-            to: 1
-            duration: mutate.popDuration
-            easing.type: Easing.OutBack
+            property: "popTime"
+            to: mutate.popDuration
+            duration: Motion.pace(mutate.popDuration)
         }
     }
 
@@ -65,22 +71,32 @@ QtObject {
             target: mutate
             property: "spread"
             to: 0
-            duration: mutate.hasSpread ? Motion.pill.leaveSpread : 0
+            duration: Motion.pace(mutate.hasSpread ? Motion.pill.leaveSpread : 0)
             easing.type: Easing.InOutCubic
         }
+        ScriptAction { script: mutate.holdPop(true) }
         NumberAnimation {
             target: mutate
-            property: "pop"
+            property: "popRemaining"
             to: 0
-            duration: Motion.pill.leavePop
+            duration: Motion.pace(Motion.pill.leavePop)
             easing.type: Easing.InBack
         }
         ScriptAction { script: mutate.departed() }
     }
 
+    function holdPop(isLeaving) {
+        const current = pop
+        popFrom = current
+        popTime = 0
+        popRemaining = 1
+        isPopLeaving = isLeaving
+    }
+
     function play() {
         if (isShown) {
             leave.stop()
+            holdPop(false)
             if (hasSpread)
                 spreadEnter.restart()
             else
@@ -89,7 +105,7 @@ QtObject {
         }
         spreadEnter.stop()
         popEnter.stop()
-        leavePause.duration = leaveDelay
+        leavePause.duration = Motion.pace(leaveDelay)
         leave.restart()
     }
 

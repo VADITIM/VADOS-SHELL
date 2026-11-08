@@ -52,7 +52,7 @@ Item {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: row.isSelected || area.containsMouse ? Motion.hoverIn : Motion.hoverOut
+                    duration: Motion.pace(row.isSelected || area.containsMouse ? Motion.hoverIn : Motion.hoverOut)
                     easing.type: Easing.OutQuad
                 }
             }
@@ -77,7 +77,7 @@ Item {
             font.pixelSize: Appearance.font.body
 
             Behavior on color {
-                ColorAnimation { duration: Motion.hoverIn }
+                ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
             }
         }
 

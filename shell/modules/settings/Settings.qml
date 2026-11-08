@@ -13,16 +13,20 @@ FocusScope {
     property string barStyle: "floating"
     property string windowMode: "canvas"
     property bool canSwitchMode: false
+    property bool isReducedMotion: false
+    property bool isQuiet: false
     property string tab: "appearance"
     property string shownTab: tab
     readonly property bool isPresent: isOpen || launch.isActive || rising.living > 0
+    readonly property string phase: launch.phase
     readonly property bool isContentShown: launch.isOpened
     property real dim: isOpen ? 1 : 0
 
     readonly property var look: Appearance.settings
     readonly property var tabs: [
         { key: "appearance", label: "APPEARANCE", glyph: "drop" },
-        { key: "taskbar", label: "TASKBAR", glyph: "style-floating" }
+        { key: "taskbar", label: "TASKBAR", glyph: "style-floating" },
+        { key: "system", label: "SYSTEM", glyph: "moon" }
     ].concat(canSwitchMode ? [{ key: "desktop", label: "DESKTOP", glyph: "mode-desktop" }] : [])
     readonly property var currentTab: tabs.find(entry => entry.key === tab) ?? tabs[0]
 
@@ -43,6 +47,8 @@ FocusScope {
     signal sideRequested(string side)
     signal styleRequested(string style)
     signal modeRequested(string mode)
+    signal reducedMotionRequested(bool isReduced)
+    signal quietRequested(bool isQuiet)
 
     function pick(key) {
         if (key === tab)
@@ -69,9 +75,9 @@ FocusScope {
 
     Behavior on dim {
         SequentialAnimation {
-            PauseAnimation { duration: settings.isOpen ? Motion.settings.merge : 0 }
+            PauseAnimation { duration: Motion.pace(settings.isOpen ? Motion.settings.merge : 0) }
             NumberAnimation {
-                duration: settings.isOpen ? Motion.settings.dim : Motion.settings.dimOut
+                duration: Motion.pace(settings.isOpen ? Motion.settings.dim : Motion.settings.dimOut)
                 easing.type: settings.isOpen ? Easing.OutQuad : Easing.InQuad
             }
         }
@@ -116,6 +122,7 @@ FocusScope {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
+        isShown: launch.isActive
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
@@ -125,6 +132,8 @@ FocusScope {
         Launch {
             id: launch
             parent: liquid.shapes
+            look: settings.look
+            pace: Motion.settings
             isShown: settings.isOpen
             parts: settings.parts
             isMirrored: settings.isMirrored
@@ -235,6 +244,7 @@ FocusScope {
                     spacing: settings.look.headerGap
 
                     ColorWheel {
+                        look: settings.look
                         color: settings.accent
                         onPicked: value => settings.accentRequested(value)
                     }
@@ -281,6 +291,32 @@ FocusScope {
                         options: ["floating", "fused", "bare"]
                         current: settings.barStyle
                         onPicked: option => settings.styleRequested(option)
+                    }
+                }
+            }
+
+            Page {
+                width: pageArea.width
+                height: pageArea.height
+                pageKey: "system"
+                shownKey: settings.shownTab
+                isContentShown: settings.isContentShown
+
+                Column {
+                    spacing: settings.look.headerGap
+
+                    OptionGroup {
+                        label: "MOTION"
+                        options: ["full", "reduced"]
+                        current: settings.isReducedMotion ? "reduced" : "full"
+                        onPicked: option => settings.reducedMotionRequested(option === "reduced")
+                    }
+
+                    OptionGroup {
+                        label: "NOTIFICATIONS"
+                        options: ["open", "quiet"]
+                        current: settings.isQuiet ? "quiet" : "open"
+                        onPicked: option => settings.quietRequested(option === "quiet")
                     }
                 }
             }

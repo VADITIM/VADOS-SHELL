@@ -1,16 +1,18 @@
 import QtQuick
 import QtQuick.Shapes
 import qs.config
+import "../utils/Geometry.js" as Geometry
 
 Column {
     id: picker
 
+    required property var look
     property color color: "white"
     property real hue: 0
     property real saturation: 0
     property real value: 1
     readonly property color current: Qt.hsva(hue, saturation, value, 1)
-    readonly property real diameter: Appearance.settings.wheel
+    readonly property real diameter: picker.look.wheel
     readonly property real radius: diameter / 2
     readonly property bool isDragging: wheelArea.pressed || sliderArea.pressed
 
@@ -48,14 +50,14 @@ Column {
     }
 
     function slideTo(pointX) {
-        value = Math.max(0, Math.min(1, pointX / slider.width))
+        value = Geometry.clampUnit(pointX / slider.width)
         emit()
     }
 
     onColorChanged: adopt(color)
     Component.onCompleted: adopt(color)
 
-    spacing: Appearance.settings.gap
+    spacing: picker.look.gap
 
     Item {
         width: picker.diameter
@@ -124,8 +126,8 @@ Column {
             readonly property real angle: picker.hue * 2 * Math.PI
             x: picker.radius + Math.cos(angle) * picker.saturation * picker.radius - width / 2
             y: picker.radius - Math.sin(angle) * picker.saturation * picker.radius - height / 2
-            width: Appearance.settings.knob
-            height: Appearance.settings.knob
+            width: picker.look.knob
+            height: picker.look.knob
             radius: width / 2
             color: picker.current
             border.width: 2
@@ -156,12 +158,12 @@ Column {
     Item {
         id: slider
         width: picker.diameter
-        height: Appearance.settings.knob
+        height: picker.look.knob
 
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width
-            height: Appearance.settings.slider
+            height: picker.look.slider
             radius: height / 2
             border.width: 1
             border.color: Appearance.color.hairline
@@ -174,8 +176,8 @@ Column {
 
         Rectangle {
             x: picker.value * (slider.width - width)
-            width: Appearance.settings.knob
-            height: Appearance.settings.knob
+            width: picker.look.knob
+            height: picker.look.knob
             radius: width / 2
             color: picker.current
             border.width: 2
@@ -199,8 +201,8 @@ Column {
         spacing: 10
 
         Rectangle {
-            width: Appearance.settings.swatch
-            height: Appearance.settings.swatch
+            width: picker.look.swatch
+            height: picker.look.swatch
             radius: Appearance.radius.medium
             color: picker.current
             border.width: 1
@@ -208,8 +210,8 @@ Column {
         }
 
         Rectangle {
-            width: picker.diameter - Appearance.settings.swatch - 10
-            height: Appearance.settings.field
+            width: picker.diameter - picker.look.swatch - 10
+            height: picker.look.field
             radius: Appearance.radius.medium
             color: Appearance.color.panel
             border.width: 1
@@ -226,7 +228,7 @@ Column {
                 selectionColor: Appearance.color.accent
                 selectedTextColor: Appearance.color.ground
                 font.family: Appearance.font.mono
-                font.pixelSize: Appearance.settings.hexText
+                font.pixelSize: picker.look.hexText
                 font.capitalization: Font.AllUppercase
                 onTextEdited: {
                     const candidate = (text.trim().startsWith("#") ? "" : "#") + text.trim()

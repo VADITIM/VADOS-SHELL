@@ -39,11 +39,16 @@ Singleton {
     Component.onCompleted: query.running = true
 
     Process {
+        id: monitor
         command: ["udevadm", "monitor", "--udev", "--subsystem-match=block"]
-        running: true
         stdout: SplitParser {
             onRead: settle.restart()
         }
+    }
+
+    Supervisor {
+        name: "removable"
+        process: monitor
     }
 
     Timer {

@@ -1,4 +1,5 @@
 import QtQuick
+import "../utils/Geometry.js" as Geometry
 
 Item {
     id: gather
@@ -20,7 +21,7 @@ Item {
     }
 
     function shareAt(value) {
-        return Math.max(0, Math.min(1, (merge - lag * Math.abs(value - seedY) / reach) / (1 - lag)))
+        return Geometry.clampUnit((merge - lag * Math.abs(value - seedY) / reach) / (1 - lag))
     }
 
     function formOf(part) {

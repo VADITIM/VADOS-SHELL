@@ -9,6 +9,7 @@ A Quickshell (Qt 6 / QML) desktop shell. **driftwm first**, compatible with Hypr
 - Quickshell QML; entry `shell/shell.qml`; config `shell.json` (live-reloaded).
 - Run on Linux: `qs -p ~/.config/vados/shell`.
 - Preview on Windows: the PySide6 harness with mock `qs.*` modules (auto-memory `qml-preview-harness`). Services that talk to a compositor are not previewable; syntax-check them with `C:\Users\vn\dependencies\pyside6\PySide6\qmlformat.exe <file>`.
+- Hard rules: `python tools/check-rules.py` (also runs as a Stop hook). Tests: `python tools/tests/run.py` (PySide6 Qt Quick tests). Both pass before every commit (`docs/rules/testing.md`).
 - Releases: on command.
 - Changelog: `CHANGELOGS.md` at the repo root, one section per version. On each push the user states when to bump the version and to what; then move `Unreleased` entries under the new version heading. Add entries to `Unreleased` as changes land.
 
@@ -19,6 +20,12 @@ A Quickshell (Qt 6 / QML) desktop shell. **driftwm first**, compatible with Hypr
 @docs/rules/animations.md
 @docs/rules/frontend.md
 @docs/rules/code-quality.md
+@docs/rules/interaction.md
+@docs/rules/security.md
+@docs/rules/state.md
+@docs/rules/performance.md
+@docs/rules/testing.md
+@docs/rules/reliability.md
 
 ## Keeping `.claude` current
 
@@ -28,10 +35,13 @@ Update these docs in the same task as the change, without being asked (V/AS `gui
 |---|---|
 | File or folder added, moved, renamed | `docs/map.md` |
 | Layer, boundary, data flow | `docs/architecture.md` |
+| A layer's public interface, imports or callers | `docs/interfaces.md` (owner, imports, interface, callers per layer) |
 | Choice between real alternatives | `docs/decisions.md` |
 | Trap, workaround, unverified assumption | `docs/quirks.md` |
 | Bug or debt not fixed now | `docs/known-issues.md` |
 | Planned work agreed or shipped | `docs/roadmap.md` (also mirrored to the Obsidian vault "VADOS SHELL", note `Shell.md`) |
 | A rule the user states | `docs/rules/<domain>.md` |
+
+`docs/direction.md` is the product direction (user, 2026-11-07): one coherent interaction engine as independently testable subsystems, built in phases (engine integrity first). Measure progress by the foundations, not the feature count.
 
 `docs/project-notes.md` holds the early design chats (Hyprland era); it is history, not rules.

@@ -60,6 +60,14 @@ Singleton {
         return color.levelCritical
     }
 
+    readonly property QtObject liquid: QtObject {
+        readonly property real fillThreshold: 0.5
+        readonly property real rimThreshold: 0.3
+        readonly property real edgeSoftness: 0.04
+        readonly property real coreThreshold: 0.5
+        readonly property real coreSoftness: 0.1
+    }
+
     readonly property QtObject taskbar: QtObject {
         readonly property int margin: 11
         readonly property int thickness: 47

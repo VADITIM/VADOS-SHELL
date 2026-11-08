@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import "../utils/Geometry.js" as Geometry
 
 Item {
     id: glyph
@@ -173,7 +174,7 @@ Item {
     function fillFor(glyphName, glyphLevel, charging) {
         if (glyphName !== "battery" || charging)
             return ""
-        const filled = 11 * Math.max(0, Math.min(1, glyphLevel))
+        const filled = 11 * Geometry.clampUnit(glyphLevel)
         if (filled < 0.5)
             return ""
         return "M5.5 10 H" + (5.5 + filled).toFixed(2) + " V14 H5.5 Z"

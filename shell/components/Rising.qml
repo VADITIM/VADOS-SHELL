@@ -10,7 +10,8 @@ Item {
     property real ceiling: 0
     property real floor: 0
     property int living: 0
-    readonly property bool isActive: isRunning || living > 0
+    readonly property bool isEmitting: isRunning && !Motion.isReduced
+    readonly property bool isActive: isEmitting || living > 0
     readonly property var look: Appearance.rising
     readonly property var pace: Motion.rising
 
@@ -60,7 +61,7 @@ Item {
     }
 
     function advance(step) {
-        if (isRunning) {
+        if (isEmitting) {
             clock += step * 1000
             if (clock >= pace.interval) {
                 clock = 0
@@ -98,15 +99,15 @@ Item {
         living = count
     }
 
-    onIsRunningChanged: {
+    onIsEmittingChanged: {
         clock = 0
-        if (!isRunning)
+        if (!isEmitting)
             drain()
     }
 
     FrameAnimation {
         running: rising.isActive
-        onTriggered: rising.advance(Math.min(frameTime, Motion.carry.frameCap))
+        onTriggered: rising.advance(Math.min(frameTime, Motion.liquid.frameCap))
     }
 
     Repeater {

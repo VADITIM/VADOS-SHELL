@@ -1,5 +1,29 @@
 # Quirks
 
+- **`Supervisor` reads a stop one timer tick later** (2026-11-07): it is unverified whether Quickshell's `Process` emits `exited` before or after `runningChanged`, and a failed start emits no `exited` at all. A zero-length timer after `runningChanged` sees both, so the failure says `exited with code N` or `failed to start` either way.
+- **`Log.js` is one instance only if every importer resolves to the same file URL.** All shell files import `"../utils/Log.js"`, which is the same file in Quickshell; the tests import it by another path (`../../shell/utils/Log.js`), so `tst_log` has its own ring, separate from the one the components log into. Within one engine, an identical message within `Log.repeatWindow` is held back, so a test that expects a warning (`ignoreWarning`) must use a message no earlier test printed (unique supervisor names in `tst_supervisor`).
+
+- **`Config` repairs a tick after `FileView.loaded`** (`Qt.callLater`, 2026-11-07), because it is unverified whether `JsonAdapter` reads the file before or after `loaded` is emitted; repairing first would be overwritten by the raw values. For that tick a bad value is what `JsonAdapter` coerced it to.
+- **The schema's `fallback` and the adapter's literal default are written twice on purpose**; `check-rules.py` compares them as text, so write both the same way (`"left"`, `[]`, `false`).
+
+- **`Burst.wallOutline` is traced, not bound** (2026-11-07). It is set in `trace()` once per frame, so for one frame after the wall appears it can be empty while `hasWall` is already true; read it with a length check (`cornerSplashForm` does). `farFront` is traced with it.
+- **`tst_budget` numbers are from this container, offscreen.** They budget script work only; a slower CPU or the real compositor's rendering are not in them. The suite prints the measured 95th percentile and worst frame on every run.
+
+- **A `Lifecycle` host captures in `moving`, starts in `moved`.** Reading `form` after the phase changed already gives the leave form, and a reduced-motion animation started before the phase changed reports to the old phase and is lost (2026-11-07).
+- **Never stop an animation from its own final `ScriptAction`.** The lifecycle hosts only stop animations on `settle`, never on `entered` or `exited`.
+- **Never name a component `Transition` or `State`** (like `Drag`): QtQuick types win inside `qs.components`. The lifecycle component is `Lifecycle`, and inside it the move table is imported as `Phases`.
+
+- **Never name a component `Drag`.** QtQuick's attached `Drag` type wins over a same-named file inside `qs.components` itself ("Drag is only available via attached properties"), while files importing `qs.components` later get the local one. The gesture ability is `Gesture` for that reason (2026-11-07).
+- **A `Scope` or `Singleton` must not declare `property var data`.** `data` is their default property; shadowing it sends every child (`FileView`, `Timer`) nowhere. `StateFile` calls its state `values`.
+- **`Config` must not bind to `Motion` at construction.** `Motion.isReduced` reads `Config`, so `Config`'s write timer takes `Motion.settings.write` when `setAccent` runs instead of in a binding, to avoid a singleton construction cycle.
+- **Singletons are created on first use**, so anything that must listen from startup is touched by `Shortcuts` (`Notifications`, `Attention`). The tests touch `Attention` the same way before sending notifications.
+- **Preview: the fake `Singleton` needs a default property** (`tools/preview/play.py`), or a state singleton with child `Timer`s fails to load.
+- **Tests: QML `XMLHttpRequest` cannot read files synchronously**, so the fake `FileView` reads and writes through a Python `Disk` singleton registered by `tools/tests/run.py`.
+- **Liquid characters must be underdamped** (`damping` below 1). `Liquid.swing` takes `√(1 − damping²)`; at 1 or above it is NaN and the body vanishes. Liquid always overshoots, so a non-overshooting motion is an easing, not a character.
+- **`Mutate`'s pop snaps the last 1.2 %.** The spring has not fully settled when the pop clock (`Motion.pill.pop`) ends, so `pop` reads 1 from then on; the snap is under half a pixel on a task pill.
+- **Characters are in seconds.** `Burst` and `Launch` convert their phase share to seconds (`openTime`, `spreadTime`) before calling the engine. Retuning `Motion.burst.spread` or `Motion.settings.pop` now changes how much of the spring plays, not the spring.
+- **Unverified Quickshell assumption (notifications, 2026-11-06):** singletons are created on first use, so `Shortcuts` binds to `Notifications.isServing` to create the service and register the server at startup. `LazyLoader` with a `NotificationServer` child and `trackedNotifications.values` as an array are also untested.
+- **Preview on Linux** (cloud sessions): PySide6 needs `libegl1`, and the offscreen platform draws each `LiquidLayer` as an unmasked grey slab, so goo shapes cannot be judged there. Content, layout and runtime warnings can: run `play.build()` and load `play.qml` with `QT_QPA_PLATFORM=offscreen`.
 - **`long` is a reserved word in QML JavaScript.** `const long = …` makes the file fail to parse, and `qmlformat` exits 1 without a message.
 - **The preview harness cannot time animations.** `grabWindow` under the basic render loop lets every animation finish within one frame, and the threaded loop stalls while grabbing. Check motion by setting the phase properties by hand and grabbing poses.
 - **The dashboard body uses per-corner `Rectangle` radii** (`topLeftRadius` and friends), which need Qt 6.7 or newer.

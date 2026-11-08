@@ -11,6 +11,7 @@ FocusScope {
     property var parts: []
     property bool canHandOff: false
     readonly property bool isPresent: isOpen || burst.isActive || rising.living > 0
+    readonly property string phase: burst.phase
 
     property real dim: isOpen ? 1 : 0
     property int diskPage: 0
@@ -63,7 +64,7 @@ FocusScope {
 
     Behavior on dim {
         NumberAnimation {
-            duration: dashboard.isOpen ? Motion.dashboard.dim : Motion.dashboard.dimOut
+            duration: Motion.pace(dashboard.isOpen ? Motion.dashboard.dim : Motion.dashboard.dimOut)
             easing.type: dashboard.isOpen ? Easing.OutQuad : Easing.InQuad
         }
     }
@@ -93,6 +94,7 @@ FocusScope {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
+        isShown: burst.isActive
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha

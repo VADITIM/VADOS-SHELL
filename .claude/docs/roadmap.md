@@ -1,13 +1,30 @@
 # Roadmap
 
-Ordered. Shipped items move to `decisions.md`. Mirrored to the Obsidian vault "VADOS SHELL", note `Shell.md`.
+Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, then one complete vertical slice, then daily-driver features, compositor support and productization. Progress is measured by the foundations, not the feature count. Shipped items move to `decisions.md`. Mirrored to the Obsidian vault "VADOS SHELL", note `Shell.md`.
+
+## Phase 1: engine integrity (now)
+
+Exit: transitions can be created, interrupted, reversed and chained without inconsistent visual or logical states.
+
+- Shipped: liquid engine, motion tokens and reduced motion, overlay engine, gesture engine, transition lifecycle with recovery, shared geometry, compositor capabilities, persistence, enforced rules and tests; overlays joined with the lifecycles, leave geometry that follows screen changes, a measured script frame budget; subsystem interfaces and ownership (`interfaces.md`) with enforced import direction (2026-11-07).
+- Left: verify on hardware and budget the render cost there (`known-issues.md`). Phase 2 can start.
+
+## Phase 2: vertical slice (taskbar and search)
+
+Exit: search works as a finished daily-use feature, not an animation demonstration.
+
+- Taskbar-to-search morph and return, keyboard and pointer, rapid input, error and recovery behaviour; then **verify on driftwm** (item 3 below).
+
+## Phase 3 onwards: daily driver, compositors, productization
+
+The numbered list below is the daily-driver backlog (phase 3: settings, notifications, controls, clipboard, tray, multi-monitor). Phase 4 completes the driftwm adapter and other backends on `Compositor.capabilities` (the contract and the README "Compositor support" table shipped 2026-11-07; left: test each backend for real, focus tracking on generic Wayland); phase 5 is installation, config validation and migration, logging and diagnostics.
 
 ## Next
 
-1. **Activity bar** (agreed 2026-11-05): a dynamic island that lives inside the taskbar. It shows what is happening now: the playing music, Discord calls, notifications, the system tray, and more over time. VAD/OS BUBBLE (`C:\Users\vn\source\VADOS-BUBBLE`) already has a first version of this; port it into the shell, improve it, and bring it in line with V/AS. **Started 2026-11-06**: the activity pill in the middle of the taskbar with its four states, music and Discord (`decisions.md` § Activity pill). Next: notifications as alerts out of the pill, the system tray, timers, more modules.
+0. **Engines in place (2026-11-07)**: overlay, gesture, attention, persistence, reduced motion. New features build on them: the lock screen is an `OverlayWindow`-free `LockWindow` (`rules/security.md`), clipboard is an overlay with a `StateFile`, notifications draw `Attention.peek` with `Gesture` swipes.
+1. **Activity bar** (agreed 2026-11-05): a dynamic island that lives inside the taskbar. It shows what is happening now: the playing music, Discord calls, notifications, the system tray, and more over time. VAD/OS BUBBLE (`C:\Users\vn\source\VADOS-BUBBLE`) already has a first version of this; port it into the shell, improve it, and bring it in line with V/AS. **Started 2026-11-06**: the activity pill in the middle of the taskbar with its four states, music and Discord (`decisions.md` § Activity pill). Foundations from the engine branch (2026-11-07): `state/Activity.qml` (notification and tray entries, where the bar is open) and `services/Notifications.qml` (off by default). Next: draw those entries in the pill (notifications as alerts out of it, the system tray), fold `Activity` into `ActivityState`, timers, more modules, then turn `notifications.enabled` on by default.
 2. **Settings on the burst**: settings is the last overlay not growing out of the taskbar column with the dashboard's `Burst` (left alone on 2026-11-05 at the user's request).
 3. **Verify on driftwm.** Run the shell in a real session and check every assumption in `quirks.md` § Unverified driftwm assumptions: camera centre, Y-up, fullscreen/pinned shapes, negative `move`.
-4. **Persist Desktop mode parking** to `~/.cache/vados/desktop.json`, so a restart never strands windows (`known-issues.md`).
 5. **Desktop mode, Windows parity:**
    - Aero-snap by dragging a window to a screen edge or corner, with a liquid preview of the target region.
    - Super+Up/Down cycle (restore → maximize → minimize).

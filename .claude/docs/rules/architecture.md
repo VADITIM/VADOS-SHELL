@@ -1,9 +1,11 @@
 # Architecture rules
 
 - **Data flows down, events flow up, nothing reaches sideways.** `config → services → components → modules → windows → shell.qml`.
+- **Each layer imports only downward** ✓ (`LAYER_IMPORTS` in `tools/check-rules.py`; direction, 2026-11-07). Services import no state, components, modules, windows or keybinds; components import no state, services, modules, windows or keybinds; state imports no components, modules, windows or keybinds; config imports nothing from `qs`; keybinds import no components, modules or windows. Owners, imports, interfaces and callers per layer: `.claude/docs/interfaces.md`.
 - **Modules never import each other.** A feature that needs another feature's state goes through `state/` (the only sideways channel) or a signal its window maps.
 - **Modules do not import `Quickshell` or the `Config` singleton.** They read `qs.config` tokens (`Appearance`, `Motion`) and `qs.services`; user settings and persistence reach them as properties, and changes leave as signals (`styleRequested`, `modeRequested`, `favoriteToggled`). Windows bridge `Config` to modules. This keeps every module previewable with mocked services.
-- **Services are singletons with no UI.** A service may use another service of the same layer.
+- **Services are singletons with no UI** ✓. No visual type (`Item`, `Rectangle`, `Text`, `Shape`, windows) and no UI import (`QtQuick.Shapes`, `Controls`, `Layouts`, `Effects`, `Quickshell.Widgets`). A service may use another service of the same layer.
+- **Components are feature-agnostic** ✓ (`COMPONENT_TOKENS` in `tools/check-rules.py`). A component reads only the component-level token groups (`Appearance`: `unit`, `radius`, `color`, `font`, `liquid`, `rising`, `burst`; `Motion`: `isReduced`, `pace`, `stateDuration`, `hoverIn`, `hoverOut`, `press`, `pill`, `type`, `gesture`, `lifecycle`, `burst`, `rising`, `liquid`). Feature sizes and timing come in as `required property var look` / `pace` from the module (`Launch`, `ColorWheel`, `EdgePull`). A new component-level group joins the list with a line in `decisions.md`.
 - **`keybinds/` only flips state or calls a service.** It does no work itself.
 - **Windows are thin layer-shell hosts**, one per screen through `Variants` in `shell.qml`.
 - **Every user setting lives in `shell.json`** through `Config.qml`'s `JsonAdapter`, with a setter function that calls `writeAdapter()`. A new key also gets a README settings row.

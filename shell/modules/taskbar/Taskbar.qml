@@ -2,6 +2,8 @@ import QtQuick
 import qs.config
 import qs.services
 import qs.components
+import "../../utils/Liquid.js" as Liquid
+import "../../utils/Geometry.js" as Geometry
 
 Item {
     id: shell
@@ -72,7 +74,7 @@ Item {
             return 0
         const awayX = Math.max(0, Math.abs(visitor.x - centerX) - visitor.width / 2 - halfWidth)
         const awayY = Math.max(0, Math.abs(visitor.y - (top + bottom) / 2) - visitor.height / 2 - (bottom - top) / 2)
-        return Math.max(0, Math.min(1, 1 - Math.hypot(awayX, awayY) / Appearance.taskbar.visitReach))
+        return Geometry.clampUnit(1 - Math.hypot(awayX, awayY) / Appearance.taskbar.visitReach)
     }
 
     function liquidParts() {
@@ -277,15 +279,15 @@ Item {
         if (!carried.isCarried)
             return
         const appId = carried.appId
-        const reach = nearest ? Math.max(0, Math.min(1, 1 - nearest.gap / Motion.carry.pinch)) : 0
+        const reach = nearest ? Geometry.clampUnit(1 - nearest.gap / Motion.carry.pinch) : 0
         const target = nearest && nearest.gap < Motion.carry.pinch ? nearest.pill : null
         if (target !== carryTarget && carryTarget)
             carryTarget.freezeGhost(appId)
-        carryCloseness = reach * reach * (3 - 2 * reach)
-        const isNowNecked = isNecked ? reach > Motion.carry.snapShare : reach > Motion.carry.joinShare
+        carryCloseness = Geometry.smooth(reach)
+        const isNowNecked = Liquid.isMerged(isNecked, reach, Motion.liquid.neck)
         if (isNowNecked !== isNecked) {
             isNecked = isNowNecked
-            carried.deformVelocity += isNowNecked ? -Motion.carry.joinKick : Motion.carry.snapKick
+            carried.deformVelocity += Liquid.neckKick(isNowNecked, Motion.liquid.neck)
         }
         carryTarget = target
         if (target) {
@@ -400,7 +402,7 @@ Item {
         target: shell
         property: "carryCloseness"
         to: 1
-        duration: Motion.carry.release
+        duration: Motion.pace(Motion.carry.release)
         easing.type: Easing.OutCubic
     }
 
@@ -492,7 +494,7 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: shell.isRevealed ? Motion.reveal.backdropEnter : Motion.reveal.backdropLeave
+                duration: Motion.pace(shell.isRevealed ? Motion.reveal.backdropEnter : Motion.reveal.backdropLeave)
                 easing.type: shell.isRevealed ? Easing.OutQuad : Easing.InQuad
             }
         }
@@ -500,14 +502,14 @@ Item {
 
     Behavior on inset {
         NumberAnimation {
-            duration: Motion.pill.sizeFollow
+            duration: Motion.pace(Motion.pill.sizeFollow)
             easing.type: Easing.InOutCubic
         }
     }
 
     Behavior on fuse {
         NumberAnimation {
-            duration: Motion.pill.sizeFollow
+            duration: Motion.pace(Motion.pill.sizeFollow)
             easing.type: Easing.InOutCubic
         }
     }
@@ -515,6 +517,7 @@ Item {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
+        isShown: true
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
@@ -546,7 +549,7 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: shell.isAway ? 0 : Motion.stateDuration
+                duration: Motion.pace(shell.isAway ? 0 : Motion.stateDuration)
                 easing.type: Easing.OutQuad
             }
         }
@@ -555,6 +558,7 @@ Item {
     LiquidLayer {
         id: tipLiquid
         anchors.fill: parent
+        isShown: shell.isBare && tip.visible
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
@@ -564,7 +568,7 @@ Item {
     LiquidBridge {
         id: neck
         readonly property var line: shell.neckLine
-        readonly property real share: line ? Math.max(0, Math.min(1, 1 - line.gap / Motion.carry.pinch)) : 0
+        readonly property real share: line ? Geometry.clampUnit(1 - line.gap / Motion.carry.pinch) : 0
         parent: shell.liquidShapes
         fromX: line ? line.fromX : 0
         fromY: line ? line.fromY : 0
@@ -572,16 +576,15 @@ Item {
         toX: carried.meniscusX
         toY: carried.meniscusY
         toRadius: carried.size / 2 * carried.dropletScale
-        readonly property real hold: Math.max(0, Math.min(1, (share - Motion.carry.snapShare) / (1 - Motion.carry.snapShare)))
+        readonly property real hold: Geometry.clampUnit((share - Motion.liquid.neck.separate) / (1 - Motion.liquid.neck.separate))
         spread: shell.isNecked || carried.isLanding ? Motion.carry.spread * (Motion.carry.snapSpread + (1 - Motion.carry.snapSpread) * Math.sqrt(hold)) : 0
         handle: Motion.carry.handle
     }
 
-    MouseArea {
+    Gesture {
         id: taskPointer
 
         property Item pressedTask: null
-        property point pressPoint: Qt.point(0, 0)
 
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
@@ -592,37 +595,31 @@ Item {
                 return
             }
             pressedTask = task
-            pressPoint = Qt.point(mouse.x, mouse.y)
             shell.pressedAppId = task.appId
         }
-        onPositionChanged: mouse => {
-            if (carried.isCarried) {
-                shell.moveCarry(mouse.x, mouse.y)
+        onCrossed: (travelX, travelY) => {
+            if (!pressedTask)
                 return
-            }
-            if (!pressedTask || !(mouse.buttons & Qt.LeftButton))
-                return
-            if (Math.hypot(mouse.x - pressPoint.x, mouse.y - pressPoint.y) > Motion.carry.slop) {
-                shell.beginCarry(pressedTask, mouse.x, mouse.y)
-                pressedTask = null
-                shell.moveCarry(mouse.x, mouse.y)
-            }
-        }
-        onReleased: mouse => {
-            if (carried.isCarried) {
-                shell.endCarry(mouse.y)
-            } else if (pressedTask && pressedTask.group) {
-                if (mouse.button === Qt.MiddleButton)
-                    Toplevels.close(pressedTask.group)
-                else
-                    Toplevels.activate(pressedTask.group)
-            }
+            shell.beginCarry(pressedTask, pressPoint.x + travelX, pressPoint.y + travelY)
             pressedTask = null
-            shell.pressedAppId = ""
         }
-        onCanceled: {
+        onMoved: (travelX, travelY) => {
             if (carried.isCarried)
-                shell.endCarry(carried.finger.y)
+                shell.moveCarry(pressPoint.x + travelX, pressPoint.y + travelY)
+        }
+        onThrown: (travelX, travelY) => {
+            if (carried.isCarried)
+                shell.endCarry(pressPoint.y + travelY)
+        }
+        onTapped: mouse => {
+            if (!pressedTask || !pressedTask.group)
+                return
+            if (mouse.button === Qt.MiddleButton)
+                Toplevels.close(pressedTask.group)
+            else
+                Toplevels.activate(pressedTask.group)
+        }
+        onEnded: {
             pressedTask = null
             shell.pressedAppId = ""
         }
@@ -751,6 +748,8 @@ Item {
 
     EdgePull {
         anchors.fill: parent
+        look: Appearance.taskbar
+        pace: Motion.reveal
         isEnabled: !shell.isRevealed
         shapes: shell.liquidShapes
         onSummoned: shell.summon()

@@ -46,21 +46,21 @@ Item {
 
     Behavior on room {
         NumberAnimation {
-            duration: Motion.stateDuration
+            duration: Motion.pace(Motion.stateDuration)
             easing.type: Easing.InOutCubic
         }
     }
 
     Behavior on stretch {
         NumberAnimation {
-            duration: Motion.pill.sizeFollow
+            duration: Motion.pace(Motion.pill.sizeFollow)
             easing.type: Easing.InOutCubic
         }
     }
 
     Behavior on swell {
         NumberAnimation {
-            duration: Motion.stateDuration
+            duration: Motion.pace(Motion.stateDuration)
             easing.type: Easing.OutBack
         }
     }
@@ -94,6 +94,7 @@ Item {
         enterDelay: idle.order * Motion.reveal.stagger
         leaveDelay: idle.stretch > 0.01 ? Motion.pill.fold + Motion.pill.sizeFollow : Motion.pill.leaveElement
         popDuration: Motion.stateDuration
+        character: Motion.liquid.circle
     }
 
     EdgeFuse {
@@ -177,9 +178,7 @@ Item {
         height: idle.size
         enabled: idle.isShown
         acceptedButtons: Qt.LeftButton | Qt.MiddleButton
-        onClicked: mouse => {
-            if (hasFolded)
-                return
+        onTapped: mouse => {
             if (mouse.button === Qt.MiddleButton)
                 idle.middleClicked()
             else if (idle.canExpand)

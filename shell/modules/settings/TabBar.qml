@@ -27,7 +27,7 @@ Item {
 
         Behavior on y {
             NumberAnimation {
-                duration: Motion.highlight.slide
+                duration: Motion.pace(Motion.highlight.slide)
                 easing.type: Easing.OutBack
             }
         }
@@ -77,7 +77,7 @@ Item {
                     color: entry.isCurrent ? Appearance.color.accent : area.containsMouse ? Appearance.color.text : Appearance.color.textMuted
 
                     Behavior on color {
-                        ColorAnimation { duration: Motion.hoverIn }
+                        ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
                     }
                 }
             }

@@ -28,12 +28,12 @@ Item {
     }
 
     Repeater {
+        parent: view.host.liquidShapes
         model: 2
 
         LiquidShape {
             required property int index
             readonly property real size: view.look.drop * view.dropShare * view.pill.popScale
-            parent: view.host.liquidShapes
             visible: size > 0.5
             width: size
             height: size

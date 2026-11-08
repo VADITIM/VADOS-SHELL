@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Effects
 import QtQuick.Shapes
 import qs.config
 import qs.services
@@ -90,14 +89,6 @@ Item {
             }
 
             Rectangle {
-                id: artMask
-                anchors.fill: parent
-                radius: width / 2
-                visible: false
-                layer.enabled: true
-            }
-
-            Rectangle {
                 anchors.fill: parent
                 radius: width / 2
                 color: Appearance.color.wash
@@ -112,20 +103,23 @@ Item {
                 }
             }
 
-            Image {
-                id: cover
+            Masked {
                 anchors.fill: parent
-                source: Activities.artUrl
-                sourceSize.width: view.look.art * 2
-                sourceSize.height: view.look.art * 2
-                fillMode: Image.PreserveAspectCrop
-                asynchronous: true
-                smooth: true
-                visible: status === Image.Ready
-                layer.enabled: true
-                layer.effect: MultiEffect {
-                    maskEnabled: true
-                    maskSource: artMask
+                visible: cover.status === Image.Ready
+                mask: Rectangle {
+                    anchors.fill: parent
+                    radius: width / 2
+                }
+
+                Image {
+                    id: cover
+                    anchors.fill: parent
+                    source: Activities.artUrl
+                    sourceSize.width: view.look.art * 2
+                    sourceSize.height: view.look.art * 2
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    smooth: true
                 }
             }
         }

@@ -1,17 +1,16 @@
 import QtQuick
-import qs.config
 
 QtObject {
     id: reshape
 
     property real targetWidth: 0
     property real targetHeight: 0
-    property int growDuration: Motion.activity.spread
-    property int shrinkDuration: Motion.activity.shrink
-    property int shrinkDelay: Motion.activity.shrinkDelay
-    property int lag: Motion.activity.lag
-    property real overshoot: Motion.activity.overshoot
-    property real arriveShare: Motion.activity.arriveShare
+    property int growDuration: 0
+    property int shrinkDuration: 0
+    property int shrinkDelay: 0
+    property int lag: 0
+    property real overshoot: 0
+    property real arriveShare: 1
     property real width: 0
     property real height: 0
     property bool isArrived: true

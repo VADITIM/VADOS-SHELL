@@ -14,13 +14,13 @@ Item {
 
     Behavior on drawn {
         NumberAnimation {
-            duration: Motion.dashboard.level
+            duration: Motion.pace(Motion.dashboard.level)
             easing.type: Easing.OutCubic
         }
     }
 
     Behavior on fill {
-        ColorAnimation { duration: Motion.stateDuration }
+        ColorAnimation { duration: Motion.pace(Motion.stateDuration) }
     }
 
     Shape {

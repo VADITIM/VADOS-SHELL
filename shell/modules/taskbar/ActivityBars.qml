@@ -14,7 +14,7 @@ Item {
 
     Behavior on level {
         NumberAnimation {
-            duration: Motion.stateDuration
+            duration: Motion.pace(Motion.stateDuration)
             easing.type: Easing.OutQuad
         }
     }
@@ -22,9 +22,9 @@ Item {
     NumberAnimation on phase {
         from: 0
         to: 1
-        duration: Motion.activity.bars
+        duration: Motion.pace(Motion.activity.bars)
         loops: Animation.Infinite
-        running: bars.level > 0
+        running: bars.level > 0 && !Motion.isReduced
     }
 
     Row {

@@ -59,6 +59,25 @@ bind = CTRL, left, global, vados:activityPrevious
 
 Bind keys to `qs -p ~/.config/vados/shell ipc call search toggle`, `... settings toggle` and `... dashboard toggle`. The taskbar hides only when the focused window is fullscreen or maximized, because plain Wayland gives no window geometry.
 
+## Compositor support
+
+The shell asks the compositor what it can do (`shell/utils/Platform.js`) and never which one runs. Taskbar, search, dashboard, settings and the liquid work everywhere (core); window information needs `windowGeometry` (extended); window modes need `freeCanvas` and `windowControl` (native).
+
+| Capability | driftwm | Hyprland | Other Wayland | Without it |
+|---|---|---|---|---|
+| `activeWindow` | yes | yes | yes | Other Wayland knows the focused window only while it is fullscreen or maximized. |
+| `windowGeometry` | yes | yes | no | The taskbar hides only for a fullscreen or maximized window, not for one that reaches its edge. |
+| `fullscreenDetection` | yes | yes | yes | Fullscreen windows would not hide the taskbar or hold notifications. |
+| `focusTracking` | yes | yes | no | Shortcuts, IPC calls and notification peeks open on the first screen instead of the focused one. |
+| `windowControl` | yes | no | no | No window modes; the `desktop maximize` and `desktop fullscreen` IPC calls do nothing. |
+| `windowMinimize` | yes | no | no | No minimize; on driftwm it is emulated in Desktop mode by parking the window off-screen. |
+| `windowSnap` | yes | no | no | No snap; on driftwm only in Desktop mode. |
+| `workspaceManagement` | no | no | no | No backend has it yet; the shell shows no workspaces. |
+| `freeCanvas` | yes | no | no | No Canvas and Desktop window modes; the settings tab hides the mode buttons. |
+| `layerShell` | yes | yes | yes | Required: the shell cannot run without wlr-layer-shell. |
+
+Keys: Hyprland reads the `vados:*` global shortcuts; driftwm and other compositors bind the `ipc call` commands. `tools/check-rules.py` fails when this table and `Platform.js` disagree.
+
 ## Window modes (driftwm)
 
 The Desktop tab in settings switches between two modes (`shell.json` key `desktop.mode`):
@@ -112,6 +131,26 @@ A click on the taskbar clock (or `SUPER + A`, or `ipc call dashboard toggle`) st
 
 Bars and rings are colour-coded in bands: blue, yellow, orange, red. GPU readings need `nvidia-smi` (NVIDIA) or the amdgpu driver (AMD). Esc or a click outside closes it.
 
+## Activity and notifications
+
+The activity bar (coming) will show what is happening now inside the taskbar. Its state and the notification service exist already:
+
+- `qs -p ~/.config/vados/shell ipc call activity toggle` (or the Hyprland global shortcut `vados:activity`), `... activity current`, `... activity pin notifications`.
+- `... ipc call overlay toggle <search|settings|dashboard>`, `... overlay close` (closes the topmost), `... overlay top`.
+- `... ipc call attention quiet true` (do not disturb), `... attention toggle`, `status`, `dismiss` (hides the current pop-up).
+- `... ipc call notifications enable` makes the shell your notification daemon, `... disable` gives it back; `status`, `count` and `clear` report and dismiss.
+
+## Network
+
+The shell reaches the network only from these files, and only while the feature that needs it is on screen:
+
+| File | Host | When |
+|---|---|---|
+| `services/Weather.qml` | api.open-meteo.com, geocoding-api.open-meteo.com; ipinfo.io when `weather.location` is empty | while the dashboard is open, at most every 15 minutes; after a failed request it retries after 1 s, doubling up to 1 minute |
+| `services/Traffic.qml` | `ping` to 1.1.1.1 | while the dashboard is open |
+
+Nothing else talks to the network. `tools/check-rules.py` fails when another file does.
+
 ## Layout
 
 ```
@@ -142,7 +181,28 @@ shell.json        user config
 | `profile.name` | your name; its initial shows in the search circle when there is no picture | `""` |
 | `profile.picture` | path to your profile picture, shown in the search circle until you type | `""` |
 | `weather.location` | city for the dashboard weather, e.g. `"Berlin"`; `""` guesses from your IP | `""` |
+| `motion.reduced` | `true`: transitions are instant and idle bubbles and splashes stop; typed text and drags stay (also in settings, System tab)<br>`false`: full motion | `false` |
+| `attention.doNotDisturb` | `true`: only critical notifications may pop up; the rest wait in the activity bar (also in settings, System tab)<br>`false`: notifications may pop up unless a window is fullscreen | `false` |
+| `notifications.enabled` | `true`: the shell becomes the notification daemon (replaces mako, dunst, swaync); nothing shows them yet, so leave it off until the activity bar lands<br>`false`: your existing daemon keeps them | `false` |
+| `rendering.quality` | `"full"`: every liquid effect<br>`"lite"`: cheaper rendering for weaker GPUs | `"full"` |
 
-Changes apply live.
+Changes apply live. The file carries a `version` (currently `1`) so later releases can migrate it; a file without one is read as the old layout and gets the version added. A value with the wrong type or outside the values above falls back to its default, and the shell says so in its log (lines starting `vados: config:`), naming the key, what it found and what it expected. Repaired values are written back to the file; unknown keys are reported and ignored. A file that is not valid JSON is left untouched and the shell keeps its current settings until you fix it.
+
+## Development
+
+- `python tools/check-rules.py` checks the hard rules (also a Claude Code Stop hook).
+- `python tools/tests/run.py` runs the Qt Quick tests (needs PySide6): the liquid engine, overlays, gestures, attention, the burst, persistence and Desktop-mode recovery, logging, supervision and diagnostics, and a check that the whole preview loads without a warning.
+- `python tools/preview/play.py` opens the playground (Windows paths; see `.claude/CLAUDE.md`).
+
+### Logs and diagnostics
+
+Every line the shell logs starts with `vados: <subsystem>:` (`compositor`, `network`, `removable`, `traffic`, `weather`, `lifecycle`, `config`), says what failed and what the shell does about it, and is printed once per 5 minutes at most, with a repeat count. Read them where the shell runs:
+
+- started from a terminal: the `qs -p ~/.config/vados/shell` output;
+- started by the compositor or a systemd user unit: `journalctl --user -b | grep 'vados:'` (add `-f` to follow).
+
+Background processes (the driftwm event stream, `nmcli monitor`, `udevadm monitor`, `ping` and the weather requests while the dashboard is open) restart on their own after a failure, waiting 1 s, then 2, 4 ... up to a minute, and log the failure and the recovery.
+
+`qs -p ~/.config/vados/shell ipc call diagnostics report` prints the state of the running shell: the compositor and its support level, which capabilities are missing, open overlays and their phases, each restarted background process with its restart count and last failure, and the last 100 log entries. Attach it to bug reports.
 
 Agent-facing docs (architecture, decisions, quirks, roadmap) live in [.claude/](.claude/CLAUDE.md).

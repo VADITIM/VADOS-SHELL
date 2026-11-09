@@ -72,15 +72,16 @@ Item {
             depth: Motion.press.card
         }
 
-        Rectangle {
+        Squircle {
             anchors.fill: parent
-            radius: width / 2
             color: Appearance.color.wash
-            border.width: card.look.ringStroke
-            border.color: card.isSelected ? Appearance.color.accent : Appearance.color.hairline
+            strokeWidth: card.look.ringStroke
+            strokeColor: card.isSelected ? Appearance.color.accent : Appearance.color.hairline
 
-            Behavior on border.color {
-                ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
+            Behavior on strokeColor {
+                ColorAnimation {
+                    duration: Motion.pace(Motion.hoverIn)
+                }
             }
         }
 
@@ -111,9 +112,9 @@ Item {
                 Masked {
                     anchors.fill: parent
                     visible: portrait.status === Image.Ready
-                    mask: Rectangle {
+                    mask: Squircle {
                         anchors.fill: parent
-                        radius: width / 2
+                        color: "black"
                     }
 
                     Image {
@@ -128,9 +129,8 @@ Item {
                     }
                 }
 
-                Rectangle {
+                Squircle {
                     anchors.fill: parent
-                    radius: width / 2
                     color: Appearance.color.wash
                     visible: portrait.status !== Image.Ready
 
@@ -207,7 +207,9 @@ Item {
                 font.bold: true
 
                 Behavior on color {
-                    ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
+                    ColorAnimation {
+                        duration: Motion.pace(Motion.hoverIn)
+                    }
                 }
             }
 

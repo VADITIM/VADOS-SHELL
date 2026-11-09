@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 import sys
 
 PYSIDE = r"C:\Users\vn\dependencies\pyside6"
@@ -27,6 +26,22 @@ QtObject {
         property QtObject attention: QtObject { property bool doNotDisturb: false }
         property QtObject motion: QtObject { property bool reduced: false }
         property QtObject rendering: QtObject { property string quality: "full" }
+        property QtObject profile: QtObject {
+            property string name: ""
+            property string secondName: ""
+            property string picture: ""
+            property string github: ""
+        }
+        property QtObject pills: QtObject {
+            property real opacity: 0.94
+            property real blur: 1
+            property string color: ""
+        }
+        property QtObject services: QtObject { property bool mediaPlayer: true }
+        property QtObject lock: QtObject {
+            property var layout: ["clock:5:1", "profile:6:4", "login:5:8"]
+            property string wallpaper: ""
+        }
     }
     function setTaskbarStyle(style) { data.taskbar.style = style }
     function setTaskbarSide(side) { data.taskbar.side = side }
@@ -38,6 +53,16 @@ QtObject {
     function setDoNotDisturb(isQuiet) { data.attention.doNotDisturb = isQuiet }
     function setReducedMotion(isReduced) { data.motion.reduced = isReduced }
     function setRenderQuality(quality) { data.rendering.quality = quality }
+    function setProfileName(value) { data.profile.name = value }
+    function setProfileSecondName(value) { data.profile.secondName = value }
+    function setProfilePicture(value) { data.profile.picture = value }
+    function setProfileGithub(value) { data.profile.github = value }
+    function setPillOpacity(value) { data.pills.opacity = value }
+    function setPillBlur(value) { data.pills.blur = value }
+    function setPillColor(value) { data.pills.color = value }
+    function setMediaPlayer(isOn) { data.services.mediaPlayer = isOn }
+    function setLockLayout(entries) { data.lock.layout = entries }
+    function setLockWallpaper(value) { data.lock.wallpaper = value }
     function toggleFavorite(appId) {
         const favorites = data.search.favorites.slice()
         const at = favorites.indexOf(appId)
@@ -94,13 +119,14 @@ def mock_services():
 def build():
     shutil.rmtree(BUILD, ignore_errors=True)
     write_module("Quickshell", [("Singleton.qml", "import QtQml\nQtObject {\n    default property list<QtObject> data\n}\n")])
-    tokens = [(os.path.join(SHELL, "config", name), None) for name in ("Appearance.qml", "Motion.qml", "Rendering.qml")]
+    tokens = [(os.path.join(SHELL, "config", name), None) for name in ("Appearance.qml", "Motion.qml", "Rendering.qml", "Release.qml")]
     write_module("qs.config", tokens + [("Config.qml", CONFIG_MOCK)])
     write_module("qs.components", qml_files(os.path.join(SHELL, "components")))
     write_module("qs.state", qml_files(os.path.join(SHELL, "state")))
-    for module in ("taskbar", "search", "settings", "dashboard"):
+    for module in ("taskbar", "search", "settings", "dashboard", "framedebug"):
         write_module("qs.modules." + module, qml_files(os.path.join(SHELL, "modules", module)))
     write_module("qs.services", mock_services())
+    write_module("qs.windows", [(os.path.join(SHELL, "windows", "FrameTap.qml"), None)])
     utilities = os.path.join(BUILD, "qs", "utils")
     os.makedirs(utilities, exist_ok=True)
     for name in os.listdir(os.path.join(SHELL, "utils")):
@@ -108,15 +134,68 @@ def build():
             shutil.copy(os.path.join(SHELL, "utils", name), os.path.join(utilities, name))
 
 
+GLOBAL_KEYS = {"Key_0": "frames", "Key_Plus": "frameShot"}
+
+
+def open_window(application):
+    from PySide6.QtCore import QEvent, QMetaObject, QObject, Qt, QUrl, Q_ARG
+    from PySide6.QtGui import QImage
+    from PySide6.QtQml import QQmlApplicationEngine
+
+    keys = {getattr(Qt.Key, name): shortcut for name, shortcut in GLOBAL_KEYS.items()}
+
+    class GlobalShortcuts(QObject):
+        def __init__(self, window):
+            super().__init__(window)
+            self.window = window
+
+        def eventFilter(self, watched, event):
+            if event.type() not in (QEvent.Type.KeyPress, QEvent.Type.ShortcutOverride):
+                return False
+            if not event.modifiers() & Qt.KeyboardModifier.KeypadModifier or event.key() not in keys:
+                return False
+            if event.type() == QEvent.Type.KeyPress and not event.isAutoRepeat():
+                QMetaObject.invokeMethod(self.window, "pressShortcut", Q_ARG(str, keys[event.key()]))
+            return True
+
+    engine = QQmlApplicationEngine()
+    engine.addImportPath(BUILD)
+    engine.load(QUrl.fromLocalFile(os.path.join(PREVIEW, "play.qml")))
+    if not engine.rootObjects():
+        return engine, None
+    window = engine.rootObjects()[0]
+    window.installEventFilter(GlobalShortcuts(window))
+
+    def copy(address):
+        path = QUrl(address).toLocalFile() or address
+        image = QImage(path)
+        if image.isNull():
+            print("vados: frames: the screenshot could not be read from " + path)
+            return
+        application.clipboard().setImage(image)
+        print("vados: frames: screenshot copied to the clipboard, also saved to " + path)
+
+    window.shotSaved.connect(copy)
+    return engine, window
+
+
+def run_window():
+    sys.path.insert(0, PYSIDE)
+    from PySide6.QtGui import QGuiApplication
+
+    application = QGuiApplication(sys.argv)
+    engine, window = open_window(application)
+    if window is None:
+        return 1
+    return application.exec()
+
+
 def main():
     build()
-    environment = dict(os.environ)
-    environment["QML_IMPORT_PATH"] = BUILD
-    environment["QSG_RENDER_LOOP"] = "basic"
-    environment["PYTHONPATH"] = PYSIDE
-    print("Running. Ctrl+P settings, G or Ctrl+G search, D or Ctrl+D dashboard, Ctrl+Left/Right activity pill state, Ctrl+Up activity lead, C call, M media, Esc closes. Close the window to quit.")
-    command = [sys.executable, "-m", "PySide6.scripts.qml", os.path.join(PREVIEW, "play.qml")] + sys.argv[1:]
-    return subprocess.call(command, env=environment)
+    os.environ["QML_IMPORT_PATH"] = BUILD
+    os.environ["QSG_RENDER_LOOP"] = "basic"
+    print("Running. Ctrl+P settings, G or Ctrl+G search, D or Ctrl+D dashboard, Ctrl+Left/Right activity pill state, Ctrl+Up activity lead, C call, M media, Esc closes, 0 or Num 0 holds every animation (Num 0 works everywhere, also in the search field), Up/Right steps a frame, Down/Left goes back, + or Num + copies a screenshot to the clipboard. Close the window to quit.")
+    return run_window()
 
 
 if __name__ == "__main__":

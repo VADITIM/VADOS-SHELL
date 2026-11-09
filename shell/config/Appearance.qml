@@ -15,12 +15,14 @@ Singleton {
         readonly property int small: 8
         readonly property int medium: 12
         readonly property int large: 20
+        readonly property real squircle: 4
+        readonly property int squircleSteps: 96
     }
 
     readonly property QtObject color: QtObject {
         readonly property color ground: "#181818"
-        readonly property color panel: "#121212"
-        readonly property real panelAlpha: 0.94
+        readonly property color panel: Config.data.pills.color || "#121212"
+        readonly property real panelAlpha: Config.data.pills.opacity
         readonly property color hairline: "#3a3a3a"
         readonly property color text: "#dedede"
         readonly property color textBody: "#d8d8d8"
@@ -41,6 +43,8 @@ Singleton {
 
     readonly property QtObject font: QtObject {
         readonly property string mono: "Space Mono"
+        readonly property var monoFallbacks: ["Space Mono", "Consolas", "DejaVu Sans Mono", "Courier New"]
+        readonly property string fixedMono: monoFallbacks.find(name => Qt.fontFamilies().indexOf(name) >= 0) ?? mono
         readonly property int body: 12
         readonly property int label: 10
         readonly property real labelSpacing: 2.6
@@ -72,6 +76,7 @@ Singleton {
         readonly property int margin: 11
         readonly property int thickness: 47
         readonly property int item: 40
+        readonly property int indicatorInset: 6
         readonly property int itemGap: 4
         readonly property int padding: 4
         readonly property int pillGap: 11
@@ -150,38 +155,78 @@ Singleton {
     }
 
     readonly property QtObject settings: QtObject {
-        readonly property int width: 600
-        readonly property int height: 440
-        readonly property int radius: 30
-        readonly property int padding: 28
+        readonly property real bodyShare: 0.9
+        readonly property int corner: 130
+        readonly property int rootCorner: 40
+        readonly property int melt: 16
+        readonly property real dim: 0.55
+        readonly property int inset: 28
+        readonly property int top: 28
         readonly property int gap: 16
         readonly property int headerGap: 24
+        readonly property real rightSpace: 0.22
+        readonly property int endPadding: 56
+        readonly property int contentGap: 32
         readonly property int wheel: 220
+        readonly property real wheelTurn: -90
         readonly property int knob: 18
         readonly property int slider: 14
         readonly property int swatch: 40
         readonly property int field: 40
+        readonly property int fieldPadding: 16
+        readonly property int fieldWidth: 220
         readonly property int hexText: 14
         readonly property int option: 36
         readonly property int optionGap: 6
-        readonly property int melt: 14
-        readonly property real dim: 0.55
-        readonly property int jolt: 6
-        readonly property int ball: 84
-        readonly property int crouchShift: 12
-        readonly property int overshoot: 22
-        readonly property var trail: [0.5, 0.36, 0.24]
-        readonly property int splashCount: 8
-        readonly property int splash: 26
-        readonly property real splashReach: 1.16
-        readonly property real budSeed: 0.4
-        readonly property QtObject tabBar: QtObject {
-            readonly property int width: 52
-            readonly property int item: 44
-            readonly property int itemGap: 4
-            readonly property int padding: 4
-            readonly property int gap: 10
-            readonly property int glyph: 20
+        readonly property QtObject lock: QtObject {
+            readonly property int cardWidth: 315
+            readonly property int cardHeight: 84
+            readonly property int cardGap: 18
+            readonly property int headerHeight: 45
+            readonly property int poke: 60
+            readonly property int footer: 150
+            readonly property real lineAlpha: 0.12
+            readonly property real tileAlpha: 0.14
+            readonly property real aspect: 0.5625
+            readonly property real crest: 0.2
+            readonly property real swell: 1.6
+            readonly property int outline: 2
+        }
+        readonly property QtObject home: QtObject {
+            readonly property int bannerSize: 21
+            readonly property real bannerLine: 1
+            readonly property int gap: 24
+            readonly property real versionShade: 0.5
+        }
+        readonly property QtObject profile: QtObject {
+            readonly property real avatarShare: 0.5
+            readonly property real avatarWidthShare: 0.28
+            readonly property real initialShare: 0.4
+            readonly property real hoverShade: 0.55
+            readonly property int ring: 3
+            readonly property int sectionGap: 40
+            readonly property int nameGap: 16
+            readonly property int lineGap: 6
+            readonly property int nameSize: 40
+            readonly property int secondSize: 22
+            readonly property int underline: 2
+            readonly property real hint: 0.35
+            readonly property int weeks: 26
+            readonly property int days: 7
+            readonly property int cellGap: 3
+            readonly property int boxPadding: 16
+            readonly property int linkSize: 22
+            readonly property real cellRound: 0.2
+        }
+        readonly property QtObject navigation: QtObject {
+            readonly property int width: 76
+            readonly property int item: 60
+            readonly property int itemGap: 8
+            readonly property int padding: 8
+            readonly property int gap: 14
+            readonly property int glyph: 28
+            readonly property real selection: 0.16
+            readonly property real resting: 0.55
         }
     }
 
@@ -211,7 +256,6 @@ Singleton {
         readonly property real rootCap: 0.05
         readonly property int crest: 28
         readonly property int crestLength: 340
-        readonly property int crestSamples: 36
         readonly property int crestInset: 14
         readonly property int jet: 30
         readonly property int jetReach: 64
@@ -230,9 +274,16 @@ Singleton {
         readonly property int trough: 30
         readonly property int troughLength: 200
         readonly property int troughStep: 8
-        readonly property int spray: 24
-        readonly property int sprayCount: 10
-        readonly property int curveSamples: 8
+        readonly property int curveStep: 8
+        readonly property int edgeRound: 220
+        readonly property int edgeRoundFade: 120
+        readonly property int edgeSnap: 100
+        readonly property real edgeReached: 0.6
+        readonly property real cornerSharpness: 0.6
+        readonly property real curveSlack: 1.3
+        readonly property int seamBlend: 60
+        readonly property int edgeHold: 16
+        readonly property int edgeFade: 64
     }
 
     readonly property QtObject dashboard: QtObject {

@@ -12,7 +12,9 @@ Column {
     property real saturation: 0
     property real value: 1
     readonly property color current: Qt.hsva(hue, saturation, value, 1)
-    readonly property real diameter: picker.look.wheel
+    property real diameter: picker.look.wheel
+    property real sliderShare: 1
+    property real wheelShare: 1
     readonly property real radius: diameter / 2
     readonly property bool isDragging: wheelArea.pressed || sliderArea.pressed
 
@@ -25,17 +27,9 @@ Column {
             hue = source.hsvHue
         saturation = source.hsvSaturation
         value = source.hsvValue
-        if (!hexInput.activeFocus)
-            hexInput.text = hexOf(source)
-    }
-
-    function hexOf(source) {
-        return source.toString().toUpperCase()
     }
 
     function emit() {
-        if (!hexInput.activeFocus)
-            hexInput.text = hexOf(current)
         picked(current)
     }
 
@@ -62,6 +56,9 @@ Column {
     Item {
         width: picker.diameter
         height: picker.diameter
+        scale: Math.max(0.001, picker.wheelShare)
+        rotation: (1 - picker.wheelShare) * picker.look.wheelTurn
+        opacity: Geometry.clampUnit(picker.wheelShare)
 
         Shape {
             anchors.fill: parent
@@ -147,10 +144,7 @@ Column {
             id: wheelArea
             anchors.fill: parent
             cursorShape: Qt.CrossCursor
-            onPressed: mouse => {
-                hexInput.focus = false
-                picker.pickAt(mouse.x, mouse.y)
-            }
+            onPressed: mouse => picker.pickAt(mouse.x, mouse.y)
             onPositionChanged: mouse => picker.pickAt(mouse.x, mouse.y)
         }
     }
@@ -160,28 +154,34 @@ Column {
         width: picker.diameter
         height: picker.look.knob
 
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width
-            height: picker.look.slider
-            radius: height / 2
-            border.width: 1
-            border.color: Appearance.color.hairline
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-                GradientStop { position: 0; color: "black" }
-                GradientStop { position: 1; color: Qt.hsva(picker.hue, picker.saturation, 1, 1) }
-            }
-        }
+        Item {
+            width: slider.width * picker.sliderShare
+            height: slider.height
+            clip: true
 
-        Rectangle {
-            x: picker.value * (slider.width - width)
-            width: picker.look.knob
-            height: picker.look.knob
-            radius: width / 2
-            color: picker.current
-            border.width: 2
-            border.color: "white"
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: slider.width
+                height: picker.look.slider
+                radius: height / 2
+                border.width: 1
+                border.color: Appearance.color.hairline
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0; color: "black" }
+                    GradientStop { position: 1; color: Qt.hsva(picker.hue, picker.saturation, 1, 1) }
+                }
+            }
+
+            Rectangle {
+                x: picker.value * (slider.width - width)
+                width: picker.look.knob
+                height: picker.look.knob
+                radius: width / 2
+                color: picker.current
+                border.width: 2
+                border.color: "white"
+            }
         }
 
         MouseArea {
@@ -189,60 +189,8 @@ Column {
             anchors.fill: parent
             anchors.margins: -6
             cursorShape: Qt.SizeHorCursor
-            onPressed: mouse => {
-                hexInput.focus = false
-                picker.slideTo(mouse.x - 6)
-            }
+            onPressed: mouse => picker.slideTo(mouse.x - 6)
             onPositionChanged: mouse => picker.slideTo(mouse.x - 6)
-        }
-    }
-
-    Row {
-        spacing: 10
-
-        Rectangle {
-            width: picker.look.swatch
-            height: picker.look.swatch
-            radius: Appearance.radius.medium
-            color: picker.current
-            border.width: 1
-            border.color: Qt.rgba(1, 1, 1, 0.14)
-        }
-
-        Rectangle {
-            width: picker.diameter - picker.look.swatch - 10
-            height: picker.look.field
-            radius: Appearance.radius.medium
-            color: Appearance.color.panel
-            border.width: 1
-            border.color: hexInput.activeFocus ? Appearance.color.accent : Appearance.color.hairline
-
-            TextInput {
-                id: hexInput
-                anchors.fill: parent
-                anchors.leftMargin: 12
-                anchors.rightMargin: 12
-                verticalAlignment: TextInput.AlignVCenter
-                maximumLength: 7
-                color: Appearance.color.text
-                selectionColor: Appearance.color.accent
-                selectedTextColor: Appearance.color.ground
-                font.family: Appearance.font.mono
-                font.pixelSize: picker.look.hexText
-                font.capitalization: Font.AllUppercase
-                onTextEdited: {
-                    const candidate = (text.trim().startsWith("#") ? "" : "#") + text.trim()
-                    if (!/^#[0-9a-fA-F]{6}$/.test(candidate))
-                        return
-                    const parsed = Qt.color(candidate)
-                    if (parsed.hsvHue >= 0)
-                        picker.hue = parsed.hsvHue
-                    picker.saturation = parsed.hsvSaturation
-                    picker.value = parsed.hsvValue
-                    picker.picked(parsed)
-                }
-                onEditingFinished: text = picker.hexOf(picker.current)
-            }
         }
     }
 }

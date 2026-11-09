@@ -67,7 +67,7 @@ Item {
         width: Appearance.taskbar.item
         height: Appearance.taskbar.item
         isShown: task.pill.areItemsShown && !task.isLeaving && task.shownRoom > 0.6
-        enterDelay: task.pill.isSpreading ? task.openingDelay : 0
+        enterDelay: task.host.isArriving ? Math.round(Math.random() * Motion.reveal.arrivalScatter) : task.pill.isSpreading ? task.openingDelay : 0
 
         Press {
             target: face
@@ -124,7 +124,7 @@ Item {
             }
 
             Rectangle {
-                x: parent.width + ((Appearance.taskbar.thickness - Appearance.taskbar.item) / 2) - 2 - width
+                x: parent.width + ((Appearance.taskbar.thickness - Appearance.taskbar.item) / 2) - Appearance.taskbar.indicatorInset - width
                 anchors.verticalCenter: parent.verticalCenter
                 width: 3
                 height: task.isActive ? 18 : task.windowCount > 1 ? 9 : 4

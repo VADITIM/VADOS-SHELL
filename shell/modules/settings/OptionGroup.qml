@@ -13,12 +13,14 @@ Column {
 
     spacing: Appearance.unit.medium
 
-    Text {
-        text: group.label
-        color: Appearance.color.textMuted
-        font.family: Appearance.font.mono
-        font.pixelSize: Appearance.font.label
-        font.letterSpacing: Appearance.font.labelSpacing
+    Piece {
+        Text {
+            text: group.label
+            color: Appearance.color.textMuted
+            font.family: Appearance.font.mono
+            font.pixelSize: Appearance.font.label
+            font.letterSpacing: Appearance.font.labelSpacing
+        }
     }
 
     Row {
@@ -27,12 +29,17 @@ Column {
         Repeater {
             model: group.options
 
-            GlyphButton {
+            Piece {
+                id: piece
+
                 required property string modelData
-                label: modelData.toUpperCase()
-                implicitHeight: Appearance.settings.option
-                isSelected: group.current === modelData
-                onClicked: group.picked(modelData)
+
+                GlyphButton {
+                    label: piece.modelData.toUpperCase()
+                    implicitHeight: Appearance.settings.option
+                    isSelected: group.current === piece.modelData
+                    onClicked: group.picked(piece.modelData)
+                }
             }
         }
     }

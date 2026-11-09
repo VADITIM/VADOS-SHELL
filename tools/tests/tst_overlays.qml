@@ -21,6 +21,7 @@ TestCase {
         Overlays.returnTaskbar("A")
         Overlays.returnTaskbar("B")
         Overlays.phases = {}
+        Overlays.swaps = {}
         gathers = 0
     }
 
@@ -32,6 +33,63 @@ TestCase {
         compare(gathers, 1, "the second overlay reuses the parts of the first gather")
         verify(Overlays.ownsKeyboard("search", "A"))
         verify(!Overlays.ownsKeyboard("dashboard", "A"))
+    }
+
+    function test_switchWaitsForTheFirstToHandOverItsCircle() {
+        Overlays.open("dashboard", "A")
+        Overlays.reportPhase("dashboard", "A", "active")
+        Overlays.open("search", "A")
+        verify(Overlays.isWaiting("search", "A"))
+        verify(Overlays.hasCircle("search", "A"), "known before the overlay shows, so its burst never starts from the taskbar parts")
+        verify(Overlays.isHandingOver("dashboard", "A"))
+        verify(!Overlays.isHandingOver("search", "A"))
+        Overlays.settleSwap("A")
+        verify(!Overlays.isWaiting("search", "A"))
+        verify(Overlays.hasCircle("search", "A"))
+        Overlays.reportPhase("dashboard", "A", "idle")
+        verify(Overlays.isTaskbarAway("A"), "the taskbar stays away between two overlays")
+        Overlays.reportPhase("search", "A", "active")
+        verify(!Overlays.hasCircle("search", "A"))
+    }
+
+    function test_taskbarStaysAwayWhenTheFirstOverlayReactsToBeingClosed() {
+        Overlays.open("dashboard", "A")
+        Overlays.reportPhase("dashboard", "A", "active")
+        const reaction = Qt.createQmlObject("import QtQuick; import qs.state; Item { Connections { target: Overlays; function onScreensChanged() { if (!Overlays.screenOf('dashboard')) Overlays.returnTaskbar('A') } } }", this)
+        Overlays.open("search", "A")
+        verify(Overlays.isTaskbarAway("A"), "closing the first overlay must not return the taskbar while the second is arriving")
+        reaction.destroy()
+        Overlays.swaps = {}
+    }
+
+    function test_leavingOverlayKnowsItHandsOverBeforeItIsClosed() {
+        Overlays.open("dashboard", "A")
+        Overlays.reportPhase("dashboard", "A", "active")
+        let isHandingOverBeforeClose = false
+        const watcher = Qt.createQmlObject("import QtQuick; import qs.state; Item { id: watcher; signal swapped(); Connections { target: Overlays; function onSwapsChanged() { watcher.swapped() } } }", this)
+        watcher.swapped.connect(() => {
+            if (Overlays.isOpen("dashboard", "A"))
+                isHandingOverBeforeClose = Overlays.isHandingOver("dashboard", "A")
+        })
+        Overlays.open("search", "A")
+        verify(isHandingOverBeforeClose, "the leave must not start as a release that streams the taskbar parts home")
+        watcher.destroy()
+        Overlays.swaps = {}
+    }
+
+    function test_closingTheWaitingOverlayEndsTheSwap() {
+        Overlays.open("dashboard", "A")
+        Overlays.reportPhase("dashboard", "A", "active")
+        Overlays.open("search", "A")
+        Overlays.close("search")
+        verify(!Overlays.isWaiting("search", "A"))
+        Overlays.swaps = {}
+    }
+
+    function test_openingOverAnIdleSurfaceIsNoSwap() {
+        Overlays.open("dashboard", "A")
+        Overlays.open("search", "A")
+        verify(!Overlays.isWaiting("search", "A"))
     }
 
     function test_taskbarReturnsPerScreen() {

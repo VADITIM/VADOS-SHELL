@@ -12,10 +12,18 @@ const settings = {
     "search.favorites": { type: "names", fallback: [] },
     "profile.name": { type: "string", fallback: "" },
     "profile.picture": { type: "string", fallback: "" },
+    "profile.secondName": { type: "string", fallback: "" },
+    "profile.github": { type: "string", fallback: "" },
+    "pills.opacity": { type: "fraction", fallback: 0.94 },
+    "pills.blur": { type: "fraction", fallback: 1 },
+    "pills.color": { type: "tint", fallback: "" },
+    "services.mediaPlayer": { type: "boolean", fallback: true },
     "weather.location": { type: "string", fallback: "" },
     "notifications.enabled": { type: "boolean", fallback: false },
     "motion.reduced": { type: "boolean", fallback: false },
     "attention.doNotDisturb": { type: "boolean", fallback: false },
+    "lock.layout": { type: "names", fallback: ["clock:5:1", "profile:6:4", "login:5:8"] },
+    "lock.wallpaper": { type: "string", fallback: "" },
     "rendering.quality": { type: "string", fallback: "full", choices: ["full", "lite"] }
 }
 
@@ -52,6 +60,10 @@ function findProblem(key, value) {
         return `is ${describe(value)}, expected text in quotes`
     if (rule.type === "colour" && !(typeof value === "string" && colourPattern.test(value)))
         return `is ${describe(value)}, expected a hex colour like "#ffffff"`
+    if (rule.type === "fraction" && !(typeof value === "number" && value >= 0 && value <= 1))
+        return `is ${describe(value)}, expected a number from 0 to 1`
+    if (rule.type === "tint" && !(value === "" || (typeof value === "string" && colourPattern.test(value))))
+        return `is ${describe(value)}, expected "" or a hex colour like "#121212"`
     if (rule.type === "names" && !(Array.isArray(value) && value.every(entry => typeof entry === "string")))
         return `is ${describe(value)}, expected a list of names in quotes`
     if (rule.choices && rule.choices.indexOf(value) < 0)

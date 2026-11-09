@@ -52,4 +52,13 @@ ShellRoot {
             screen: modelData
         }
     }
+
+    Variants {
+        model: Quickshell.screens
+
+        FrameWindow {
+            required property ShellScreen modelData
+            screen: modelData
+        }
+    }
 }

@@ -10,6 +10,7 @@ Text {
     property int characterInterval: Motion.type.character
     property int untypeInterval: Motion.type.untype
     property bool holdsWidth: false
+    property int leaveBudget: 0
     property real nextStep: 0
     readonly property real fullWidth: measure.implicitWidth
 
@@ -24,7 +25,7 @@ Text {
             return 0
         if (!wanted.startsWith(shown)) {
             shown = shown.slice(0, -1)
-            return untypeInterval
+            return leaveBudget > 0 ? Math.min(untypeInterval, Motion.pace(leaveBudget) / Math.max(1, target.length)) : untypeInterval
         }
         shown = wanted.slice(0, shown.length + 1)
         return characterInterval

@@ -38,7 +38,10 @@ Item {
 
     Mutate {
         id: mutate
+        label: "fold dot"
         isShown: dot.isShown
+        isArriving: dot.host.isArriving
+        hasArrived: dot.host.hasArrivedAt(dot.origin.y + dot.y + dot.height / 2)
         hasSpread: false
         enterDelay: Motion.fold.dotDelay
         leaveDelay: 0
@@ -99,7 +102,9 @@ Item {
                     color: area.containsMouse ? Appearance.color.accent : Appearance.color.textMuted
 
                     Behavior on color {
-                        ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
+                        ColorAnimation {
+                            duration: Motion.pace(Motion.hoverIn)
+                        }
                     }
                 }
             }

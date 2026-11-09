@@ -4,6 +4,8 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import animations
 SHELL = os.path.join(ROOT, "shell")
 
 ENGINE_TESTS = {
@@ -16,7 +18,6 @@ ENGINE_TESTS = {
     "shell/services/Confinement.qml": "tst_confinement.qml",
     "shell/utils/Phases.js": "tst_lifecycle.qml",
     "shell/components/Lifecycle.qml": "tst_lifecycle.qml",
-    "shell/components/Launch.qml": "tst_launch.qml",
     "shell/utils/Geometry.js": "tst_geometry.qml",
     "shell/utils/Platform.js": "tst_platform.qml",
     "shell/utils/Schema.js": "tst_schema.qml",
@@ -27,6 +28,8 @@ ENGINE_TESTS = {
     "shell/utils/Backoff.js": "tst_supervisor.qml",
     "shell/services/Supervisor.qml": "tst_supervisor.qml",
     "shell/utils/Diagnostics.js": "tst_diagnostics.qml",
+    "shell/utils/Playing.js": "tst_frames.qml",
+    "shell/state/FrameDebug.qml": "tst_frames.qml",
 }
 
 RENDERING_COMPONENTS = {"shell/components/LiquidLayer.qml", "shell/components/Masked.qml"}
@@ -47,7 +50,7 @@ VISUAL_TYPES = r"Item|Rectangle|Text|TextInput|TextEdit|Image|IconImage|Shape|Sh
 
 COMPONENT_TOKENS = {
     "Appearance": {"unit", "radius", "color", "font", "liquid", "rising", "burst"},
-    "Motion": {"isReduced", "pace", "stateDuration", "hoverIn", "hoverOut", "press", "pill", "type", "gesture", "lifecycle", "burst", "rising", "liquid"},
+    "Motion": {"isReduced", "pace", "isHeld", "holdAgain", "stateDuration", "hoverIn", "hoverOut", "press", "pill", "type", "sweep", "gesture", "lifecycle", "burst", "rising", "liquid"},
 }
 
 COMPOSITOR_SUPPORT_BACKENDS = ["driftwm", "hyprland", "generic"]
@@ -120,7 +123,7 @@ def check(files):
             "colours come from Appearance.color (rules/frontend.md)", scope="shell/modules/")
     only_in("tokens", r"\"#[0-9a-fA-F]{3,8}\"", set(),
             "colours come from Appearance.color (rules/frontend.md)", scope="shell/components/")
-    only_in("overlays", r"WlrLayershell\.keyboardFocus|WlrLayer\.Overlay", {"shell/windows/OverlayWindow.qml"},
+    only_in("overlays", r"WlrLayershell\.keyboardFocus|WlrLayer\.Overlay", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml"},
             "overlays are OverlayWindows registered in state/Overlays.qml (rules/interaction.md)")
     only_in("lock", r"WlSessionLock", {"shell/windows/LockWindow.qml"},
             "the session lock lives only in windows/LockWindow.qml (rules/security.md)")
@@ -152,6 +155,12 @@ def check(files):
             surface = "".join(top)
             if not re.search(r"^\s*isShown:", surface, re.M) or re.search(r"^\s*visible:", surface, re.M):
                 flag("rendering", path, line_of(text, start), "a LiquidLayer says when it is shown with isShown, never visible, so it stops rendering when idle (rules/performance.md)")
+
+    for path, text in files:
+        if path.startswith(("shell/components/", "shell/modules/")):
+            for declaration in animations.declarations(text.split(chr(10))):
+                if not declaration["is_held"]:
+                    flag("motion", path, declaration["line"] + 1, "an animation takes paused: Motion.isHeld so the frame debugger can hold it (rules/animations.md)")
 
     for path, text in files:
         if path.startswith("shell/components/") and re.search(r"^\s*id: leave$", text, re.M) and "Lifecycle {" not in text:

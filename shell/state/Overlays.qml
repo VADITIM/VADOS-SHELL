@@ -13,10 +13,10 @@ Singleton {
     property var screens: ({})
     property var stack: []
     property var awayScreens: []
-    property var settingsOrigins: ({})
     property var taskbarParts: ({})
     property var visitors: ({})
     property var phases: ({})
+    property var swaps: ({})
     readonly property string top: stack.length > 0 ? stack[stack.length - 1] : ""
 
     signal taskbarGathering(string screenName)
@@ -50,6 +50,36 @@ Singleton {
         return Object.keys(onScreen).every(key => onScreen[key] === "active")
     }
 
+    function isWaiting(key, screenName) {
+        const swap = swaps[screenName]
+        return swap !== undefined && swap.to === key && !swap.isReady
+    }
+
+    function hasCircle(key, screenName) {
+        const swap = swaps[screenName]
+        return swap !== undefined && swap.to === key
+    }
+
+    function isHandingOver(key, screenName) {
+        const swap = swaps[screenName]
+        return swap !== undefined && swap.to !== key
+    }
+
+    function placeSwap(screenName, swap) {
+        const placed = Object.assign({}, swaps)
+        if (swap)
+            placed[screenName] = swap
+        else
+            delete placed[screenName]
+        swaps = placed
+    }
+
+    function settleSwap(screenName) {
+        const swap = swaps[screenName]
+        if (swap && !swap.isReady)
+            placeSwap(screenName, { to: swap.to, isReady: true })
+    }
+
     function reportPhase(key, screenName, phase) {
         if (!kinds[key] || screenName.length === 0)
             return
@@ -62,6 +92,10 @@ Singleton {
         placed[screenName] = onScreen
         phases = placed
         if (phase === "idle")
+            settleSwap(screenName)
+        if (phase === "active" && swaps[screenName]?.to === key)
+            placeSwap(screenName, null)
+        if (phase === "idle")
             returnTaskbar(screenName)
     }
 
@@ -71,10 +105,10 @@ Singleton {
                 close(key)
         }
         awayScreens = awayScreens.filter(screenName => screenNames.indexOf(screenName) >= 0)
-        settingsOrigins = keepOnly(settingsOrigins, screenNames)
         taskbarParts = keepOnly(taskbarParts, screenNames)
         visitors = keepOnly(visitors, screenNames)
         phases = keepOnly(phases, screenNames)
+        swaps = keepOnly(swaps, screenNames)
     }
 
     function keepOnly(byScreen, screenNames) {
@@ -94,20 +128,25 @@ Singleton {
         if (!kinds[key] || screenName.length === 0)
             return
         const layer = kinds[key].layer
-        for (const other of stack.slice()) {
-            if (other !== key && kinds[other].layer <= layer)
-                close(other)
-        }
+        const isSwap = stack.some(other => other !== key && screens[other] === screenName && phaseOf(other, screenName) !== "idle" && kinds[other].layer <= layer)
+        if (isSwap)
+            placeSwap(screenName, { to: key, isReady: false })
         gatherTaskbar(screenName)
+        const displaced = stack.filter(other => other !== key && kinds[other].layer <= layer)
         const placed = Object.assign({}, screens)
         placed[key] = screenName
         screens = placed
         stack = stack.filter(other => other !== key).concat([key])
+        for (const other of displaced)
+            close(other)
     }
 
     function close(key) {
         if (screenOf(key).length === 0)
             return
+        const screenName = screenOf(key)
+        if (swaps[screenName]?.to === key)
+            placeSwap(screenName, null)
         const placed = Object.assign({}, screens)
         delete placed[key]
         screens = placed
@@ -138,12 +177,6 @@ Singleton {
             awayScreens = awayScreens.filter(away => away !== screenName)
     }
 
-    function placeSettingsOrigin(screenName, origin) {
-        const origins = Object.assign({}, settingsOrigins)
-        origins[screenName] = origin
-        settingsOrigins = origins
-    }
-
     function placeTaskbarParts(screenName, parts) {
         const placed = Object.assign({}, taskbarParts)
         placed[screenName] = parts
@@ -156,6 +189,8 @@ Singleton {
         onScreen[key] = visitor
         placed[screenName] = onScreen
         visitors = placed
+        if (visitor && visitor.isReleasing === true && visitor.release > 0)
+            returnTaskbar(screenName)
     }
 
     function visitorOn(screenName) {

@@ -7,12 +7,49 @@ import qs.modules.taskbar
 import qs.modules.search
 import qs.modules.settings
 import qs.modules.dashboard
+import qs.modules.framedebug
+import qs.windows
+import QtCore as Core
 
 Window {
     id: root
 
     readonly property string screenName: "play"
     readonly property bool isRight: Config.data.taskbar.side === "right"
+    property Item focusBeforeFrames: null
+
+    signal shotSaved(string path)
+
+    function holdKeyboard() {
+        if (!FrameDebug.isActive || frameHud.activeFocus)
+            return
+        focusBeforeFrames = activeFocusItem
+        frameHud.forceActiveFocus()
+    }
+
+    function returnKeyboard() {
+        if (focusBeforeFrames && focusBeforeFrames.visible)
+            focusBeforeFrames.forceActiveFocus()
+        else
+            contentItem.forceActiveFocus()
+        focusBeforeFrames = null
+    }
+
+    function isOverlayOpen(key: string): bool {
+        return Overlays.isOpen(key, screenName) && !Overlays.isWaiting(key, screenName)
+    }
+
+    function landOverlay() {
+        Overlays.settleSwap(screenName)
+        Overlays.returnTaskbar(screenName)
+    }
+
+    function pressShortcut(name: string) {
+        if (name === "frames")
+            FrameDebug.toggle(screenName)
+        else if (name === "frameShot")
+            FrameDebug.snap(screenName)
+    }
 
     width: 1600
     height: 900
@@ -20,52 +57,144 @@ Window {
     title: "VAD/OS Shell playground"
     color: "#2b3542"
 
-    Component.onCompleted: Overlays.placeSettingsOrigin(screenName, taskbar.settingsOrigin)
 
-    Rectangle {
+    Item {
+        id: scene
         anchors.fill: parent
-        gradient: Gradient {
-            GradientStop { position: 0; color: "#3b4a5c" }
-            GradientStop { position: 1; color: "#1d242e" }
-        }
-    }
-
-    Repeater {
-        model: [
-            { x: 380, y: 110, width: 720, height: 440, color: "#e6e6e6" },
-            { x: 820, y: 300, width: 520, height: 380, color: "#c9d3e0" },
-            { x: 240, y: 520, width: 480, height: 300, color: "#3a3f48" }
-        ]
 
         Rectangle {
-            required property var modelData
-            x: modelData.x
-            y: modelData.y
-            width: modelData.width
-            height: modelData.height
-            radius: 10
-            color: modelData.color
+            anchors.fill: parent
+            gradient: Gradient {
+                GradientStop { position: 0; color: "#3b4a5c" }
+                GradientStop { position: 1; color: "#1d242e" }
+            }
         }
-    }
 
-    Taskbar {
-        id: taskbar
-        x: root.isRight ? root.width - width : 0
-        width: Appearance.taskbar.windowWidth
-        height: parent.height
-        isMirrored: root.isRight
-        barStyle: Config.data.taskbar.style
-        isCompact: Config.data.taskbar.compact
-        onCompactRequested: isCompact => Config.setTaskbarCompact(isCompact)
-        onSettingsRequested: Overlays.toggle("settings", root.screenName)
-        onDashboardRequested: Overlays.toggle("dashboard", root.screenName)
-        isAway: Overlays.isTaskbarAway(root.screenName)
-        visitor: Overlays.visitorOn(root.screenName)
-        activityMode: ActivityState.modeOn(root.screenName)
-        activityLead: ActivityState.leadKey
-        onActivityModeRequested: mode => ActivityState.set(root.screenName, mode)
-        onActivityLeadRequested: direction => ActivityState.rotate(direction)
-        onSettingsOriginChanged: Overlays.placeSettingsOrigin(root.screenName, settingsOrigin)
+        Repeater {
+            model: [
+                { x: 380, y: 110, width: 720, height: 440, color: "#e6e6e6" },
+                { x: 820, y: 300, width: 520, height: 380, color: "#c9d3e0" },
+                { x: 240, y: 520, width: 480, height: 300, color: "#3a3f48" }
+            ]
+
+            Rectangle {
+                required property var modelData
+                x: modelData.x
+                y: modelData.y
+                width: modelData.width
+                height: modelData.height
+                radius: 10
+                color: modelData.color
+            }
+        }
+
+        Taskbar {
+            id: taskbar
+            x: root.isRight ? root.width - width : 0
+            width: Appearance.taskbar.windowWidth
+            height: scene.height
+            isMirrored: root.isRight
+            barStyle: Config.data.taskbar.style
+            isCompact: Config.data.taskbar.compact
+            onCompactRequested: isCompact => Config.setTaskbarCompact(isCompact)
+            onSettingsRequested: Overlays.toggle("settings", root.screenName)
+            onDashboardRequested: Overlays.toggle("dashboard", root.screenName)
+            isAway: Overlays.isTaskbarAway(root.screenName)
+            visitor: Overlays.visitorOn(root.screenName)
+            activityMode: ActivityState.modeOn(root.screenName)
+            activityLead: ActivityState.leadKey
+            onActivityModeRequested: mode => ActivityState.set(root.screenName, mode)
+            onActivityLeadRequested: direction => ActivityState.rotate(direction)
+        }
+
+        Search {
+            id: search
+            anchors.fill: parent
+            visible: isPresent
+            isOpen: root.isOverlayOpen("search")
+            favoriteIds: Config.data.search.favorites
+            parts: Overlays.taskbarParts[root.screenName] ?? []
+            isMirrored: root.isRight
+            canHandOff: Config.data.taskbar.style !== "bare"
+            isHandingOver: Overlays.isHandingOver("search", root.screenName)
+            hasCircle: Overlays.hasCircle("search", root.screenName)
+            onPhaseChanged: Overlays.reportPhase("search", root.screenName, phase)
+            onVisitorChanged: Overlays.placeVisitor("search", root.screenName, visitor)
+            onCloseRequested: Overlays.close("search")
+            onLanded: root.landOverlay()
+            onFavoriteToggled: appId => Config.toggleFavorite(appId)
+        }
+
+        Settings {
+            id: settings
+            anchors.fill: parent
+            visible: isPresent
+            isOpen: root.isOverlayOpen("settings")
+            parts: Overlays.taskbarParts[root.screenName] ?? []
+            isMirrored: root.isRight
+            canHandOff: Config.data.taskbar.style !== "bare"
+            isHandingOver: Overlays.isHandingOver("settings", root.screenName)
+            hasCircle: Overlays.hasCircle("settings", root.screenName)
+            onPhaseChanged: Overlays.reportPhase("settings", root.screenName, phase)
+            onVisitorChanged: Overlays.placeVisitor("settings", root.screenName, visitor)
+            accent: Appearance.color.accent
+            taskbarSide: Config.data.taskbar.side
+            barStyle: Config.data.taskbar.style
+            windowMode: Config.data.desktop.mode
+            canSwitchMode: true
+            onCloseRequested: Overlays.close("settings")
+            onLanded: root.landOverlay()
+            onAccentRequested: value => Config.setAccent(value.toString())
+            onSideRequested: side => Config.setTaskbarSide(side)
+            onStyleRequested: style => Config.setTaskbarStyle(style)
+            onModeRequested: mode => Config.setWindowMode(mode)
+            isReducedMotion: Config.data.motion.reduced
+            isQuiet: Config.data.attention.doNotDisturb
+            onReducedMotionRequested: isReduced => Config.setReducedMotion(isReduced)
+            onQuietRequested: isQuiet => Config.setDoNotDisturb(isQuiet)
+            profileName: Config.data.profile.name
+            profileSecondName: Config.data.profile.secondName
+            profilePicture: Config.data.profile.picture
+            profileGithub: Config.data.profile.github
+            pillOpacity: Config.data.pills.opacity
+            pillBlur: Config.data.pills.blur
+            pillColor: Config.data.pills.color
+            isMediaPlayerOn: Config.data.services.mediaPlayer
+            isNotificationsOn: Config.data.notifications.enabled
+            lockLayout: Config.data.lock.layout
+            lockWallpaper: Config.data.lock.wallpaper
+            onLockLayoutRequested: entries => Config.setLockLayout(entries)
+            onLockWallpaperRequested: value => Config.setLockWallpaper(value)
+            onProfileRequested: (field, value) => ({
+                name: Config.setProfileName,
+                secondName: Config.setProfileSecondName,
+                picture: Config.setProfilePicture,
+                github: Config.setProfileGithub
+            })[field](value)
+            onPillRequested: (field, value) => ({
+                opacity: Config.setPillOpacity,
+                blur: Config.setPillBlur,
+                color: Config.setPillColor
+            })[field](value)
+            onMediaPlayerRequested: isOn => Config.setMediaPlayer(isOn)
+            onNotificationsRequested: isOn => Config.setNotificationsEnabled(isOn)
+        }
+
+        Dashboard {
+            id: dashboard
+            anchors.fill: parent
+            visible: isPresent
+            isOpen: root.isOverlayOpen("dashboard")
+            isMirrored: root.isRight
+            parts: Overlays.taskbarParts[root.screenName] ?? []
+            canHandOff: Config.data.taskbar.style !== "bare"
+            isHandingOver: Overlays.isHandingOver("dashboard", root.screenName)
+            hasCircle: Overlays.hasCircle("dashboard", root.screenName)
+            onPhaseChanged: Overlays.reportPhase("dashboard", root.screenName, phase)
+            onVisitorChanged: Overlays.placeVisitor("dashboard", root.screenName, visitor)
+            onCloseRequested: Overlays.close("dashboard")
+            onLanded: root.landOverlay()
+        }
     }
 
     Connections {
@@ -74,61 +203,64 @@ Window {
         function onTaskbarGathering(screenName) {
             if (screenName !== root.screenName)
                 return
-            Overlays.placeSettingsOrigin(root.screenName, taskbar.settingsOrigin)
             Overlays.placeTaskbarParts(root.screenName, taskbar.liquidParts())
         }
     }
 
-    Search {
-        id: search
-        anchors.fill: parent
-        visible: isPresent
-        isOpen: Overlays.isOpen("search", root.screenName)
-        favoriteIds: Config.data.search.favorites
-        parts: Overlays.taskbarParts[root.screenName] ?? []
-        isMirrored: root.isRight
-        canHandOff: Config.data.taskbar.style !== "bare"
-        onVisitorChanged: Overlays.placeVisitor("search", root.screenName, visitor)
-        onCloseRequested: Overlays.close("search")
-        onLanded: Overlays.returnTaskbar(root.screenName)
-        onFavoriteToggled: appId => Config.toggleFavorite(appId)
+    FrameTap {
+        target: scene
+        screenName: root.screenName
+        isLive: true
     }
 
-    Settings {
-        id: settings
+    FrameHud {
+        id: frameHud
         anchors.fill: parent
-        visible: isPresent
-        isOpen: Overlays.isOpen("settings", root.screenName)
-        origin: Overlays.settingsOrigins[root.screenName] ?? Qt.rect(0, 0, 0, 0)
-        parts: Overlays.taskbarParts[root.screenName] ?? []
-        accent: Appearance.color.accent
-        taskbarSide: Config.data.taskbar.side
-        barStyle: Config.data.taskbar.style
-        windowMode: Config.data.desktop.mode
-        canSwitchMode: true
-        onCloseRequested: Overlays.close("settings")
-        onLanded: Overlays.returnTaskbar(root.screenName)
-        onAccentRequested: value => Config.setAccent(value.toString())
-        onSideRequested: side => Config.setTaskbarSide(side)
-        onStyleRequested: style => Config.setTaskbarStyle(style)
-        onModeRequested: mode => Config.setWindowMode(mode)
-        isReducedMotion: Config.data.motion.reduced
-        isQuiet: Config.data.attention.doNotDisturb
-        onReducedMotionRequested: isReduced => Config.setReducedMotion(isReduced)
-        onQuietRequested: isQuiet => Config.setDoNotDisturb(isQuiet)
+        isActive: FrameDebug.isActive
+        isReplay: FrameDebug.isViewingPast
+        replayShots: FrameDebug.shotsOn(root.screenName)
+        counter: FrameDebug.counter
+        label: FrameDebug.shownLabel
+        onStepRequested: FrameDebug.step()
+        onBackRequested: FrameDebug.back()
+        onShotRequested: FrameDebug.snap(root.screenName)
+        onCloseRequested: FrameDebug.close()
+        onIsActiveChanged: {
+            if (isActive)
+                root.holdKeyboard()
+            else
+                root.returnKeyboard()
+        }
     }
 
-    Dashboard {
-        id: dashboard
-        anchors.fill: parent
-        visible: isPresent
-        isOpen: Overlays.isOpen("dashboard", root.screenName)
-        isMirrored: root.isRight
-        parts: Overlays.taskbarParts[root.screenName] ?? []
-        canHandOff: Config.data.taskbar.style !== "bare"
-        onVisitorChanged: Overlays.placeVisitor("dashboard", root.screenName, visitor)
-        onCloseRequested: Overlays.close("dashboard")
-        onLanded: Overlays.returnTaskbar(root.screenName)
+    onActiveFocusItemChanged: if (FrameDebug.isActive && !frameHud.activeFocus) Qt.callLater(holdKeyboard)
+
+    Connections {
+        target: FrameDebug
+
+        function onSnapshotReady(shots) {
+            frameHud.snapshotShots = shots
+            const isStarted = frameHud.capture(result => {
+                const path = Core.StandardPaths.writableLocation(Core.StandardPaths.TempLocation) + "/vados-frame.png"
+                result.saveToFile(path)
+                root.shotSaved(path)
+                FrameDebug.finishSnap()
+            })
+            if (!isStarted)
+                FrameDebug.finishSnap()
+        }
+    }
+
+    Shortcut {
+        sequence: "0"
+        context: Qt.ApplicationShortcut
+        onActivated: root.pressShortcut("frames")
+    }
+
+    Shortcut {
+        sequence: "+"
+        context: Qt.ApplicationShortcut
+        onActivated: root.pressShortcut("frameShot")
     }
 
     Shortcut {

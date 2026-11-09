@@ -71,6 +71,7 @@ Item {
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: dwellCharge
         target: edgePull
         property: "dwell"
@@ -81,6 +82,7 @@ Item {
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: dwellRelease
         target: edgePull
         property: "dwell"
@@ -90,6 +92,7 @@ Item {
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: pullRelease
         target: edgePull
         property: "pull"

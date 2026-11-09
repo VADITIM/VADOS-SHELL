@@ -20,6 +20,7 @@ Item {
     }
 
     NumberAnimation on phase {
+        paused: Motion.isHeld && running
         from: 0
         to: 1
         duration: Motion.pace(Motion.activity.bars)

@@ -45,3 +45,8 @@
 - **Activity pill gaps**: only music and Discord calls so far (no notifications, tray, timers); the Discord view shows no participants or speaking state; one MPRIS player at a time; not run on the Linux shell.
 - **`CTRL + LEFT / RIGHT` are global**, so they shadow word-jump in every app while bound.
 - **Two activity states after the engine merge (2026-11-08)**: `state/ActivityState.qml` drives the activity pill (mode, lead, music and calls from `Activities`), `state/Activity.qml` holds the notification and tray entries and an open screen nothing draws. They share the IPC target `activity` (pill: `next`, `previous`, `mode`, `rotate`; bar: `toggle`, `close`, `pin`, `current`) and the global shortcut `vados:activity` toggles a bar that has no surface. Fold `Activity` into `ActivityState` when the pill shows notifications and the tray.
+
+- Lock tab module pills are 315 px wide and assume the free 22% of the settings body fits them; on screens narrower than about 1500 px they overlap the grid.
+
+- **GitHub history box is empty.** The Profile tab draws the frame and the 26x7 cell grid only; no contributions are fetched (the network is reached only from files in the README Network section).
+- **Profile picture is typed as a path.** Clicking the avatar shows a path field under the names, not a file dialog.

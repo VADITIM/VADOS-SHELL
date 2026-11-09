@@ -56,7 +56,7 @@ Item {
             compare(part("blurPass").visible, isRunning, "blur pass drawn")
             compare(part("blurPass").blurEnabled, isRunning, "blur enabled")
             compare(part("blurredTexture").live, isRunning, "blurred texture updated")
-            compare(part("rimSurface").layer.enabled, isRunning, "rim surface layered")
+            compare(part("rimTexture").live, isRunning, "rim colour updated")
             compare(part("rimPass").visible, isRunning, "rim pass drawn")
             compare(part("fillPass").visible, isRunning, "blurred fill pass drawn")
         }
@@ -66,7 +66,7 @@ Item {
             verify(!liquid.isRendering)
             verifyBlurRuns(false)
             verify(!part("shapeTexture").live)
-            verify(!part("fillSurface").layer.enabled)
+            verify(!part("fillTexture").live)
             verify(!part("passes").layer.enabled)
             verify(!part("corePass").visible)
         }
@@ -92,6 +92,24 @@ Item {
             verify(!part("passes").layer.enabled, "one pass needs no flattening")
             Config.setRenderQuality("full")
             verifyBlurRuns(true)
+        }
+
+        function verifyColourSurfacesUnlayered() {
+            verify(!part("rimSurface").layer.enabled, "a layer switched off never draws again when switched back on")
+            verify(!part("fillSurface").layer.enabled)
+        }
+
+        function test_colourSurfacesNeverLayer() {
+            verifyColourSurfacesUnlayered()
+            liquid.opacity = 0
+            verifyColourSurfacesUnlayered()
+            liquid.opacity = 1
+            liquid.isShown = false
+            verifyColourSurfacesUnlayered()
+            liquid.isShown = true
+            verifyColourSurfacesUnlayered()
+            verify(part("fillTexture").live, "the fill updates again once shown")
+            verify(part("rimTexture").live)
         }
 
         function test_hiddenLayerRunsNoEffect() {

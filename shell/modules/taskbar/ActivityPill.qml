@@ -47,7 +47,10 @@ Item {
 
     Mutate {
         id: mutate
+        label: "activity pill"
         isShown: pill.isShown
+        isArriving: pill.host.isArriving
+        hasArrived: pill.host.hasArrivedAt(pill.y)
         hasSpread: false
         enterDelay: Motion.reveal.stagger
         leaveDelay: Motion.activity.faceLeave
@@ -105,6 +108,7 @@ Item {
 
             Mutate {
                 id: satellitePop
+                label: "activity satellite"
                 isShown: pill.areSatellitesShown && reshape.isArrived
                 hasSpread: false
                 enterDelay: (satellite.index + 1) * Motion.activity.stagger

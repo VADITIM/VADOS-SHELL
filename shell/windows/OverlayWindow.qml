@@ -10,7 +10,9 @@ PanelWindow {
     property bool isPresent: false
     property string phase: "idle"
     readonly property string screenName: screen?.name ?? ""
-    readonly property bool isOpen: Overlays.isOpen(overlayKey, screenName)
+    readonly property bool isOpen: Overlays.isOpen(overlayKey, screenName) && !Overlays.isWaiting(overlayKey, screenName)
+    readonly property bool isHandingOver: Overlays.isHandingOver(overlayKey, screenName)
+    readonly property bool hasCircle: Overlays.hasCircle(overlayKey, screenName)
     readonly property var parts: Overlays.taskbarParts[screenName] ?? []
 
     function requestClose() {
@@ -18,6 +20,7 @@ PanelWindow {
     }
 
     function land() {
+        Overlays.settleSwap(screenName)
         Overlays.returnTaskbar(screenName)
     }
 
@@ -26,6 +29,13 @@ PanelWindow {
     }
 
     onPhaseChanged: Overlays.reportPhase(overlayKey, screenName, phase)
+
+    FrameTap {
+        target: window.contentItem
+        screenName: window.screenName
+        isLive: window.visible
+        order: 1
+    }
 
     anchors {
         left: true
@@ -37,6 +47,6 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "vados-" + overlayKey
-    WlrLayershell.keyboardFocus: Overlays.ownsKeyboard(overlayKey, screenName) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: Overlays.ownsKeyboard(overlayKey, screenName) && !FrameDebug.isActive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
 }

@@ -127,12 +127,82 @@ Singleton {
         file.writeAdapter()
     }
 
-    function setProfile(name, picture) {
-        if (!accept("profile.name", name) || !accept("profile.picture", picture))
+    function setProfileName(value) {
+        if (!accept("profile.name", value))
             return
-        adapter.profile.name = name
-        adapter.profile.picture = picture
+        adapter.profile.name = value
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setProfileSecondName(value) {
+        if (!accept("profile.secondName", value))
+            return
+        adapter.profile.secondName = value
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setProfilePicture(value) {
+        if (!accept("profile.picture", value))
+            return
+        adapter.profile.picture = value
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setProfileGithub(value) {
+        if (!accept("profile.github", value))
+            return
+        adapter.profile.github = value
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setPillOpacity(value) {
+        if (!accept("pills.opacity", value))
+            return
+        adapter.pills.opacity = value
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setPillBlur(value) {
+        if (!accept("pills.blur", value))
+            return
+        adapter.pills.blur = value
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setPillColor(value) {
+        if (!accept("pills.color", value))
+            return
+        adapter.pills.color = value
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setMediaPlayer(value) {
+        if (!accept("services.mediaPlayer", value))
+            return
+        adapter.services.mediaPlayer = value
         file.writeAdapter()
+    }
+
+    function setLockLayout(entries) {
+        if (!accept("lock.layout", entries))
+            return
+        adapter.lock.layout = entries
+        file.writeAdapter()
+    }
+
+    function setLockWallpaper(value) {
+        if (!accept("lock.wallpaper", value))
+            return
+        adapter.lock.wallpaper = value
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
     }
 
     function toggleFavorite(appId) {
@@ -181,6 +251,20 @@ Singleton {
             property JsonObject profile: JsonObject {
                 property string name: ""
                 property string picture: ""
+                property string secondName: ""
+                property string github: ""
+            }
+            property JsonObject pills: JsonObject {
+                property real opacity: 0.94
+                property real blur: 1
+                property string color: ""
+            }
+            property JsonObject services: JsonObject {
+                property bool mediaPlayer: true
+            }
+            property JsonObject lock: JsonObject {
+                property var layout: ["clock:5:1", "profile:6:4", "login:5:8"]
+                property string wallpaper: ""
             }
             property JsonObject weather: JsonObject {
                 property string location: ""

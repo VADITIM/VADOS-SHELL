@@ -77,7 +77,9 @@ Item {
             font.pixelSize: Appearance.font.body
 
             Behavior on color {
-                ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
+                ColorAnimation {
+                    duration: Motion.pace(Motion.hoverIn)
+                }
             }
         }
 

@@ -106,6 +106,7 @@ Item {
     }
 
     FrameAnimation {
+        paused: Motion.isHeld && running
         running: rising.isActive
         onTriggered: rising.advance(Math.min(frameTime, Motion.liquid.frameCap))
     }

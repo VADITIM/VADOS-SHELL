@@ -2,6 +2,7 @@ import QtQuick
 import qs.config
 import qs.services
 import qs.components
+import "../../utils/Geometry.js" as Geometry
 
 FocusScope {
     id: dashboard
@@ -10,6 +11,8 @@ FocusScope {
     property bool isMirrored: false
     property var parts: []
     property bool canHandOff: false
+    property bool isHandingOver: false
+    property bool hasCircle: false
     readonly property bool isPresent: isOpen || burst.isActive || rising.living > 0
     readonly property string phase: burst.phase
 
@@ -110,6 +113,7 @@ FocusScope {
 
             Burst {
                 id: burst
+                label: "dashboard burst"
                 isShown: dashboard.isOpen
                 parts: dashboard.parts
                 rootX: dashboard.rootX
@@ -120,7 +124,10 @@ FocusScope {
                 leftCorner: dashboard.look.rootCorner
                 rightCorner: dashboard.look.corner
                 edgePad: dashboard.look.melt
+                screenHeight: dashboard.height
                 canHandOff: dashboard.canHandOff
+                isHandingOver: dashboard.isHandingOver
+                hasCircle: dashboard.hasCircle
                 hasSideStep: Battery.isPresent
                 onLanded: dashboard.landed()
             }
@@ -146,6 +153,7 @@ FocusScope {
         y: burst.form.y - burst.form.height / 2
         width: Math.max(0, burst.form.width)
         height: Math.max(0, burst.form.height)
+        opacity: burst.isLeaving ? 1 - Geometry.smooth(Geometry.clampUnit(burst.exit / Motion.burst.leaveFade)) : 1
         clip: true
 
         Item {

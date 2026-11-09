@@ -139,7 +139,10 @@ Item {
 
     Mutate {
         id: mutate
+        label: "task pill"
         isShown: taskPill.isShown
+        isArriving: taskPill.host.isArriving
+        hasArrived: taskPill.host.hasArrivedAt(taskPill.y + taskPill.height / 2)
         enterDelay: taskPill.enterDelay
         onDeparted: taskPill.departed()
     }
@@ -185,6 +188,7 @@ Item {
 
         move: Transition {
             NumberAnimation {
+                paused: Motion.isHeld && running
                 property: "y"
                 duration: Motion.pace(Motion.stateDuration)
                 easing.type: Easing.OutCubic
@@ -201,6 +205,7 @@ Item {
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: topSlide
         target: taskPill
         property: "washTop"
@@ -209,6 +214,7 @@ Item {
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: bottomSlide
         target: taskPill
         property: "washBottom"

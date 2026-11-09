@@ -56,7 +56,9 @@ Item {
                 font.pixelSize: tile.look.name
 
                 Behavior on color {
-                    ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
+                    ColorAnimation {
+                        duration: Motion.pace(Motion.hoverIn)
+                    }
                 }
             }
 

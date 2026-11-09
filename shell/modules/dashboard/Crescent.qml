@@ -20,7 +20,9 @@ Item {
     }
 
     Behavior on fill {
-        ColorAnimation { duration: Motion.pace(Motion.stateDuration) }
+        ColorAnimation {
+            duration: Motion.pace(Motion.stateDuration)
+        }
     }
 
     Shape {

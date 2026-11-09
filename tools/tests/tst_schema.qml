@@ -20,6 +20,13 @@ TestCase {
         compare(defaults.version, Schema.version)
     }
 
+    function test_fractionAndTintRules() {
+        verify(Schema.findProblem("pills.opacity", 1.5) !== "")
+        verify(Schema.findProblem("pills.opacity", 0.5) === "")
+        verify(Schema.findProblem("pills.color", "red") !== "")
+        verify(Schema.findProblem("pills.color", "") === "")
+    }
+
     function test_cleanSettingsAreIdempotent() {
         const settings = Schema.createDefaults()
         settings.taskbar.side = "right"

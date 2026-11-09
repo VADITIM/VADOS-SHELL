@@ -34,6 +34,8 @@ autostart = ["qs -p ~/.config/vados/shell"]
 "f11" = "exec qs -p ~/.config/vados/shell ipc call desktop fullscreen"
 "ctrl+right" = "exec qs -p ~/.config/vados/shell ipc call activity next"
 "ctrl+left" = "exec qs -p ~/.config/vados/shell ipc call activity previous"
+"kp_0" = "exec qs -p ~/.config/vados/shell ipc call frames toggle"
+"kp_add" = "exec qs -p ~/.config/vados/shell ipc call frames shot"
 ```
 
 Check the keybinding table name against your driftwm version's `config.reference.toml`.
@@ -53,6 +55,8 @@ layerrule = blur, vados-dashboard
 layerrule = ignorezero, vados-dashboard
 bind = CTRL, right, global, vados:activityNext
 bind = CTRL, left, global, vados:activityPrevious
+bind = , KP_0, global, vados:frames
+bind = , KP_ADD, global, vados:frameShot
 ```
 
 ### Anything else
@@ -115,7 +119,7 @@ A liquid pill in the middle of the taskbar shows what is running now. It has fou
 
 ## Settings window
 
-The gear above power or `CTRL + P` opens the settings. The whole taskbar melts into the gear, which shoots from there into the screen centre and pops open into the settings panel, with bubbles rising off it. A tab bar buds out of its left edge: Appearance, Taskbar, and Desktop on driftwm. Up/Down or Tab switch tabs. Esc, `CTRL + P` or a click outside closes it: the panel implodes, flies back, and the taskbar pops back in.
+The gear above power or `CTRL + P` opens the settings: the taskbar melts into a circle that sweeps across the whole screen as a liquid burst, bounces on the far edge and settles into a body merged with the screen edges. The taskbar becomes the main navigation inside it, a tall accent-coloured pop bar with User, Settings, Customization and Advanced; tabs with deeper levels open a white second pop bar to its right (Customization: Backgrounds, Pills, Taskbar, Lock Screen; Advanced: Link to VAD/OS, Services). Up/Down/Tab switch tabs, Left/Right the second bar. Esc, `CTRL + P` or a click outside closes it: the body collapses back into the taskbar.
 
 `CTRL + P` is a global binding, so it shadows Ctrl+P (print) inside apps. Rebind it in the compositor config if that matters to you.
 
@@ -175,14 +179,22 @@ shell.json        user config
 | `taskbar.style` | `"floating"`: liquid bubbles beside the edge<br>`"fused"`: tabs grown out of the screen edge<br>`"bare"`: no container, icons only | `"floating"` |
 | `taskbar.side` | `"left"` / `"right"` | `"left"` |
 | `taskbar.compact` | `true`: idle pills folded to power, audio and a dot (drag down on them)<br>`false`: all idle pills (drag up, or press the dot) | `false` |
-| `appearance.accent` | hex colour, e.g. `"#ffffff"`; set live from the settings window (Appearance tab) | `"#ffffff"` |
+| `appearance.accent` | hex colour, e.g. `"#ffffff"`; set live from the settings window (User tab) | `"#ffffff"` |
 | `desktop.mode` | `"canvas"` / `"desktop"` (driftwm only) | `"canvas"` |
 | `search.favorites` | desktop entry ids, e.g. `["firefox.desktop"]` | `[]` |
 | `profile.name` | your name; its initial shows in the search circle when there is no picture | `""` |
+| `profile.secondName` | optional second name | `""` |
+| `profile.github` | your GitHub username | `""` |
+| `pills.opacity` | 0 to 1, how opaque pills and overlay bodies are (settings, Customization / Pills) | `0.94` |
+| `pills.blur` | 0 to 1, scales the liquid blur of every pill and overlay (settings, Customization / Pills) | `1` |
+| `lock.layout` | lock screen modules as `"module:column:row"` on the 16 x 16 grid (modules `clock`, `profile`, `login` are required; `weather`, `music`, `dashboard`, `notifications` optional); edited in settings, Customization / Lock Screen | `["clock:5:1", "profile:6:4", "login:5:8"]` |
+| `lock.wallpaper` | image path of the lock screen background | `""` |
+| `pills.color` | hex colour of every pill and overlay body; `""` is the default dark | `""` |
+| `services.mediaPlayer` | `true`: the media player appears in the activity pill when something plays (settings, Advanced)<br>`false`: it never does | `true` |
 | `profile.picture` | path to your profile picture, shown in the search circle until you type | `""` |
 | `weather.location` | city for the dashboard weather, e.g. `"Berlin"`; `""` guesses from your IP | `""` |
-| `motion.reduced` | `true`: transitions are instant and idle bubbles and splashes stop; typed text and drags stay (also in settings, System tab)<br>`false`: full motion | `false` |
-| `attention.doNotDisturb` | `true`: only critical notifications may pop up; the rest wait in the activity bar (also in settings, System tab)<br>`false`: notifications may pop up unless a window is fullscreen | `false` |
+| `motion.reduced` | `true`: transitions are instant and idle bubbles and splashes stop; typed text and drags stay (also in settings, Settings tab)<br>`false`: full motion | `false` |
+| `attention.doNotDisturb` | `true`: only critical notifications may pop up; the rest wait in the activity bar (also in settings, Settings tab)<br>`false`: notifications may pop up unless a window is fullscreen | `false` |
 | `notifications.enabled` | `true`: the shell becomes the notification daemon (replaces mako, dunst, swaync); nothing shows them yet, so leave it off until the activity bar lands<br>`false`: your existing daemon keeps them | `false` |
 | `rendering.quality` | `"full"`: every liquid effect<br>`"lite"`: cheaper rendering for weaker GPUs | `"full"` |
 
@@ -193,6 +205,17 @@ Changes apply live. The file carries a `version` (currently `1`) so later releas
 - `python tools/check-rules.py` checks the hard rules (also a Claude Code Stop hook).
 - `python tools/tests/run.py` runs the Qt Quick tests (needs PySide6): the liquid engine, overlays, gestures, attention, the burst, persistence and Desktop-mode recovery, logging, supervision and diagnostics, and a check that the whole preview loads without a warning.
 - `python tools/preview/play.py` opens the playground (Windows paths; see `.claude/CLAUDE.md`).
+
+### Frame by frame
+
+Press `KP_0` (numpad 0): every animation freezes where it is and the top right shows `FRAME n` with the names of the animations playing (`dashboard burst entering`, `task pill leave`, `x3` when several run at once, `NO ANIMATION` when none). Trigger the animation you want to look at (open the dashboard, hover a pill): it starts frozen at frame 0. Then:
+
+- `UP` (or `RIGHT`) runs exactly one frame (about 1/60 s) and freezes again;
+- `DOWN` (or `LEFT`) goes back one frame. Every frame you stepped is kept as a picture (the last 120, at half resolution), and the HUD says `REPLAY` while you look at one; going forward again through the pictures runs nothing, and from the newest frame `UP` runs a real frame again;
+- `KP_ADD` (numpad +) copies a screenshot of the shell to the clipboard with `wl-copy` (install `wl-clipboard`), also when nothing is held: the shell windows on a dark ground, at full resolution, or the frame you are replaying;
+- `ESC` or `KP_0` again lets everything run and forgets the pictures.
+
+Give the frame and the name (`frame 14, dashboard burst entering, the wall ...`) and the exact moment is known. `qs -p ~/.config/vados/shell ipc call frames step`, `... frames back`, `... frames shot` and `... frames status` do the same without the keyboard. While held, the shell holds the keyboard on the screen where you pressed the key (mouse and compositor shortcuts still work). Timers that sequence motion (the taskbar stagger timers) and `Behavior` fades (the dashboard dim, bar fills, hover colours) keep running while held. With Num Lock off the numpad sends `KP_Insert` and `KP_Add` keeps its name. The screenshot holds only what the shell draws, not the windows of other applications.
 
 ### Logs and diagnostics
 

@@ -89,9 +89,13 @@ Item {
 
     Mutate {
         id: mutate
+        label: "idle pill"
         isShown: idle.isShown
+        isArriving: idle.host.isArriving
+        hasArrived: idle.host.hasArrivedAt(idle.origin.y + idle.y + idle.height / 2)
         hasSpread: false
-        enterDelay: idle.order * Motion.reveal.stagger
+        hasArrivalPop: true
+        enterDelay: idle.host.isArriving ? (idle.order - 1) * Motion.reveal.arrivalStagger : idle.order * Motion.reveal.stagger
         leaveDelay: idle.stretch > 0.01 ? Motion.pill.fold + Motion.pill.sizeFollow : Motion.pill.leaveElement
         popDuration: Motion.stateDuration
         character: Motion.liquid.circle

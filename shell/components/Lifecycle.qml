@@ -1,6 +1,7 @@
 import QtQuick
 import qs.config
 import "../utils/Phases.js" as Phases
+import "../utils/Playing.js" as Playing
 import "../utils/Log.js" as Log
 
 QtObject {
@@ -14,12 +15,32 @@ QtObject {
     readonly property bool isLeaving: Phases.isLeaving(phase)
     readonly property bool isShowing: Phases.isShowing(phase)
 
+    readonly property string playing: isMoving ? name + " " + phase : ""
+
+    Component.onCompleted: Playing.enlist(lifecycle)
+    Component.onDestruction: Playing.delist(lifecycle)
+
     property Timer watchdog: Timer {
         interval: Motion.lifecycle.stuck
         onTriggered: {
             Log.warn("lifecycle", lifecycle.name + " stuck in " + lifecycle.phase + ", settling")
             lifecycle.send("settle")
         }
+    }
+
+    property Connections holding: Connections {
+        target: Motion
+
+        function onIsHeldChanged() {
+            lifecycle.watch()
+        }
+    }
+
+    function watch() {
+        if (isMoving && !Motion.isHeld)
+            watchdog.restart()
+        else
+            watchdog.stop()
     }
 
     signal moving(string from, string to, string event)
@@ -35,10 +56,9 @@ QtObject {
             interrupted(from)
         moving(from, to, event)
         phase = to
-        if (Phases.isMoving(to))
-            watchdog.restart()
-        else
-            watchdog.stop()
+        watch()
         moved(from, to, event)
+        if (Motion.isHeld)
+            Qt.callLater(Motion.holdAgain)
     }
 }

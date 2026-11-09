@@ -60,8 +60,16 @@ Item {
         objectName: "rimSurface"
         anchors.fill: parent
         color: liquid.rim
+    }
+
+    ShaderEffectSource {
+        id: rimTexture
+        objectName: "rimTexture"
+        anchors.fill: parent
+        sourceItem: rimSurface
+        hideSource: true
+        live: liquid.isBlurring
         visible: false
-        layer.enabled: liquid.isBlurring
     }
 
     Rectangle {
@@ -69,8 +77,16 @@ Item {
         objectName: "fillSurface"
         anchors.fill: parent
         color: liquid.fill
+    }
+
+    ShaderEffectSource {
+        id: fillTexture
+        objectName: "fillTexture"
+        anchors.fill: parent
+        sourceItem: fillSurface
+        hideSource: true
+        live: liquid.isRendering
         visible: false
-        layer.enabled: liquid.isRendering
     }
 
     Item {
@@ -82,7 +98,7 @@ Item {
         MultiEffect {
             objectName: "rimPass"
             anchors.fill: parent
-            source: rimSurface
+            source: rimTexture
             visible: liquid.isBlurring
             maskEnabled: true
             maskSource: blurredTexture
@@ -93,7 +109,7 @@ Item {
         MultiEffect {
             objectName: "fillPass"
             anchors.fill: parent
-            source: fillSurface
+            source: fillTexture
             visible: liquid.isBlurring
             maskEnabled: true
             maskSource: blurredTexture
@@ -104,7 +120,7 @@ Item {
         MultiEffect {
             objectName: "corePass"
             anchors.fill: parent
-            source: fillSurface
+            source: fillTexture
             maskEnabled: true
             maskSource: shapeTexture
             maskThresholdMin: Appearance.liquid.coreThreshold

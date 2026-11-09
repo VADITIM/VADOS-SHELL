@@ -56,6 +56,48 @@ Scope {
         onPressed: ActivityState.step(Compositor.focusedScreen, -1)
     }
 
+    GlobalShortcut {
+        appid: "vados"
+        name: "frames"
+        description: "Hold every animation and step it one frame at a time"
+        onPressed: FrameDebug.toggle(Compositor.focusedScreen)
+    }
+
+    GlobalShortcut {
+        appid: "vados"
+        name: "frameShot"
+        description: "Copy a screenshot of the shell to the clipboard"
+        onPressed: FrameDebug.snap(Compositor.focusedScreen)
+    }
+
+    IpcHandler {
+        target: "frames"
+
+        function back(): void {
+            FrameDebug.back()
+        }
+
+        function shot(): void {
+            FrameDebug.snap(Compositor.focusedScreen)
+        }
+
+        function toggle(): void {
+            FrameDebug.toggle(Compositor.focusedScreen)
+        }
+
+        function step(): void {
+            FrameDebug.step()
+        }
+
+        function close(): void {
+            FrameDebug.close()
+        }
+
+        function status(): string {
+            return FrameDebug.counter + " " + FrameDebug.shownLabel
+        }
+    }
+
     IpcHandler {
         target: "activity"
 

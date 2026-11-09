@@ -35,14 +35,9 @@ Item {
     property bool isVeiled: false
     property bool isEaten: false
     property var visitor: null
+    readonly property bool isArriving: visitor !== null && visitor.isReleasing === true && visitor.release > 0
     property string activityMode: "idle"
     property string activityLead: "media"
-    readonly property rect settingsOrigin: {
-        const size = settingsIdle.size
-        const left = idleColumn.x + settingsIdle.x + settingsIdle.circleX
-        const top = idleColumn.y + settingsIdle.y + (settingsIdle.height - size) / 2
-        return Qt.rect(left, top, size, size)
-    }
 
     signal compactRequested(bool isCompact)
     signal settingsRequested()
@@ -77,6 +72,17 @@ Item {
         return Geometry.clampUnit(1 - Math.hypot(awayX, awayY) / Appearance.taskbar.visitReach)
     }
 
+    function hasArrivedAt(centerY) {
+        if (!isArriving)
+            return true
+        let nearest = null
+        for (const part of visitor.arrivals) {
+            if (!nearest || Math.abs(part.y - centerY) < Math.abs(nearest.y - centerY))
+                nearest = part
+        }
+        return nearest === null || visitor.release >= nearest.arrival
+    }
+
     function liquidParts() {
         if (isBare)
             return []
@@ -90,7 +96,7 @@ Item {
         const idles = idleColumn.children
         for (let position = 0; position < idles.length; position++) {
             const idle = idles[position]
-            if (idle === settingsIdle || !idle.isShown || idle.popScale < 0.5)
+            if (!idle.isShown || idle.popScale < 0.5)
                 continue
             const size = idle.size * idle.popScale
             const left = idleColumn.x + idle.x + idle.circleX + (idle.size - size) / 2
@@ -393,11 +399,13 @@ Item {
     }
 
     FrameAnimation {
+        paused: Motion.isHeld && running
         running: carried.isActive
         onTriggered: shell.trackCarry()
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: closenessRelease
         target: shell
         property: "carryCloseness"
@@ -549,7 +557,7 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: Motion.pace(shell.isAway ? 0 : Motion.stateDuration)
+                duration: Motion.pace(shell.isAway || shell.isArriving ? 0 : Motion.stateDuration)
                 easing.type: Easing.OutQuad
             }
         }
@@ -723,7 +731,7 @@ Item {
         x: Appearance.taskbar.margin + 2
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Appearance.taskbar.margin
-        isShown: shell.isRevealed && !shell.isEaten
+        isShown: (shell.isRevealed || shell.isAway) && !shell.isEaten
         transform: Upright {
             isMirrored: shell.isMirrored
             axis: clock.width / 2

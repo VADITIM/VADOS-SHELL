@@ -122,11 +122,13 @@ Item {
     }
 
     FrameAnimation {
+        paused: Motion.isHeld && running
         running: carried.isActive
         onTriggered: carried.advance(frameTime)
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: liftAnimation
         target: carried
         property: "lift"
@@ -135,6 +137,7 @@ Item {
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: holdRelease
         target: carried
         property: "hold"
@@ -144,6 +147,7 @@ Item {
     }
 
     SequentialAnimation {
+        paused: Motion.isHeld && running
         id: dropAnimation
         NumberAnimation {
             target: carried

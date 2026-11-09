@@ -51,17 +51,18 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 
 | Singleton | Interface | Used by |
 |---|---|---|
-| `Overlays` | `kinds`, `top`, `taskbarParts`, `settingsOrigins`, `isOpen(key, screen)`, `ownsKeyboard(key, screen)`, `isTaskbarAway(screen)`, `visitorOn(screen)`, `open/close/toggle(key, screen)`, `closeTop()`, `reportPhase(key, screen, phase)`, `returnTaskbar(screen)`, `placeSettingsOrigin`, `placeTaskbarParts`, `placeVisitor`, `keepScreens(names)`, signal `taskbarGathering(screen)` | windows, `Shortcuts`, `shell.qml` |
+| `Overlays` | `kinds`, `top`, `taskbarParts`, `isOpen(key, screen)`, `ownsKeyboard(key, screen)`, `isTaskbarAway(screen)`, `visitorOn(screen)`, `open/close/toggle(key, screen)`, `closeTop()`, `reportPhase(key, screen, phase)`, `returnTaskbar(screen)`, `placeSettingsOrigin`, `placeTaskbarParts`, `placeVisitor`, `keepScreens(names)`, signal `taskbarGathering(screen)` | windows, `Shortcuts`, `shell.qml` |
 | `Activity` | `current`, `entries`, `hasActivity`, `isOpenOn(screen)`, `open/close/toggle(screen)`, `pin(kind)` | `Shortcuts` |
+| `FrameDebug` | `isActive`, `isStepping`, `isSnapping`, `isViewingPast`, `counter`, `shownLabel`, `frame`, `history`, `cursor`, `memory`, `screenName`, `shotsOn(screen)`, `toggle(screen)`, `begin(screen)`, `step()`, `back()`, `snap(screen)`, `finishSnap()`, `close()`, `refresh()`, `expect()`, `store(token, shot)`, `skip()`, signals `captureRequested(token, scale)`, `snapshotReady(shots)` | `FrameWindow`, `FrameTap`, `Shortcuts` |
 | `Attention` | `isQuiet`, `isFullscreen`, `peek`, `held`, `mayPeek(n)`, `dismissPeek()`, `setQuiet(isOn)` | `Shortcuts` |
 
 ## components
 
 Reusable, feature-agnostic primitives. They read only component-level tokens; feature sizes and timing arrive as properties (`look`, `pace`). Abilities (`architecture.md` § Abilities) are attached to a host that only sets state.
 
-- Engine: `Lifecycle` (`send(event)`, `phase`, signals `moving`, `moved`, `interrupted`), `Gesture` (signals `moved`, `crossed`, `thrown`, `tapped`, `ended`), `Burst` and `Launch` (overlay enter/leave; `isShown`, `parts`, `phase`, `isActive`, `isOpened`, signal `landed`; `Launch` requires `look` and `pace`), `Gather`, `Mutate`, `Turn`, `Press`, `Jolt`, `Rising`.
+- Engine: `Lifecycle` (`send(event)`, `phase`, signals `moving`, `moved`, `interrupted`), `Gesture` (signals `moved`, `crossed`, `thrown`, `tapped`, `ended`), `Burst` (overlay enter/leave; `isShown`, `parts`, `phase`, `isActive`, `isOpened`, signal `landed`), `Gather`, `Mutate` (`isArriving`, `hasArrived`), `Turn` (`isFlipping`), `LabelReveal` (`isShown`, `sweepWidth`, `label`), `Squircle` (`color`, `strokeColor`, `strokeWidth`), `TypedText` (`leaveBudget`), `Outline` (`isShown`, `radius`, `traceDuration`, `leaveDuration`, `label`), `Press`, `Rising`.
 - Rendering: `LiquidLayer` (`isShown`, `shapes`), `LiquidShape`, `LiquidBridge`, `EdgeFuse`, `Lobe`, `Masked`, `Surface`.
-- Controls and text: `GlyphButton` (signal `clicked`), `Glyph`, `ColorWheel` (requires `look`; signal `picked`), `EdgePull` (requires `look`, `pace`; signal `summoned`), `TypedText`, `ArcText`, `Upright`.
+- Controls and text: `GlyphButton` (signal `clicked`), `Glyph`, `ColorWheel` (requires `look`; `diameter`, `wheelShare` for the wheel's scale-rotate pop, `sliderShare` for the value slider's left-to-right slide; signal `picked`), `EdgePull` (requires `look`, `pace`; signal `summoned`), `TypedText`, `ArcText`, `Upright`.
 
 ## modules
 
@@ -69,7 +70,7 @@ Each module's root is the interface its window binds: state comes in as properti
 
 | Module | In (properties) | Out (signals) |
 |---|---|---|
-| `Taskbar` | `isCovered`, `isSummoned`, `barStyle`, `isCompact`, `isMirrored`, `isAway`, `isVeiled`, `isEaten`, `visitor`, `hostWindow` | `compactRequested`, `settingsRequested`, `dashboardRequested`, `extensionRequested`; reads `isRevealed`, `settingsOrigin`, `inputWidth`, `liquidParts()` |
+| `Taskbar` | `isCovered`, `isSummoned`, `barStyle`, `isCompact`, `isMirrored`, `isAway`, `isVeiled`, `isEaten`, `visitor`, `hostWindow` | `compactRequested`, `settingsRequested`, `dashboardRequested`, `extensionRequested`; reads `isRevealed`, `isArriving`, `hasArrivedAt(centerY)`, `settingsOrigin`, `inputWidth`, `liquidParts()` |
 | `Extension` | `isMirrored`, `inset`, `extensionKey`, `heldKey`, `origin` | `closeRequested`; reads `inputWidth` |
 | `Search` | `isOpen`, `favoriteIds`, `profileName`, `profilePicture`, `parts`, `isMirrored`, `canHandOff` | `closeRequested`, `landed`, `favoriteToggled`; reads `isPresent`, `phase`, `visitor` |
 | `Dashboard` | `isOpen`, `isMirrored`, `parts`, `canHandOff` | `closeRequested`, `landed`; reads `isPresent`, `phase`, `visitor` |
@@ -79,11 +80,11 @@ Search and dashboard read `Appearance.taskbar.margin`: they grow out of the task
 
 ## windows
 
-`TaskbarWindow` (per screen, `WlrLayer.Top`) and the `OverlayWindow`s (`SearchWindow`, `SettingsWindow`, `DashboardWindow`; `overlayKey`, `isOpen`, `parts`, `phase`, `requestClose()`, `land()`, `placeVisitor()`). Windows are the only place that bridges `Config` setters to module signals and reports overlay phases to `Overlays`. Created only by `shell.qml` through `Variants`.
+`TaskbarWindow` (per screen, `WlrLayer.Top`), `FrameWindow` (per screen; the frame debugger, outside `Overlays`) and the `OverlayWindow`s (`SearchWindow`, `SettingsWindow`, `DashboardWindow`; `overlayKey`, `isOpen`, `parts`, `phase`, `requestClose()`, `land()`, `placeVisitor()`). Windows are the only place that bridges `Config` setters to module signals and reports overlay phases to `Overlays`. Created only by `shell.qml` through `Variants`.
 
 ## keybinds and IPC
 
-`keybinds/Shortcuts.qml`: global shortcuts `vados:search`, `vados:settings`, `vados:dashboard`, `vados:activity` (Hyprland protocol), and `qs ipc call` targets `dashboard`, `search`, `settings`, `desktop`, `overlay`, `activity`, `attention`, `diagnostics`, `notifications`. Each handler flips `state` (`Overlays`, `Activity`, `Attention`), calls a `Config` setter, or calls a service (`Confinement`, `Notifications`). No feature logic.
+`keybinds/Shortcuts.qml`: global shortcuts `vados:frames`, `vados:frameShot`, `vados:search`, `vados:settings`, `vados:dashboard`, `vados:activity` (Hyprland protocol), and `qs ipc call` targets `frames` (`toggle`, `step`, `back`, `shot`, `close`, `status`), `dashboard`, `search`, `settings`, `desktop`, `overlay`, `activity`, `attention`, `diagnostics`, `notifications`. Each handler flips `state` (`Overlays`, `Activity`, `Attention`), calls a `Config` setter, or calls a service (`Confinement`, `Notifications`). No feature logic.
 
 ## Compositor adapter
 

@@ -12,6 +12,7 @@ QtObject {
     readonly property real resting: isPressed ? depth : isRaised ? raise : 1
 
     readonly property NumberAnimation motion: NumberAnimation {
+        paused: Motion.isHeld && running
         target: press.target
         property: "scale"
     }

@@ -8,8 +8,11 @@ Item {
     property var tabs: []
     property string currentKey
     property bool isShown: false
-    readonly property var look: Appearance.settings.tabBar
-    readonly property int currentIndex: Math.max(0, tabs.findIndex(tab => tab.key === currentKey))
+    property color fill: Appearance.color.accent
+    property color ink: Appearance.color.ground
+    readonly property var look: Appearance.settings.navigation
+    readonly property int currentIndex: tabs.findIndex(tab => tab.key === currentKey)
+    readonly property bool hasCurrent: currentIndex >= 0
 
     signal picked(string key)
 
@@ -17,12 +20,27 @@ Item {
     height: tabs.length * look.item + Math.max(0, tabs.length - 1) * look.itemGap + look.padding * 2
 
     Rectangle {
-        x: bar.look.padding
-        y: bar.look.padding + bar.currentIndex * (bar.look.item + bar.look.itemGap)
+        anchors.fill: parent
+        radius: width / 2
+        color: bar.fill
+        scale: barTurn.presence
+        opacity: barTurn.presence
+
+        Turn {
+            id: barTurn
+            isShown: bar.isShown
+            enterEasing: Easing.OutBack
+            leaveWindow: 0
+        }
+    }
+
+    Rectangle {
+        x: (bar.width - bar.look.item) / 2
+        y: bar.look.padding + Math.max(0, bar.currentIndex) * (bar.look.item + bar.look.itemGap)
         width: bar.look.item
         height: bar.look.item
         radius: height / 2
-        color: Appearance.color.wash
+        color: Qt.alpha(bar.ink, bar.look.selection)
         scale: highlightTurn.presence
 
         Behavior on y {
@@ -34,7 +52,7 @@ Item {
 
         Turn {
             id: highlightTurn
-            isShown: bar.isShown
+            isShown: bar.isShown && bar.hasCurrent
             enterDelay: bar.tabs.length * Motion.pill.elementStagger
             leaveWindow: 0
         }
@@ -50,7 +68,7 @@ Item {
             required property int index
             readonly property bool isCurrent: bar.currentKey === modelData.key
 
-            x: bar.look.padding
+            x: (bar.width - bar.look.item) / 2
             y: bar.look.padding + index * (bar.look.item + bar.look.itemGap)
             width: bar.look.item
             height: bar.look.item
@@ -74,10 +92,12 @@ Item {
                 Glyph {
                     anchors.fill: parent
                     name: entry.modelData.glyph
-                    color: entry.isCurrent ? Appearance.color.accent : area.containsMouse ? Appearance.color.text : Appearance.color.textMuted
+                    color: Qt.alpha(bar.ink, entry.isCurrent || area.containsMouse ? 1 : bar.look.resting)
 
                     Behavior on color {
-                        ColorAnimation { duration: Motion.pace(Motion.hoverIn) }
+                        ColorAnimation {
+                            duration: Motion.pace(Motion.hoverIn)
+                        }
                     }
                 }
             }

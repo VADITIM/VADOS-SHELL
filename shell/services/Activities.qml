@@ -13,7 +13,7 @@ Singleton {
 
     readonly property var players: Mpris.players.values
     readonly property MprisPlayer player: pickPlayer(players)
-    readonly property bool hasMedia: player !== null && player.playbackState !== MprisPlaybackState.Stopped
+    readonly property bool hasMedia: Config.data.services.mediaPlayer && player !== null && player.playbackState !== MprisPlaybackState.Stopped
     readonly property bool isPlaying: player?.isPlaying ?? false
     readonly property string mediaSource: player?.identity ?? "Spotify"
     readonly property string title: player?.trackTitle ?? ""

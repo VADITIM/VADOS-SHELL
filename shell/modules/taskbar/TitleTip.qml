@@ -59,6 +59,7 @@ Item {
     }
 
     NumberAnimation {
+        paused: Motion.isHeld && running
         id: arriving
         target: tip
         property: "presence"
@@ -68,6 +69,7 @@ Item {
     }
 
     SequentialAnimation {
+        paused: Motion.isHeld && running
         id: leaving
         NumberAnimation {
             target: tip

@@ -1,4 +1,5 @@
 import QtQuick
+import qs.config
 
 QtObject {
     id: reshape
@@ -17,6 +18,7 @@ QtObject {
     property bool isGrowing: false
 
     readonly property ParallelAnimation motion: ParallelAnimation {
+        paused: Motion.isHeld && running
         SequentialAnimation {
             PauseAnimation { id: widthPause }
             NumberAnimation {

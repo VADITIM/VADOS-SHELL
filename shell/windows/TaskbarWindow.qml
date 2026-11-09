@@ -26,13 +26,19 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.namespace: "vados-taskbar"
     color: "transparent"
-    Component.onCompleted: Overlays.placeSettingsOrigin(screenName, taskbar.settingsOrigin)
     mask: Region {
         item: inputZone
 
         Region {
             item: extensionZone
         }
+    }
+
+    FrameTap {
+        target: window.contentItem
+        screenName: window.screenName
+        isLive: window.visible
+        side: window.isRight ? "right" : "left"
     }
 
     Item {
@@ -55,7 +61,6 @@ PanelWindow {
         function onTaskbarGathering(screenName) {
             if (screenName !== window.screenName)
                 return
-            Overlays.placeSettingsOrigin(window.screenName, taskbar.settingsOrigin)
             Overlays.placeTaskbarParts(window.screenName, taskbar.liquidParts())
         }
     }
@@ -76,7 +81,6 @@ PanelWindow {
         activityLead: ActivityState.leadKey
         onActivityModeRequested: mode => ActivityState.set(window.screenName, mode)
         onActivityLeadRequested: direction => ActivityState.rotate(direction)
-        onSettingsOriginChanged: Overlays.placeSettingsOrigin(window.screenName, settingsOrigin)
         isCovered: Occupancy.isCovered(window.screen?.name ?? "")
         isEaten: extension.isHolding
         onExtensionRequested: (key, origin) => {

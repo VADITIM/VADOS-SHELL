@@ -4,6 +4,7 @@ import Quickshell
 
 Singleton {
     readonly property bool isReduced: Config.data.motion.reduced
+    property bool isHeld: false
     readonly property int stateDuration: 220
     readonly property QtObject press: QtObject {
         readonly property int down: 80
@@ -31,6 +32,12 @@ Singleton {
         readonly property int elementStagger: 28
         readonly property int slide: 160
         readonly property int sizeFollow: 210
+    }
+
+    readonly property QtObject sweep: QtObject {
+        readonly property int grow: 420
+        readonly property int retract: 500
+        readonly property int leave: 300
     }
 
     readonly property QtObject highlight: QtObject {
@@ -98,6 +105,8 @@ Singleton {
         readonly property int dwell: 1500
         readonly property int linger: 700
         readonly property int stagger: 30
+        readonly property int arrivalScatter: 80
+        readonly property int arrivalStagger: 45
         readonly property int tipDelay: 350
         readonly property int backdropEnter: 360
         readonly property int backdropLeave: 210
@@ -125,35 +134,22 @@ Singleton {
     }
 
     readonly property QtObject settings: QtObject {
-        readonly property var joltSteps: [[1, 50], [-0.5, 70], [0, 110]]
         readonly property int write: 250
         readonly property int dim: 200
-        readonly property int pageSwap: 140
-        readonly property int merge: 200
-        readonly property real mergeLag: 0.45
-        readonly property int shoot: 280
-        readonly property real crouchShare: 0.24
-        readonly property real crouchSquash: 0.26
-        readonly property real shotCarry: 0.82
-        readonly property real shotStretch: 0.55
-        readonly property real snapShare: 0.12
-        readonly property real trailLag: 0.08
-        readonly property int pop: 440
-        readonly property real impactShare: 0.16
-        readonly property real inflate: 0.2
-        readonly property real impactSquash: 0.28
-        readonly property real expandShare: 0.36
-        readonly property real splashShare: 0.55
-        readonly property real contentShare: 0.4
-        readonly property int budDelay: 20
-        readonly property int bud: 150
-        readonly property int extend: 170
-        readonly property int retract: 100
-        readonly property int collapse: 170
-        readonly property int flyBack: 200
-        readonly property real backStretch: 0.4
         readonly property int dimOut: 200
-        readonly property int handBack: 160
+        readonly property int pageSwap: 140
+        readonly property int revealLeave: pageSwap
+        readonly property int stagger: 40
+        readonly property int waveRun: 700
+        readonly property int slide: 200
+        readonly property int cellCascade: 2
+        readonly property int cellEnter: 90
+        readonly property int cellLeave: Math.min(70, pageSwap)
+        readonly property int outlineTrace: 520
+        readonly property int outlineLeave: Math.min(120, pageSwap)
+        readonly property int wipe: 260
+        readonly property int wipeLeave: Math.min(120, pageSwap)
+        readonly property int wheelPop: 320
     }
 
     readonly property QtObject desktop: QtObject {
@@ -174,10 +170,9 @@ Singleton {
 
     readonly property QtObject burst: QtObject {
         readonly property int converge: 240
-        readonly property real convergeLag: 0.4
-        readonly property real tiltShare: 0.35
-        readonly property real thin: 0.2
-        readonly property real streamStretch: 0.7
+        readonly property real convergeLag: 0.5
+        readonly property real shrinkShare: 0.45
+        readonly property real travelStart: 0.4
         readonly property real absorbShare: 0.25
         readonly property int spread: 900
         readonly property real impactShare: 0.1
@@ -195,15 +190,20 @@ Singleton {
         readonly property real jetShare: 0.55
         readonly property real impactSquash: 0.5
         readonly property real splashSpan: 0.5
-        readonly property real sprayLead: 1.45
-        readonly property real catchShare: 0.85
-        readonly property real sprayFade: 0.6
-        readonly property real openShare: 0.45
+        readonly property real openShare: 0.14
         readonly property real flareStart: 0.65
         readonly property real flareRetract: 0.3
         readonly property int leaveHold: 60
         readonly property int leave: 380
         readonly property real leaveShrink: 0.55
+        readonly property int release: 320
+        readonly property real releaseEmerge: 0.2
+        readonly property real releaseTravel: 0.35
+        readonly property real releaseExtendLead: 0.104
+        readonly property real releaseExtendSpeed: 0.7
+        readonly property real releaseRebound: 1.6
+        readonly property real stepRetract: 0.12
+        readonly property real leaveFade: 0.2
     }
 
     readonly property QtObject rising: QtObject {
@@ -237,6 +237,15 @@ Singleton {
 
     readonly property QtObject lifecycle: QtObject {
         readonly property int stuck: 3000
+    }
+
+    readonly property QtObject frames: QtObject {
+        readonly property int stepTimeout: 250
+        readonly property real stepMinimum: 12
+        readonly property int history: 120
+        readonly property real memory: 1024 * 1024 * 1024
+        readonly property int bytesPerPixel: 4
+        readonly property real scale: 1
     }
 
     readonly property QtObject store: QtObject {
@@ -273,11 +282,6 @@ Singleton {
             readonly property real damping: 0.3788
             readonly property real expansion: 1
         }
-        readonly property QtObject launch: QtObject {
-            readonly property real response: 0.174
-            readonly property real damping: 0.3371
-            readonly property real expansion: 0.06
-        }
         readonly property QtObject pill: QtObject {
             readonly property real response: 0.068
             readonly property real damping: 0.67
@@ -309,6 +313,13 @@ Singleton {
             readonly property real mergeKick: 3
             readonly property real separateKick: 5
         }
+    }
+
+    function holdAgain() {
+        if (!isHeld)
+            return
+        isHeld = false
+        isHeld = true
     }
 
     function pace(duration) {

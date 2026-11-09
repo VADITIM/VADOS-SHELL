@@ -3,6 +3,7 @@ import QtQuick.Shapes
 import qs.config
 import qs.services
 import qs.components
+import "../../utils/Geometry.js" as Geometry
 
 FocusScope {
     id: search
@@ -14,6 +15,8 @@ FocusScope {
     property var parts: []
     property bool isMirrored: false
     property bool canHandOff: false
+    property bool isHandingOver: false
+    property bool hasCircle: false
     readonly property bool isPresent: isOpen || burst.isActive
     readonly property string phase: burst.phase
     readonly property bool isContentShown: burst.isOpened
@@ -236,6 +239,7 @@ FocusScope {
 
             Burst {
                 id: burst
+                label: "search burst"
                 isShown: search.isOpen
                 parts: search.parts
                 rootX: search.rootX
@@ -246,7 +250,10 @@ FocusScope {
                 leftCorner: search.look.rootCorner
                 rightCorner: search.look.corner
                 edgePad: search.look.melt
+                screenHeight: search.height
                 canHandOff: search.canHandOff
+                isHandingOver: search.isHandingOver
+                hasCircle: search.hasCircle
                 hasSteps: false
                 wall: search.look.wall.map(point => Qt.point(search.foundCenterX + point[0] * search.foundRadius - search.formRight, point[1]))
                 onLanded: {
@@ -274,6 +281,7 @@ FocusScope {
         y: burst.form.y - burst.form.height / 2
         width: Math.max(0, burst.form.width)
         height: Math.max(0, burst.form.height)
+        opacity: burst.isLeaving ? 1 - Geometry.smooth(Geometry.clampUnit(burst.exit / Motion.burst.leaveFade)) : 1
         clip: true
 
         Item {
@@ -449,6 +457,7 @@ FocusScope {
 
             Shape {
                 anchors.fill: parent
+                preferredRendererType: Shape.CurveRenderer
 
                 ShapePath {
                     fillColor: "white"

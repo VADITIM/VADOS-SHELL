@@ -18,14 +18,12 @@ TestCase {
         verify(worst(share => 1 - Math.exp(-5 * share) * Math.cos(2.5 * Math.PI * share) - Liquid.rise(Motion.liquid.burst, share * openTime)) < 0.001)
     }
 
-    function test_crashAndLaunchMatchTheOldWobbles() {
+    function test_crashMatchesTheOldWobble() {
         verify(worst(share => Math.exp(-4.5 * share) * Math.sin(3.5 * Math.PI * share) - Liquid.ring(Motion.liquid.crash, share)) < 0.001)
-        const spreadTime = Motion.settings.pop * (1 - Motion.settings.impactShare) / 1000
-        verify(worst(share => 0.06 * Math.exp(-4.5 * share) * Math.sin(4 * Math.PI * share) - Liquid.ring(Motion.liquid.launch, share * spreadTime)) < 0.001)
     }
 
     function test_everyCharacterIsUnderdamped() {
-        for (const name of ["burst", "crash", "launch", "pill", "circle", "follow", "dock", "droplet"]) {
+        for (const name of ["burst", "crash", "pill", "circle", "follow", "dock", "droplet"]) {
             const character = Motion.liquid[name]
             verify(character.damping > 0 && character.damping < 1, name)
             verify(character.response > 0, name)

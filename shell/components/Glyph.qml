@@ -116,6 +116,10 @@ Item {
             return "M3 5 H21 V17 H3 Z M3 14 H21 M9 21 H15 M12 17 V21"
         case "style-bare":
             return "M3 3 V21 M11.5 7 h0.01 M11.5 12 h0.01 M11.5 17 h0.01"
+        case "user":
+            return "M12 4 a4 4 0 1 0 0 8 a4 4 0 1 0 0 -8 Z M4.5 20 a7.5 7.5 0 0 1 15 0"
+        case "brush":
+            return "M4 20 C4 17 6 16 8 16 a3 3 0 0 1 0 4 Z M9.5 15 L19 5.5 a1.5 1.5 0 0 1 0 2 L11 16"
         case "drop":
             return "M12 3.5 C9 7.5 6 10.8 6 14 a6 6 0 0 0 12 0 C18 10.8 15 7.5 12 3.5 Z"
         case "bolt":

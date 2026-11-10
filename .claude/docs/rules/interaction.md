@@ -2,7 +2,7 @@
 
 Enforced by `tools/check-rules.py` where marked ✓; the rest is checked in review.
 
-- **Every full-screen surface is an overlay** ✓. It is an `OverlayWindow` (`windows/OverlayWindow.qml`) with a key in `Overlays.kinds` (`state/Overlays.qml`). Overlays on the same layer exclude each other; opening one closes the others on its layer or below. Nothing else sets `WlrLayershell.keyboardFocus` or the overlay layer.
+- **Every full-screen surface is an overlay** ✓. It is an `OverlayWindow` (`windows/OverlayWindow.qml`) with a key in `Overlays.kinds` (`state/Overlays.qml`), which is the built overlay rows of `utils/Features.js` (`rules/features.md`). Overlays on the same layer exclude each other; opening one closes the others on its layer or below. Nothing else sets `WlrLayershell.keyboardFocus` or the overlay layer.
 - **The frame debugger is the one surface outside `Overlays`** (`windows/FrameWindow.qml`, `state/FrameDebug.qml`): it must not close what it inspects. It owns the keyboard while held, on the screen that started it, and `Escape` always resumes.
 - **One keyboard owner.** The topmost overlay (`Overlays.top`) owns the keyboard; Escape closes the topmost first; closing hands focus back to the window that had it (the compositor does this once the exclusive layer lets go). Every overlay is fully usable from the keyboard: arrows, Tab, Enter, Escape.
 - **The taskbar is gathered and returned only by `Overlays`.** Switching overlays keeps the parts of the first gather; the taskbar comes back only when no overlay is left on its screen.

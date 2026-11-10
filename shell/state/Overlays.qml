@@ -1,15 +1,12 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import "../utils/Features.js" as Features
 
 Singleton {
     id: overlays
 
-    readonly property var kinds: ({
-        search: { layer: 1 },
-        settings: { layer: 1 },
-        dashboard: { layer: 1 }
-    })
+    readonly property var kinds: Features.overlayKinds()
     property var screens: ({})
     property var stack: []
     property var awayScreens: []

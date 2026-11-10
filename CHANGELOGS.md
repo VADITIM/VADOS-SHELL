@@ -4,6 +4,9 @@ Newest version first. The version and its number are set by the user on each pus
 
 ## Unreleased
 
+- Feature registry (`shell/utils/Features.js`): every surface of the shell, built or planned, is one row with its kind, the taskbar part it is born from, its impact and the capabilities it needs. Overlays are registered from it, and `tools/check-rules.py` fails when a module folder has no row or a built row is not fully wired. Planned: alerts, notifications menu, clipboard history, lock screen, widgets, canvas tooling.
+- Ready budgets by impact (`Motion.budget.ready`: glance 250 ms, focus 500 ms, takeover 500 ms): the longest time from a trigger to a surface's first content, measured for the burst and the pill pop in `tst_features`.
+
 - Overlay leave to taskbar: the task pill's extension from circle to pill is faster and ends with a small bounce, with the program entries arriving at the same moment as before. The idle pills at the bottom keep the circle the overlay gave back and show their icons one after another instead of all at once (`Geometry.rebound`, `Motion.reveal.arrivalStagger`).
 - Overlay enter: dashboard, search and settings content starts appearing earlier (around frame 22 for the dashboard, 27 for search): `Motion.burst.openShare` 0.45 → 0.14.
 - Taskbar: the running-app indicator sits closer to its icon (`taskbar.indicatorInset`).

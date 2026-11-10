@@ -233,6 +233,11 @@ Singleton {
     readonly property QtObject budget: QtObject {
         readonly property real frame: 4
         readonly property real sampleShare: 0.95
+        readonly property QtObject ready: QtObject {
+            readonly property int glance: 250
+            readonly property int focus: 500
+            readonly property int takeover: 500
+        }
     }
 
     readonly property QtObject lifecycle: QtObject {

@@ -16,6 +16,7 @@ A Quickshell (Qt 6 / QML) desktop shell. **driftwm first**, compatible with Hypr
 ## Hard rules
 
 @docs/rules/architecture.md
+@docs/rules/features.md
 @docs/rules/compositor.md
 @docs/rules/animations.md
 @docs/rules/frontend.md
@@ -39,7 +40,8 @@ Update these docs in the same task as the change, without being asked (V/AS `gui
 | Choice between real alternatives | `docs/decisions.md` |
 | Trap, workaround, unverified assumption | `docs/quirks.md` |
 | Bug or debt not fixed now | `docs/known-issues.md` |
-| Planned work agreed or shipped | `docs/roadmap.md` (also mirrored to the Obsidian vault "VADOS SHELL", note `Shell.md`) |
+| A surface added, built or dropped | its row in `shell/utils/Features.js`, its contract in `docs/roadmap.md` (`docs/rules/features.md`) |
+| Planned work agreed or shipped | `docs/roadmap.md` (also mirrored to the Obsidian vault "VADOS Gallery", folder `SHELL`, note `Shell.md`; the feature notes it is built from sit beside it) |
 | A rule the user states | `docs/rules/<domain>.md` |
 
 `docs/direction.md` is the product direction (user, 2026-11-07): one coherent interaction engine as independently testable subsystems, built in phases (engine integrity first). Measure progress by the foundations, not the feature count.

@@ -8,7 +8,7 @@ How the subsystems of `direction.md` land in this tree:
 
 | Direction | Here |
 |---|---|
-| Experience layer | `modules/` (taskbar, search, dashboard, settings), hosted by `windows/` |
+| Experience layer | `modules/` (taskbar, search, dashboard, settings), hosted by `windows/`; every surface, built or planned, is a row in `utils/Features.js` (§ Features) |
 | Liquid interaction engine: orchestration, interruption | `components/Lifecycle.qml` + `utils/Phases.js` (transition phases), `state/Overlays.qml` (which surface is up), `components/Gesture.qml` (gestures and velocity) |
 | Motion system | `config/Motion.qml` (tokens, `pace`), `utils/Liquid.js` (springs) |
 | Geometry system | `utils/Geometry.js` (clamps, easing, mixing, splines), `Compositor.toScreen` (backend to screen coordinates) |
@@ -25,6 +25,30 @@ How the subsystems of `direction.md` land in this tree:
 - Import direction per layer (`LAYER_IMPORTS`): services import no state, components, modules, windows or keybinds; components import no state, services, modules, windows or keybinds; state imports no components, modules, windows or keybinds; config imports nothing from `qs`; keybinds import no components, modules or windows. Relative `import "../x"` counts the same.
 - Services declare no visual type (`Item`, `Rectangle`, `Text`, `Shape`, windows, ...) and import no UI module (`QtQuick.Shapes`, `Controls`, `Layouts`, `Effects`, `Quickshell.Widgets`).
 - Components read only component-level `Appearance` and `Motion` groups (`COMPONENT_TOKENS`). A component sized or timed by a feature takes `required property var look` and/or `pace` from the module: `ColorWheel` (settings), `EdgePull` (taskbar sizes, `Motion.reveal`).
+
+## Features
+
+`utils/Features.js` is the registry of every surface the shell draws, built or planned (rules in `rules/features.md`, contracts in `roadmap.md`). A row answers: `key`, `folder` under `modules/`, `root` (the module's root type), `surface` (`bar`, `mutation`, `overlay`, `lock`, `desktop`, `debug`), `origin` (the taskbar part it is born from: `edge`, `column`, `activity`, `idle`, `power`, `none`), `impact` (`ambient`, `glance`, `focus`, `takeover`), `needs` (capabilities of `utils/Platform.js`), `isBuilt`, and `layer` on overlays.
+
+The registry is load-bearing in three places:
+
+- `Overlays.kinds` is `Features.overlayKinds()`: the built overlay rows with their layer. A planned overlay has no kind, so `Overlays.open` ignores it and the taskbar is never gathered for a surface without a window.
+- `tools/check-rules.py` (`[features]`) reads the rows (one per line) against the tree: every `modules/` folder belongs to a row; a built row has its root, and by surface kind its window, `shell.qml` entry and IPC target; a folder with code but only planned rows fails.
+- `tst_features` checks the rows (every field, valid values, unique keys and roots, `needs` are capabilities, a taskbar-born surface names its origin) and measures the ready time of the shipped enter engines against `Motion.budget.ready` (`Burst.isOpened` inside `focus`, `Mutate.isInnerShown` inside `glance`).
+
+Things inside a surface are not rows; they are that surface's modules, listed in its catalogue (`utils/Lock.js` `modules`, `Settings.tabs`, `Activities.keys`).
+
+**Adding a surface**, in this order (each step keeps the checker and the tests green):
+
+1. The row, with `isBuilt: false`, and its folder under `modules/`. Its contract in `roadmap.md`.
+2. Anything the engine lacks (a capability in `Platform.js` and the README table, a `Motion.liquid` character, an `origin`), each with its test and a line in `decisions.md`.
+3. Data: services with a preview mock, runtime state in a `StateFile`, settings keys in `Schema.js`, `Config.qml` and the README.
+4. Pure logic and catalogues in `utils/`, with a test.
+5. The module root: state in as properties, requests out as signals, one `Lifecycle` for its phases, feature tokens in its own `Appearance` and `Motion` groups, every duration through `Motion.pace`.
+6. The host by surface kind: an `OverlayWindow` plus `Variants` entry and IPC target; or the taskbar module for a `mutation`; `LockWindow`; `WidgetWindow`.
+7. The row flips to `isBuilt: true`; the preview loads it without a warning; README section; the contract moves from `roadmap.md` to `decisions.md`.
+
+**Adding a module to a surface** is one catalogue row and one file in the surface's folder.
 
 ## Transition lifecycle
 
@@ -86,14 +110,13 @@ Order of a change: `Mutate` pops the pill in and out (hidden); faces leave at on
 
 ## Overlays absorb the taskbar
 
-Search, settings and the dashboard sit on the overlay layer, above the taskbar, so their liquid can only react to the taskbar if they draw it themselves. `Overlays.open` calls `gatherTaskbar(screen)`: unless the taskbar on that screen is already away, it emits `taskbarGathering(screen)` and adds the screen to `awayScreens`. On that signal `TaskbarWindow` publishes `Taskbar.liquidParts()` (every shown pill body and idle circle except the gear, none for `bare`) with `placeTaskbarParts`, and the gear circle with `placeSettingsOrigin`.
+Search, settings and the dashboard sit on the overlay layer, above the taskbar, so their liquid can only react to the taskbar if they draw it themselves. `Overlays.open` calls `gatherTaskbar(screen)`: unless the taskbar on that screen is already away, it emits `taskbarGathering(screen)` and adds the screen to `awayScreens`. On that signal `TaskbarWindow` publishes `Taskbar.liquidParts()` (every shown pill body and idle circle, the gear included since 2026-11-09; none for `bare`) with `placeTaskbarParts`.
 
 Both are in **edge-relative coordinates**: the taskbar's own left-edge layout, before mirroring, which equals the distance from the screen edge. Each overlay mirrors them itself from the live `taskbar.side`, so geometry never depends on when the layer-shell window re-anchors.
 
 While away the taskbar is cut to opacity 0 and unrevealed, and the overlay's `Gather` (`components/Gather.qml`) draws the same silhouettes in its own `LiquidLayer` and pulls them into one point, where they goo into the overlay's body. The overlay emits `landed()` at the end of its leave; `Overlays.returnTaskbar(screen)` then brings the taskbar back unless another overlay is open on that screen.
 
-- **Settings**: parts gather into the gear, then the ball flies to the centre.
-- **Dashboard and search**: `Burst` streams the parts to the taskbar column, where they form a new ball fused to the screen edge, which explodes along the overlay away from the edge.
+- **Dashboard, search and settings**: `Burst` streams the parts to the taskbar column, where they form a new ball fused to the screen edge, which explodes along the overlay away from the edge.
 
 ## Abilities
 
@@ -186,16 +209,16 @@ Entry points before the bar exists: the Hyprland shortcut `vados:activity`, IPC 
 
 ## Overlay engine
 
-`state/Overlays.qml` is the one registry for full-screen surfaces (it replaced `Visibilities`, 2026-11-07). `kinds` declares each overlay and its `layer` (search, settings and dashboard share layer 1). State: `screens` (key → screen), `stack` (opening order; `top` is the last), `awayScreens` (screens whose taskbar is gathered), `taskbarParts`, `settingsOrigins`, `visitors` (screen → overlay → leaving ball).
+`state/Overlays.qml` is the one registry for full-screen surfaces (it replaced `Visibilities`, 2026-11-07). `kinds` holds each overlay and its `layer` (search, settings and dashboard share layer 1); it is `Features.overlayKinds()`, the built overlay rows of the registry (§ Features). State: `screens` (key → screen), `stack` (opening order; `top` is the last), `awayScreens` (screens whose taskbar is gathered), `taskbarParts`, `visitors` (screen → overlay → leaving ball).
 
 - `open(key, screen)` closes every overlay on the same layer or below, gathers the taskbar (once per screen: a switch keeps the first gather's parts), and pushes the key on the stack. `close`, `toggle`, `closeTop` (Escape, IPC `overlay close`).
 - `ownsKeyboard(key, screen)`: only the top overlay takes exclusive keyboard focus.
 - `returnTaskbar(screen)` (an overlay's `landed()`) brings that screen's taskbar back only when no overlay is left on it, whichever screen the next overlay opened on.
 - `placeVisitor(key, screen, ball)` / `visitorOn(screen)`: each leaving overlay owns its own entry, so one leaving never erases the other's ball.
 - `phases` (screen → overlay → lifecycle phase, idle ones dropped), `phaseOf(key, screen)`, `isSettled(screen)` (every surface on it is `active` or gone). When a surface reports `idle`, `Overlays` calls `returnTaskbar` for its screen: the taskbar comes back once nothing is on the screen, even if a `landed()` was lost.
-- `keepScreens(names)` (from `shell.qml` on `Quickshell.screens` changes) closes overlays on screens that went away and drops their away flag, parts, gear origin, leaving balls and phases, so an unplugged monitor leaves no exclusive keyboard or gathered taskbar behind.
+- `keepScreens(names)` (from `shell.qml` on `Quickshell.screens` changes) closes overlays on screens that went away and drops their away flag, parts, leaving balls and phases, so an unplugged monitor leaves no exclusive keyboard or gathered taskbar behind.
 
-`windows/OverlayWindow.qml` is the window side: a full-screen `PanelWindow` on the overlay layer, namespace `vados-<key>`, keyboard from `ownsKeyboard`, with `isOpen`, `parts`, `requestClose()`, `land()` and `placeVisitor()` for its module. `SearchWindow`, `SettingsWindow` and `DashboardWindow` are an `OverlayWindow` plus their module. A new overlay is a `kinds` entry and an `OverlayWindow`.
+`windows/OverlayWindow.qml` is the window side: a full-screen `PanelWindow` on the overlay layer, namespace `vados-<key>`, keyboard from `ownsKeyboard`, with `isOpen`, `parts`, `requestClose()`, `land()` and `placeVisitor()` for its module. `SearchWindow`, `SettingsWindow` and `DashboardWindow` are an `OverlayWindow` plus their module. A new overlay is a built overlay row in `utils/Features.js` and an `OverlayWindow` (§ Features).
 
 ## Gesture engine
 
@@ -277,10 +300,7 @@ Opening: the gear (`SettingsIdle` → `settingsRequested` → `TaskbarWindow`) o
 
 Settings opens with the dashboard and search `Burst`: the taskbar parts stream into a circle at the taskbar column, which explodes along the whole screen (100% of its height, `Appearance.settings.bodyShare` less `rightSpace`, plus `endPadding`, of its width), bounces past the far wall and settles with waves crashing on the walls. Then the taskbar's role changes: a tall accent-coloured pop bar (`TabBar`) pops in inside the body as the main navigation (User, Settings, Customization, Advanced), and a white second pop bar pops in to its right for tabs with deeper levels (Customization: Backgrounds, Pills, Taskbar, Lock Screen; Advanced: Link to VAD/OS, Services). The page content slides right when the second bar appears.
 
-1. **Merge**: every taskbar part is drawn into the gear pill, near ends first (`mergeLag`), while the gear swells into one ball (`Appearance.settings.ball`).
-2. **Shoot**: from the gear, the ball crouches away from the panel (squash), then fires straight to the panel centre, stretched by speed with three trailing droplets that catch up.
-3. **Pop**: impact squash and inflate along the flight line, then the bubble bursts open into the panel. Width and height wobble in antiphase (the `launch` character, `Liquid.ring`), and splash droplets ride just ahead of the wave front and settle back into the edge. Content `Turn`s in at `contentShare`, and `Rising` bubbles start leaving the top and bottom edges for the screen edges.
-4. **Tab bar**: a circle buds out of the container's left edge (OutBack), then extends into the `TabBar` pill, and its items enter.
+The earlier launch (merge into the gear, shoot to the centre, pop; `Launch`, `Jolt`) was removed on 2026-11-09.
 
 Tab switch: the highlight slides, the old page leaves (`Motion.settings.pageSwap`) before the new one enters. Left/Right step the second bar, Up/Down/Tab the main one. Close is the burst's own leave: content out, the body collapses into the circle at the taskbar column, and the taskbar comes back out of it like after the dashboard.
 

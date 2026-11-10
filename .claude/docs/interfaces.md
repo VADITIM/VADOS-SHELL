@@ -20,8 +20,12 @@ Data flows down, events flow up: `config → services → components → modules
 
 - `Config` (`config/Config.qml`): `data.<group>.<key>` (the `JsonAdapter` over `shell.json`, schema in `utils/Schema.js`) and one setter per key: `setTaskbarStyle`, `setTaskbarSide`, `setTaskbarCompact`, `setAccent`, `setWindowMode`, `setWeatherLocation`, `setReducedMotion`, `setRenderQuality`, `setDoNotDisturb`, `setNotificationsEnabled`, `setProfile`, `toggleFavorite`. Only windows, keybinds, services and state read it; modules get values as properties and send changes up as signals.
 - `Appearance`: sizes and colours. **Component-level groups** (any component may read them): `unit`, `radius`, `color`, `font`, `liquid`, `rising`, `burst`. **Feature groups** (only the feature's module, its window, or a service of that feature): `taskbar`, `extension`, `settings`, `desktop`, `dashboard`, `search`. A component that needs feature sizes takes them as a `look` property.
-- `Motion`: timing and physics, and `pace(duration)`, the reduced-motion precedence. **Component-level**: `isReduced`, `pace`, `stateDuration`, `hoverIn`, `hoverOut`, `press`, `pill`, `type`, `gesture`, `lifecycle`, `burst`, `rising`, `liquid`. **Feature groups**: `highlight`, `extension`, `tip`, `hover`, `fold`, `reveal`, `carry`, `settings`, `desktop`, `dashboard`, `search`, plus `budget`, `store`, `attention`, `supervision` for tests, `StateFile`, `Attention` and `Supervisor`. A component that needs feature timing takes it as a `pace` property.
+- `Motion`: timing and physics, and `pace(duration)`, the reduced-motion precedence. **Component-level**: `isReduced`, `pace`, `stateDuration`, `hoverIn`, `hoverOut`, `press`, `pill`, `type`, `gesture`, `lifecycle`, `burst`, `rising`, `liquid`. **Feature groups**: `highlight`, `extension`, `tip`, `hover`, `fold`, `reveal`, `carry`, `settings`, `desktop`, `dashboard`, `search`, plus `budget` (`frame`, `sampleShare`, and `ready` by impact: `glance`, `focus`, `takeover`), `store`, `attention`, `supervision` for tests, `StateFile`, `Attention` and `Supervisor`. A component that needs feature timing takes it as a `pace` property.
 - `Rendering`: `isLite`, `blur(radius)` (render quality for the rendering components).
+
+## utils: the feature registry
+
+`utils/Features.js` (`rules/features.md`, `architecture.md` § Features): `surfaces`, `origins`, `impacts` (the allowed values), `features` (one row per surface, built or planned) and `overlayKinds()` (key → `{ layer }` for the built overlay rows). Read by `state/Overlays.qml` (`kinds`), `tools/check-rules.py` (`[features]`) and `tst_features`. A module's root named in a row is the interface its window binds (§ modules).
 
 ## services
 
@@ -51,7 +55,7 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 
 | Singleton | Interface | Used by |
 |---|---|---|
-| `Overlays` | `kinds`, `top`, `taskbarParts`, `isOpen(key, screen)`, `ownsKeyboard(key, screen)`, `isTaskbarAway(screen)`, `visitorOn(screen)`, `open/close/toggle(key, screen)`, `closeTop()`, `reportPhase(key, screen, phase)`, `returnTaskbar(screen)`, `placeSettingsOrigin`, `placeTaskbarParts`, `placeVisitor`, `keepScreens(names)`, signal `taskbarGathering(screen)` | windows, `Shortcuts`, `shell.qml` |
+| `Overlays` | `kinds` (from `Features.overlayKinds()`), `top`, `taskbarParts`, `isOpen(key, screen)`, `ownsKeyboard(key, screen)`, `isTaskbarAway(screen)`, `visitorOn(screen)`, `open/close/toggle(key, screen)`, `closeTop()`, `reportPhase(key, screen, phase)`, `returnTaskbar(screen)`, `placeTaskbarParts`, `placeVisitor`, `keepScreens(names)`, signal `taskbarGathering(screen)` | windows, `Shortcuts`, `shell.qml` |
 | `Activity` | `current`, `entries`, `hasActivity`, `isOpenOn(screen)`, `open/close/toggle(screen)`, `pin(kind)` | `Shortcuts` |
 | `FrameDebug` | `isActive`, `isStepping`, `isSnapping`, `isViewingPast`, `counter`, `shownLabel`, `frame`, `history`, `cursor`, `memory`, `screenName`, `shotsOn(screen)`, `toggle(screen)`, `begin(screen)`, `step()`, `back()`, `snap(screen)`, `finishSnap()`, `close()`, `refresh()`, `expect()`, `store(token, shot)`, `skip()`, signals `captureRequested(token, scale)`, `snapshotReady(shots)` | `FrameWindow`, `FrameTap`, `Shortcuts` |
 | `Attention` | `isQuiet`, `isFullscreen`, `peek`, `held`, `mayPeek(n)`, `dismissPeek()`, `setQuiet(isOn)` | `Shortcuts` |
@@ -70,11 +74,11 @@ Each module's root is the interface its window binds: state comes in as properti
 
 | Module | In (properties) | Out (signals) |
 |---|---|---|
-| `Taskbar` | `isCovered`, `isSummoned`, `barStyle`, `isCompact`, `isMirrored`, `isAway`, `isVeiled`, `isEaten`, `visitor`, `hostWindow` | `compactRequested`, `settingsRequested`, `dashboardRequested`, `extensionRequested`; reads `isRevealed`, `isArriving`, `hasArrivedAt(centerY)`, `settingsOrigin`, `inputWidth`, `liquidParts()` |
+| `Taskbar` | `isCovered`, `isSummoned`, `barStyle`, `isCompact`, `isMirrored`, `isAway`, `isVeiled`, `isEaten`, `visitor`, `hostWindow` | `compactRequested`, `settingsRequested`, `dashboardRequested`, `extensionRequested`; reads `isRevealed`, `isArriving`, `hasArrivedAt(centerY)`, `inputWidth`, `liquidParts()` |
 | `Extension` | `isMirrored`, `inset`, `extensionKey`, `heldKey`, `origin` | `closeRequested`; reads `inputWidth` |
 | `Search` | `isOpen`, `favoriteIds`, `profileName`, `profilePicture`, `parts`, `isMirrored`, `canHandOff` | `closeRequested`, `landed`, `favoriteToggled`; reads `isPresent`, `phase`, `visitor` |
 | `Dashboard` | `isOpen`, `isMirrored`, `parts`, `canHandOff` | `closeRequested`, `landed`; reads `isPresent`, `phase`, `visitor` |
-| `Settings` | `isOpen`, `origin`, `parts`, `accent`, `taskbarSide`, `barStyle`, `windowMode`, `canSwitchMode`, `isReducedMotion`, `isQuiet` | `closeRequested`, `landed`, `accentRequested`, `sideRequested`, `styleRequested`, `modeRequested`, `reducedMotionRequested`, `quietRequested`; reads `isPresent`, `phase` |
+| `Settings` | `isOpen`, `parts`, `accent`, `taskbarSide`, `barStyle`, `windowMode`, `canSwitchMode`, `isReducedMotion`, `isQuiet` | `closeRequested`, `landed`, `accentRequested`, `sideRequested`, `styleRequested`, `modeRequested`, `reducedMotionRequested`, `quietRequested`; reads `isPresent`, `phase` |
 
 Search and dashboard read `Appearance.taskbar.margin`: they grow out of the taskbar column, so the taskbar's margin is their root.
 

@@ -30,7 +30,12 @@ ENGINE_TESTS = {
     "shell/utils/Diagnostics.js": "tst_diagnostics.qml",
     "shell/utils/Playing.js": "tst_frames.qml",
     "shell/state/FrameDebug.qml": "tst_frames.qml",
+    "shell/utils/Features.js": "tst_features.qml",
 }
+
+FEATURE_REGISTRY = "shell/utils/Features.js"
+
+FEATURE_WINDOWS = {"lock": "LockWindow", "desktop": "WidgetWindow"}
 
 RENDERING_COMPONENTS = {"shell/components/LiquidLayer.qml", "shell/components/Masked.qml"}
 
@@ -91,6 +96,19 @@ def readme_section(title):
         text = handle.read()
     match = re.search(r"^## " + re.escape(title) + r"\n(.*?)(?=^## |\Z)", text, re.M | re.S)
     return match.group(1) if match else ""
+
+
+def feature_rows(text):
+    rows = []
+    for key, body in re.findall(r"^\s*\{ key: \"(\w+)\", (.*) \},?$", text, re.M):
+        fields = dict(re.findall(r"(\w+): (\"\w+\"|\[[^\]]*\]|\w+)", body))
+        rows.append({"key": key, **{name: value.strip('"') for name, value in fields.items()}})
+    return rows
+
+
+def module_folders():
+    modules = os.path.join(SHELL, "modules")
+    return sorted(name for name in os.listdir(modules) if os.path.isdir(os.path.join(modules, name)))
 
 
 def check(files):
@@ -243,6 +261,41 @@ def check(files):
             flag("testing", engine, 1, "engine listed in tools/check-rules.py no longer exists")
         elif not os.path.exists(os.path.join(ROOT, "tools", "tests", test)):
             flag("testing", engine, 1, f"engine has no test tools/tests/{test} (rules/testing.md)")
+
+    sources = dict(files)
+    rows = feature_rows(sources.get(FEATURE_REGISTRY, ""))
+    folders = module_folders()
+    if not rows:
+        flag("features", FEATURE_REGISTRY, 1, "the feature registry has no rows the checker can read; keep one row per line (rules/features.md)")
+    for folder in folders:
+        owners = [row for row in rows if row.get("folder") == folder]
+        if not owners:
+            flag("features", f"shell/modules/{folder}", 1, "a module folder belongs to a row in utils/Features.js (rules/features.md)")
+        elif any(path.startswith(f"shell/modules/{folder}/") for path in sources) and not any(row.get("isBuilt") == "true" for row in owners):
+            flag("features", FEATURE_REGISTRY, 1, f"shell/modules/{folder} holds code but every feature in it is planned; set isBuilt once its surface is wired (rules/features.md)")
+    for row in rows:
+        key, folder, root, surface = row["key"], row.get("folder"), row.get("root"), row.get("surface")
+        if folder not in folders:
+            flag("features", FEATURE_REGISTRY, 1, f"`{key}` names shell/modules/{folder}, which does not exist (rules/features.md)")
+            continue
+        if row.get("isBuilt") != "true":
+            continue
+        if f"shell/modules/{folder}/{root}.qml" not in sources:
+            flag("features", FEATURE_REGISTRY, 1, f"`{key}` is built but its root shell/modules/{folder}/{root}.qml does not exist (rules/features.md)")
+        window = f"{root}Window" if surface == "overlay" else FEATURE_WINDOWS.get(surface)
+        if window and f"shell/windows/{window}.qml" not in sources:
+            flag("features", FEATURE_REGISTRY, 1, f"`{key}` is built as {surface} but shell/windows/{window}.qml does not exist (rules/features.md)")
+        if surface == "overlay":
+            if f'overlayKey: "{key}"' not in sources.get(f"shell/windows/{window}.qml", ""):
+                flag("features", f"shell/windows/{window}.qml", 1, f"the window of `{key}` is an OverlayWindow with overlayKey \"{key}\" (rules/features.md)")
+            if not re.search(r"^\s*" + re.escape(window) + r" \{", sources.get("shell/shell.qml", ""), re.M):
+                flag("features", "shell/shell.qml", 1, f"`{key}` is built but shell.qml creates no {window} per screen (rules/features.md)")
+            if f'target: "{key}"' not in sources.get("shell/keybinds/Shortcuts.qml", ""):
+                flag("features", "shell/keybinds/Shortcuts.qml", 1, f"`{key}` is built but has no IPC target \"{key}\" (rules/features.md)")
+        if surface == "lock" and "shell/services/Lock.qml" not in sources:
+            flag("features", FEATURE_REGISTRY, 1, f"`{key}` is built but shell/services/Lock.qml (authentication) does not exist (rules/security.md)")
+    if "Features.overlayKinds()" not in sources.get("shell/state/Overlays.qml", ""):
+        flag("features", "shell/state/Overlays.qml", 1, "overlay kinds come from the built overlay rows of utils/Features.js, never a second list (rules/features.md)")
 
     config = dict(files).get("shell/config/Config.qml", "")
     settings = readme_section("Settings (`shell.json`)")

@@ -1,0 +1,176 @@
+# driftwm config -> ~/.config/driftwm/config.toml
+# Only overrides are listed; every omitted field keeps its built-in default.
+# Validate with: driftwm --check-config
+
+mod_key = "super"
+focus_follows_mouse = false
+window_placement = "auto"
+autostart = ["waybar", "swaync"] # remove what you don't have installed
+
+[session]
+restore_windows = false
+restore_camera = true
+
+[env]
+MOZ_ENABLE_WAYLAND = "1"
+
+[input.keyboard]
+layout = "de"
+options = "caps:shiftlock,numpad:mac"   # numpad:mac = numpad always types digits, Num Lock ignored; Caps Lock also shifts the number row (digits -> !"§$%&/()=)
+repeat_rate = 30             # Windows default: ~30 chars/s
+repeat_delay = 500           # Windows default: 500 ms
+num_lock = true              # Num Lock on at startup
+
+[input.trackpad]
+tap_to_click = true
+natural_scroll = true
+disable_while_typing = true
+
+[input.mouse]
+accel_profile = "flat"
+
+[cursor]
+# theme = "none"                # XCURSOR_THEME; "none" = inherit from environment (e.g. "Adwaita")
+# size = 0                      # XCURSOR_SIZE; 0 = inherit from environment (e.g. 24)
+inactive_opacity = 0.2 # cursor opacity on non-active outputs (0.0–1.0)
+
+[navigation]
+trackpad_speed = 1.5
+# mouse_speed = 1.0           # mouse drag pan multiplier (1.0 = direct, 0 = off)
+# touch_speed = 1.0           # touchscreen pan multiplier (1.0 = direct, 0 = off)
+drift = 0.5
+# camera_speed = 0.3          # camera lerp factor, 0-1 (1 = instant)
+auto_navigate_on_click = true # a click on a partly off-screen window scrolls
+
+[zoom]
+# step = 1.1                  # multiplier per keypress (1.1 = 10% per press)
+# trackpad_speed = 1.0        # trackpad pinch-zoom multiplier (1.0 = direct, 0 = off)
+# mouse_speed = 1.0           # mouse-wheel zoom multiplier (1.0 = direct, 0 = off)
+# touch_speed = 1.0           # touchscreen zoom multiplier (1.0 = direct, 0 = off)
+# fit_padding = 80.0          # screen px kept around zoom-to-fit
+# reset_on_new_window = false # zoom to 1.0 when a new window opens
+# reset_on_activation = true  # zoom to 1.0 when an off-screen window asks for focus
+# interact_min = 0.5          # zoom below which canvas windows take no pointer input: a left click navigates to the window, a drag moves it. 0 disables. The zoom floor is half of zoom-to-fit, so a low value may never be reached.
+
+[snap]
+enabled = false
+gap = 12
+outer_gap = 12
+corners = false # also line up parallel edges (e.g. top to top)
+centers = true  # also line up midpoints
+
+[decorations]
+default_mode = "client"
+corner_radius = 15
+shadow = true
+# bg_color = "#ffffff"           # title bar background
+# fg_color = "#333333"           # title text + close button × color
+# corner_radius = 10             # rounded corners; off while the window covers the usable area
+# shadow = true                  # drop shadow; off while the window covers the usable area
+
+# # driftwm's own title bars (server decorations). The font comes from
+# # fontconfig; install `adwaita-fonts` for the default look.
+# title_bar_height = 25          # title bar height in px
+# font = "Adwaita Sans"          # title text font family
+# font_size = 11                 # title text size in points
+# font_weight = "medium"         # thin/extralight/light/regular/medium/ semibold/bold/extrabold/black
+# title_align = "center"         # "left" or "center" (long titles left-align)
+
+# # Decoration mode for windows without a rule:
+# #   "client"  — the app draws its own title bar (CSD)
+# #   "minimal" — no title bar; driftwm's shadow, corners and border
+# #   "none"    — no chrome at all, per-window chrome rules included
+# # "server" (driftwm's title bar) is per window only, via [[window_rules]]:
+# # many toolkits draw their own anyway, which would double the title bar.
+# #
+# # GTK apps without a header bar hide their own title bar under "minimal" and
+# # "none". driftwm tells GTK the mode when the app starts, so a reload reaches
+# # only apps started after it; window rules can't change what GTK draws.
+# default_mode = "client"
+
+# # Borders apply in every mode but "none".
+# border_width = 0               # px; 0 = no border
+# border_color = "#333333"       # unfocused border
+# border_color_focused = "#333333"  # focused border; set it apart from
+# border_color for a focus indicator
+
+# # Focus-dependent opacity for windows with no `opacity` rule or `msg opacity`
+# # of their own. Fullscreen windows and widgets stay opaque. Under an animated
+# # [background], each translucent window costs a full recomposite per frame.
+opacity = 0.86        # unfocused windows
+opacity_focused = 1.0 # focused windows
+
+# # Frost the backdrop of every window, as the `blur` rule does for one.
+# # Fullscreen windows and layer surfaces are left alone.
+blur = true
+# # Example: dim + frost
+
+
+[effects]
+blur_radius = 5
+blur_strength = 1.5
+animate_blur_fps = 20
+
+animation_speed = 0.6
+animation_scale = 0.9 # open/close grow/shrink amplitude (1 = fade only)
+
+[background]
+type = "default"
+
+[keybindings]
+"mod+return" = "exec-terminal"
+"mod+d" = "exec-launcher"
+"mod+q" = "close-window"
+"mod+f" = "toggle-fullscreen"        # focused (hovered) window only
+"mod+l" = "spawn swaylock -f -c 000000 -kl"
+"mod+shift+r" = "reload-config"
+
+[mouse]
+resize_on_border = true
+
+# Super + LMB: drag the canvas, anywhere (also over windows)
+[mouse.anywhere]
+"mod+left" = "pan-viewport"
+"mod+wheel-scroll" = "zoom"
+
+# Super + RMB: move the window under the cursor
+# Super + Shift + RMB: resize it (stand-in for the forward button, see note)
+[mouse.on-window]
+"mod+right" = "move-window"
+"mod+shift+right" = "resize-window-snapped"
+# NOTE: driftwm's parser only knows left/right/middle/scroll triggers. There is
+# no "forward"/"side" button name, so it can't be bound here. Remap the button
+# at evdev level (e.g. input-remapper / keyd) to a key chord if you want it.
+
+# Bookmarks are named points on the infinite canvas (not monitors). An empty
+# table drops the four default corner seeds; fill in later, e.g. "1" = [0, 0].
+# Jump: mod+1..4, store current view: mod+shift+1..4.
+[navigation.bookmarks]
+
+# Monitors: layout position of each output. Names come from `wlr-randr`.
+# Fill in name/scale/position later and uncomment.
+# [[outputs]]
+# name = ""
+# scale = 1.0
+# position = [0, 0]
+#
+# [[outputs]]
+# name = ""
+# scale = 1.0
+# position = [0, 0]
+#
+# [[outputs]]
+# name = ""
+# scale = 1.0
+# position = [0, 0]
+#
+# [[outputs]]
+# name = ""
+# scale = 1.0
+# position = [0, 0]
+
+# Window rules
+[[window_rules]]
+title = "Picture-in-Picture"
+pinned_to_screen = true
+position = [0, -300]

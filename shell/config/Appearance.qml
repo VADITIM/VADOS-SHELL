@@ -140,6 +140,20 @@ Singleton {
         }
     }
 
+    readonly property QtObject alerts: QtObject {
+        readonly property int width: 288
+        readonly property int height: 80
+        readonly property int padding: 12
+        readonly property int badge: 44
+        readonly property int glyph: 20
+        readonly property real ring: 1.5
+        readonly property int gap: 12
+        readonly property int lineGap: 2
+        readonly property int count: 18
+        readonly property int titleCharacters: 40
+        readonly property int bodyCharacters: 72
+    }
+
     readonly property QtObject extension: QtObject {
         readonly property int width: 300
         readonly property int radius: 44

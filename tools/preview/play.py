@@ -123,7 +123,7 @@ def build():
     write_module("qs.config", tokens + [("Config.qml", CONFIG_MOCK)])
     write_module("qs.components", qml_files(os.path.join(SHELL, "components")))
     write_module("qs.state", qml_files(os.path.join(SHELL, "state")))
-    for module in ("taskbar", "search", "settings", "dashboard", "framedebug"):
+    for module in ("taskbar", "alerts", "search", "settings", "dashboard", "framedebug"):
         write_module("qs.modules." + module, qml_files(os.path.join(SHELL, "modules", module)))
     write_module("qs.services", mock_services())
     write_module("qs.windows", [(os.path.join(SHELL, "windows", "FrameTap.qml"), None)])

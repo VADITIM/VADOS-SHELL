@@ -7,7 +7,7 @@ IdlePill {
     id: networkIdle
 
     idleKey: "network"
-    glyphName: "wifi"
+    glyphName: Network.isWired || Network.isConnected ? "wifi" : Network.isEnabled ? "wifi-error" : "wifi-off"
     glyphLevel: Network.isWired ? 1 : Network.isEnabled && Network.isConnected ? Math.max(0.1, Network.strength) : 0
 
     Row {

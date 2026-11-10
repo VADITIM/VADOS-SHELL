@@ -137,7 +137,7 @@ Bars and rings are colour-coded in bands: blue, yellow, orange, red. GPU reading
 
 ## Activity and notifications
 
-The activity bar (coming) will show what is happening now inside the taskbar. Its state and the notification service exist already:
+With `notifications.enabled` on, every notification that may interrupt (critical always; normal ones unless do-not-disturb is on or a window is fullscreen; low never) grows out of the activity pill as an alert: the app it came from (Discord, Telegram, WhatsApp, Signal, Slack, Element, Thunderbird and Spotify are recognised; anything else shows its own name), the summary and the start of the message. Several arriving together share one alert (`+N`). Click it to open the app, swipe it sideways to put it away; it stays in the notification list either way. The rest of the activity bar (tray, notification list) is coming:
 
 - `qs -p ~/.config/vados/shell ipc call activity toggle` (or the Hyprland global shortcut `vados:activity`), `... activity current`, `... activity pin notifications`.
 - `... ipc call overlay toggle <search|settings|dashboard>`, `... overlay close` (closes the topmost), `... overlay top`.
@@ -195,7 +195,7 @@ shell.json        user config
 | `weather.location` | city for the dashboard weather, e.g. `"Berlin"`; `""` guesses from your IP | `""` |
 | `motion.reduced` | `true`: transitions are instant and idle bubbles and splashes stop; typed text and drags stay (also in settings, Settings tab)<br>`false`: full motion | `false` |
 | `attention.doNotDisturb` | `true`: only critical notifications may pop up; the rest wait in the activity bar (also in settings, Settings tab)<br>`false`: notifications may pop up unless a window is fullscreen | `false` |
-| `notifications.enabled` | `true`: the shell becomes the notification daemon (replaces mako, dunst, swaync); nothing shows them yet, so leave it off until the activity bar lands<br>`false`: your existing daemon keeps them | `false` |
+| `notifications.enabled` | `true`: the shell becomes the notification daemon (replaces mako, dunst, swaync) and shows notifications as alerts out of the activity pill<br>`false`: your existing daemon keeps them | `false` |
 | `rendering.quality` | `"full"`: every liquid effect<br>`"lite"`: cheaper rendering for weaker GPUs | `"full"` |
 
 Changes apply live. The file carries a `version` (currently `1`) so later releases can migrate it; a file without one is read as the old layout and gets the version added. A value with the wrong type or outside the values above falls back to its default, and the shell says so in its log (lines starting `vados: config:`), naming the key, what it found and what it expected. Repaired values are written back to the file; unknown keys are reported and ignored. A file that is not valid JSON is left untouched and the shell keeps its current settings until you fix it.

@@ -8,10 +8,24 @@ IdlePill {
 
     idleKey: "audio"
     isAvailable: Audio.isReady
-    glyphName: Audio.isMuted ? "muted" : "speaker"
+    property string nudge: ""
+
+    glyphName: Audio.isMuted ? "muted" : nudge.length > 0 ? nudge : "speaker"
     glyphLevel: Audio.volume
-    onScrolled: steps => Audio.setVolume(Audio.volume + steps * 0.05)
+    onScrolled: steps => nudgeVolume(steps * 0.05)
     onMiddleClicked: Audio.toggleMute()
+
+    function nudgeVolume(change) {
+        Audio.setVolume(Audio.volume + change)
+        nudge = change > 0 ? "volume-up" : "volume-down"
+        nudgeTimer.restart()
+    }
+
+    Timer {
+        id: nudgeTimer
+        interval: Motion.reveal.nudge
+        onTriggered: audioIdle.nudge = ""
+    }
 
     Row {
         height: Appearance.taskbar.idleSize
@@ -60,7 +74,7 @@ IdlePill {
                     startX = mouse.x
                 }
                 onPositionChanged: mouse => Audio.setVolume(startVolume + (mouse.x - startX) / width)
-                onWheel: wheel => Audio.setVolume(Audio.volume + wheel.angleDelta.y / 120 * 0.05)
+                onWheel: wheel => audioIdle.nudgeVolume(wheel.angleDelta.y / 120 * 0.05)
             }
         }
 

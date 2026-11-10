@@ -4,6 +4,7 @@ import qs.config
 import qs.state
 import qs.services
 import qs.modules.taskbar
+import qs.modules.alerts
 import qs.modules.search
 import qs.modules.settings
 import qs.modules.dashboard
@@ -17,6 +18,15 @@ Window {
     readonly property string screenName: "play"
     readonly property bool isRight: Config.data.taskbar.side === "right"
     property Item focusBeforeFrames: null
+    property int sampleIndex: 0
+    readonly property var peek: Attention.peek && Attention.peek.screen === screenName && !Overlays.isTaskbarAway(screenName) ? Attention.peek : null
+    readonly property var samples: [
+        ["Vesktop", "dev.vencord.Vesktop", "#general", "mira: the new build is up, can someone check the burst on a right taskbar?"],
+        ["Telegram Desktop", "org.telegram.desktop", "Jonas", "Dinner at eight? I booked the place by the river."],
+        ["ZapZap", "com.rtosta.zapzap", "Family", "<b>Mum</b>: photos from the weekend &amp; the garden"],
+        ["Thunderbird", "org.mozilla.thunderbird", "Invoice 2026-11", "Your invoice for November is ready to download."],
+        ["NetworkManager", "", "Connected", "You are now connected to the Wi-Fi network \"home\"."]
+    ]
 
     signal shotSaved(string path)
 
@@ -42,6 +52,12 @@ Window {
     function landOverlay() {
         Overlays.settleSwap(screenName)
         Overlays.returnTaskbar(screenName)
+    }
+
+    function postSample(urgency) {
+        const sample = samples[sampleIndex % samples.length]
+        sampleIndex++
+        return Notifications.post(sample[0], sample[1], sample[2], sample[3], urgency)
     }
 
     function pressShortcut(name: string) {
@@ -105,6 +121,24 @@ Window {
             activityLead: ActivityState.leadKey
             onActivityModeRequested: mode => ActivityState.set(root.screenName, mode)
             onActivityLeadRequested: direction => ActivityState.rotate(direction)
+            isAlerting: root.peek !== null
+            alertSize: alerts.bodySize
+        }
+
+        Alerts {
+            id: alerts
+            x: taskbar.x
+            width: taskbar.width
+            height: taskbar.height
+            isMirrored: root.isRight
+            peek: root.peek
+            body: taskbar.alertRect
+            isBodyShown: taskbar.isAlertShown
+            onDismissRequested: Attention.dismissPeek()
+            onOpenRequested: notification => {
+                Notifications.open(notification)
+                Attention.dismissPeek()
+            }
         }
 
         Search {
@@ -286,6 +320,20 @@ Window {
         enabled: !Overlays.isOpen("search", root.screenName)
         context: Qt.ApplicationShortcut
         onActivated: Activities.isCalling = !Activities.isCalling
+    }
+
+    Shortcut {
+        sequence: "N"
+        enabled: !Overlays.isOpen("search", root.screenName)
+        context: Qt.ApplicationShortcut
+        onActivated: root.postSample(1)
+    }
+
+    Shortcut {
+        sequence: "Shift+N"
+        enabled: !Overlays.isOpen("search", root.screenName)
+        context: Qt.ApplicationShortcut
+        onActivated: root.postSample(2)
     }
 
     Shortcut {

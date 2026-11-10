@@ -1,5 +1,7 @@
 import QtQuick
 import QtTest
+import qs.config
+import qs.services
 import qs.state
 
 TestCase {
@@ -61,5 +63,78 @@ TestCase {
         tryCompare(window, "activeFocusItem", field)
         Overlays.close("search")
         tryVerify(() => !Overlays.isTaskbarAway(window.screenName), 10000)
+    }
+
+    function sceneChild(propertyName) {
+        const scene = window.contentItem.children[0]
+        for (const child of scene.children) {
+            if (child[propertyName] !== undefined)
+                return child
+        }
+        return null
+    }
+
+    function peekOnce() {
+        const taskbar = sceneChild("alertRect")
+        const alerts = sceneChild("bodySize")
+        verify(taskbar !== null && alerts !== null)
+        const notification = window.postSample(1)
+        tryVerify(() => Attention.peek !== null, 3000, "the notification peeks")
+        tryVerify(() => taskbar.isAlertShown, 3000, "the activity pill grows into the alert")
+        tryVerify(() => Math.abs(taskbar.alertRect.width - alerts.bodySize.width) < 1 && Math.abs(taskbar.alertRect.height - alerts.bodySize.height) < 1, 3000, "the pill settles at the alert size")
+        return { taskbar: taskbar, alerts: alerts, notification: notification }
+    }
+
+    function finishAlert(taskbar) {
+        tryCompare(Attention, "peek", null, 3000)
+        tryVerify(() => !taskbar.isAlertShown, 3000)
+        tryVerify(() => taskbar.alertRect.width < Appearance.alerts.width / 2, 3000, "the alert folds back into the activity pill")
+        Notifications.clear()
+    }
+
+    function test_alertPeeksAndATapOpensItsApp() {
+        failOnWarning(/.*/)
+        window.sampleIndex = 0
+        const peeked = peekOnce()
+        compare(peeked.alerts.source.key, "discord")
+        const body = peeked.taskbar.alertRect
+        mouseClick(peeked.alerts, body.x + body.width / 2, body.y + body.height / 2)
+        compare(Notifications.opened[Notifications.opened.length - 1], peeked.notification, "a tap opens the notification's app")
+        finishAlert(peeked.taskbar)
+    }
+
+    function test_swipingAnAlertAwayKeepsTheNotification() {
+        failOnWarning(/.*/)
+        const peeked = peekOnce()
+        const body = peeked.taskbar.alertRect
+        const opened = Notifications.opened.length
+        mouseDrag(peeked.alerts, body.x + body.width / 2, body.y + body.height / 2, Motion.alerts.swipe * 2, 0)
+        compare(Notifications.opened.length, opened, "a swipe is not a tap")
+        verify(Notifications.isAlive(peeked.notification), "a swiped alert stays in the history")
+        finishAlert(peeked.taskbar)
+    }
+
+    function test_alertsTogglingFasterThanTheirMotionEndAtRest() {
+        failOnWarning(/.*/)
+        const taskbar = sceneChild("alertRect")
+        for (let round = 0; round < 6; round++) {
+            window.postSample(round % 2 === 0 ? 1 : 2)
+            wait(Motion.attention.batch + round * 40)
+            Attention.dismissPeek()
+            wait(round * 30)
+        }
+        finishAlert(taskbar)
+        verify(!taskbar.isAlertShown)
+    }
+
+    function test_aShortDragSettlesBack() {
+        failOnWarning(/.*/)
+        const peeked = peekOnce()
+        const body = peeked.taskbar.alertRect
+        mouseDrag(peeked.alerts, body.x + body.width / 2, body.y + body.height / 2, Motion.alerts.swipe / 3, 0, Qt.LeftButton, Qt.NoModifier, 400)
+        verify(Attention.peek !== null, "a short drag does not dismiss")
+        tryCompare(peeked.alerts, "slide", 0, 2000)
+        Attention.dismissPeek()
+        finishAlert(peeked.taskbar)
     }
 }

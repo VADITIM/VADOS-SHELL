@@ -20,12 +20,14 @@ Data flows down, events flow up: `config → services → components → modules
 
 - `Config` (`config/Config.qml`): `data.<group>.<key>` (the `JsonAdapter` over `shell.json`, schema in `utils/Schema.js`) and one setter per key: `setTaskbarStyle`, `setTaskbarSide`, `setTaskbarCompact`, `setAccent`, `setWindowMode`, `setWeatherLocation`, `setReducedMotion`, `setRenderQuality`, `setDoNotDisturb`, `setNotificationsEnabled`, `setProfile`, `toggleFavorite`. Only windows, keybinds, services and state read it; modules get values as properties and send changes up as signals.
 - `Appearance`: sizes and colours. **Component-level groups** (any component may read them): `unit`, `radius`, `color`, `font`, `liquid`, `rising`, `burst`. **Feature groups** (only the feature's module, its window, or a service of that feature): `taskbar`, `extension`, `settings`, `desktop`, `dashboard`, `search`. A component that needs feature sizes takes them as a `look` property.
-- `Motion`: timing and physics, and `pace(duration)`, the reduced-motion precedence. **Component-level**: `isReduced`, `pace`, `stateDuration`, `hoverIn`, `hoverOut`, `press`, `pill`, `type`, `gesture`, `lifecycle`, `burst`, `rising`, `liquid`. **Feature groups**: `highlight`, `extension`, `tip`, `hover`, `fold`, `reveal`, `carry`, `settings`, `desktop`, `dashboard`, `search`, plus `budget` (`frame`, `sampleShare`, and `ready` by impact: `glance`, `focus`, `takeover`), `store`, `attention`, `supervision` for tests, `StateFile`, `Attention` and `Supervisor`. A component that needs feature timing takes it as a `pace` property.
+- `Motion`: timing and physics, and `pace(duration)`, the reduced-motion precedence. **Component-level**: `isReduced`, `pace`, `stateDuration`, `hoverIn`, `hoverOut`, `press`, `pill`, `type`, `gesture`, `lifecycle`, `burst`, `rising`, `liquid`. **Feature groups**: `highlight`, `alerts`, `extension`, `tip`, `hover`, `fold`, `reveal`, `carry`, `settings`, `desktop`, `dashboard`, `search`, plus `budget` (`frame`, `sampleShare`, and `ready` by impact: `glance`, `focus`, `takeover`), `store`, `attention`, `supervision` for tests, `StateFile`, `Attention` and `Supervisor`. A component that needs feature timing takes it as a `pace` property.
 - `Rendering`: `isLite`, `blur(radius)` (render quality for the rendering components).
 
 ## utils: the feature registry
 
 `utils/Features.js` (`rules/features.md`, `architecture.md` § Features): `surfaces`, `origins`, `impacts` (the allowed values), `features` (one row per surface, built or planned) and `overlayKinds()` (key → `{ layer }` for the built overlay rows). Read by `state/Overlays.qml` (`kinds`), `tools/check-rules.py` (`[features]`) and `tst_features`. A module's root named in a row is the interface its window binds (§ modules).
+
+`utils/Alerts.js` (`architecture.md` § Alerts): the alert source catalogue `sources` (`key`, `label`, `glyph`, `tint`, `ids`), `generic`, `glyphs`, and `identify(appName, desktopEntry)`, `plainOf(text)`, `clip(text, limit)`, `leadOf(notifications)`. Read by `modules/alerts/Alerts.qml` and `tst_alerts`. The tints are brand colours, data of the catalogue rather than theme tokens.
 
 ## services
 
@@ -43,7 +45,7 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 | `DateTime` | `time`, `date` | taskbar |
 | `Hardware`, `Traffic`, `Weather` | readings, plus `isActive` (polls only while a window sets it) | dashboard module; `DashboardWindow` sets `isActive` |
 | `Network` | `isEnabled`, `isWired`, `isConnected`, `ssid`, `strength`, `networks`, `isWatching`, `toggle()`, `connectTo(name)` | taskbar, extension |
-| `Notifications` | `isServing`, `list`, `latest`, `unreadCount`, `hasUnread`, `isUrgent`, `isCritical/isLow/isAlive(n)`, `markRead()`, `dismiss(n)`, `clear()`, `invoke(n, id)`, signal `received` | `Activity`, `Attention`, `Shortcuts` |
+| `Notifications` | `isServing`, `list`, `latest`, `unreadCount`, `hasUnread`, `isUrgent`, `isCritical/isLow/isAlive(n)`, `markRead()`, `dismiss(n)`, `clear()`, `open(n)` (default action, else the desktop entry), `invoke(n, id)`, signal `received` | `Activity`, `Attention`, `Shortcuts`, `TaskbarWindow` |
 | `Power` | `lock()`, `suspend()`, `restart()`, `shutdown()` | taskbar |
 | `Removable` | `devices`, `eject(device)` | taskbar |
 | `Tray` | `items`, `open(...)`, `openMenu(...)` | `Activity` |
@@ -58,7 +60,7 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 | `Overlays` | `kinds` (from `Features.overlayKinds()`), `top`, `taskbarParts`, `isOpen(key, screen)`, `ownsKeyboard(key, screen)`, `isTaskbarAway(screen)`, `visitorOn(screen)`, `open/close/toggle(key, screen)`, `closeTop()`, `reportPhase(key, screen, phase)`, `returnTaskbar(screen)`, `placeTaskbarParts`, `placeVisitor`, `keepScreens(names)`, signal `taskbarGathering(screen)` | windows, `Shortcuts`, `shell.qml` |
 | `Activity` | `current`, `entries`, `hasActivity`, `isOpenOn(screen)`, `open/close/toggle(screen)`, `pin(kind)` | `Shortcuts` |
 | `FrameDebug` | `isActive`, `isStepping`, `isSnapping`, `isViewingPast`, `counter`, `shownLabel`, `frame`, `history`, `cursor`, `memory`, `screenName`, `shotsOn(screen)`, `toggle(screen)`, `begin(screen)`, `step()`, `back()`, `snap(screen)`, `finishSnap()`, `close()`, `refresh()`, `expect()`, `store(token, shot)`, `skip()`, signals `captureRequested(token, scale)`, `snapshotReady(shots)` | `FrameWindow`, `FrameTap`, `Shortcuts` |
-| `Attention` | `isQuiet`, `isFullscreen`, `peek`, `held`, `mayPeek(n)`, `dismissPeek()`, `setQuiet(isOn)` | `Shortcuts` |
+| `Attention` | `isQuiet`, `isFullscreen`, `peek`, `held`, `mayPeek(n)`, `dismissPeek()`, `setQuiet(isOn)` | `Shortcuts`, `TaskbarWindow` |
 
 ## components
 
@@ -66,7 +68,7 @@ Reusable, feature-agnostic primitives. They read only component-level tokens; fe
 
 - Engine: `Lifecycle` (`send(event)`, `phase`, signals `moving`, `moved`, `interrupted`), `Gesture` (signals `moved`, `crossed`, `thrown`, `tapped`, `ended`), `Burst` (overlay enter/leave; `isShown`, `parts`, `phase`, `isActive`, `isOpened`, signal `landed`), `Gather`, `Mutate` (`isArriving`, `hasArrived`), `Turn` (`isFlipping`), `LabelReveal` (`isShown`, `sweepWidth`, `label`), `Squircle` (`color`, `strokeColor`, `strokeWidth`), `TypedText` (`leaveBudget`), `Outline` (`isShown`, `radius`, `traceDuration`, `leaveDuration`, `label`), `Press`, `Rising`.
 - Rendering: `LiquidLayer` (`isShown`, `shapes`), `LiquidShape`, `LiquidBridge`, `EdgeFuse`, `Lobe`, `Masked`, `Surface`.
-- Controls and text: `GlyphButton` (signal `clicked`), `Glyph`, `ColorWheel` (requires `look`; `diameter`, `wheelShare` for the wheel's scale-rotate pop, `sliderShare` for the value slider's left-to-right slide; signal `picked`), `EdgePull` (requires `look`, `pace`; signal `summoned`), `TypedText`, `ArcText`, `Upright`.
+- Controls and text: `GlyphButton` (signal `clicked`), `Glyph` (`name`, `level`, `isCharging`; the icon from `utils/Icons.js` `pick`), `ColorWheel` (requires `look`; `diameter`, `wheelShare` for the wheel's scale-rotate pop, `sliderShare` for the value slider's left-to-right slide; signal `picked`), `EdgePull` (requires `look`, `pace`; signal `summoned`), `TypedText`, `ArcText`, `Upright`.
 
 ## modules
 
@@ -74,7 +76,8 @@ Each module's root is the interface its window binds: state comes in as properti
 
 | Module | In (properties) | Out (signals) |
 |---|---|---|
-| `Taskbar` | `isCovered`, `isSummoned`, `barStyle`, `isCompact`, `isMirrored`, `isAway`, `isVeiled`, `isEaten`, `visitor`, `hostWindow` | `compactRequested`, `settingsRequested`, `dashboardRequested`, `extensionRequested`; reads `isRevealed`, `isArriving`, `hasArrivedAt(centerY)`, `inputWidth`, `liquidParts()` |
+| `Taskbar` | `isCovered`, `isSummoned`, `barStyle`, `isCompact`, `isMirrored`, `isAway`, `isVeiled`, `isEaten`, `visitor`, `hostWindow`, `isAlerting`, `alertSize` | `compactRequested`, `settingsRequested`, `dashboardRequested`, `extensionRequested`; reads `isRevealed`, `isArriving`, `hasArrivedAt(centerY)`, `inputWidth`, `liquidParts()`, `alertRect`, `isAlertShown` |
+| `Alerts` | `isMirrored`, `peek`, `body` (the pill body rect), `isBodyShown` | `dismissRequested`, `openRequested(notification)`; reads `bodySize`, `source`, `slide` |
 | `Extension` | `isMirrored`, `inset`, `extensionKey`, `heldKey`, `origin` | `closeRequested`; reads `inputWidth` |
 | `Search` | `isOpen`, `favoriteIds`, `profileName`, `profilePicture`, `parts`, `isMirrored`, `canHandOff` | `closeRequested`, `landed`, `favoriteToggled`; reads `isPresent`, `phase`, `visitor` |
 | `Dashboard` | `isOpen`, `isMirrored`, `parts`, `canHandOff` | `closeRequested`, `landed`; reads `isPresent`, `phase`, `visitor` |

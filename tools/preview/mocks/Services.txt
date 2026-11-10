@@ -174,9 +174,20 @@ QtObject {
     function isLow(notification) { return notification.urgency === 0 }
     function isAlive(notification) { return list.indexOf(notification) >= 0 }
     function markRead() { unreadCount = 0 }
-    function dismiss(notification) {}
-    function clear() {}
+    property int posted: 0
+    property var opened: []
+    function dismiss(notification) { list = list.filter(candidate => candidate !== notification) }
+    function clear() { list = [] }
+    function open(notification) { opened = opened.concat([notification]) }
     function invoke(notification, identifier) {}
+    function post(appName, desktopEntry, summary, body, urgency) {
+        posted++
+        const notification = { id: posted, appName: appName, desktopEntry: desktopEntry, summary: summary, body: body, urgency: urgency, expireTimeout: 0, actions: [] }
+        list = [notification].concat(list)
+        latest = notification
+        received(notification)
+        return notification
+    }
 }
 Compositor|pragma Singleton
 import QtQuick

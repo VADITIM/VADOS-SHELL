@@ -49,6 +49,17 @@ Singleton {
         markRead()
     }
 
+    function open(notification) {
+        if (!notification)
+            return
+        const action = notification.actions.find(candidate => candidate.identifier === "default")
+        if (action)
+            action.invoke()
+        else
+            DesktopEntries.byId(notification.desktopEntry)?.execute()
+        unreadIds = unreadIds.filter(identifier => identifier !== notification.id)
+    }
+
     function invoke(notification, identifier) {
         const action = notification.actions.find(candidate => candidate.identifier === identifier)
         if (action)

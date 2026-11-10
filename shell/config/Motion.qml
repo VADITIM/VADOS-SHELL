@@ -64,6 +64,21 @@ Singleton {
         readonly property int tick: 1000
     }
 
+    readonly property QtObject alerts: QtObject {
+        readonly property int grow: 300
+        readonly property int shrink: 170
+        readonly property int shrinkDelay: 60
+        readonly property int lag: 40
+        readonly property real overshoot: 1.4
+        readonly property real arriveShare: 0.5
+        readonly property int faceEnter: 140
+        readonly property int faceLeave: 90
+        readonly property int stagger: 40
+        readonly property int settle: 160
+        readonly property real swipe: 64
+        readonly property real fling: 900
+    }
+
     readonly property QtObject extension: QtObject {
         readonly property int grow: 360
         readonly property int shrink: 240
@@ -103,6 +118,7 @@ Singleton {
 
     readonly property QtObject reveal: QtObject {
         readonly property int dwell: 1500
+        readonly property int nudge: 700
         readonly property int linger: 700
         readonly property int stagger: 30
         readonly property int arrivalScatter: 80

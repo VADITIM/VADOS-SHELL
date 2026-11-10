@@ -31,6 +31,8 @@ ENGINE_TESTS = {
     "shell/utils/Playing.js": "tst_frames.qml",
     "shell/state/FrameDebug.qml": "tst_frames.qml",
     "shell/utils/Features.js": "tst_features.qml",
+    "shell/utils/Alerts.js": "tst_alerts.qml",
+    "shell/utils/Icons.js": "tst_icons.qml",
 }
 
 FEATURE_REGISTRY = "shell/utils/Features.js"

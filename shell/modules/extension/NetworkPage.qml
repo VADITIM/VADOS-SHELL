@@ -40,8 +40,8 @@ Item {
 
             Glyph {
                 anchors.fill: parent
-                name: "wifi"
-                level: Network.isEnabled && Network.isConnected ? Math.max(0.1, Network.strength) : 0
+                name: Network.isConnected ? "wifi" : Network.isEnabled ? "wifi-error" : "wifi-off"
+                level: Network.isConnected ? Math.max(0.1, Network.strength) : 0
                 color: Appearance.color.accent
             }
         }

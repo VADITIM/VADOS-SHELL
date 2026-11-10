@@ -10,23 +10,28 @@ Item {
     property string mode: "idle"
     property string leadKey: "media"
     property var liveKeys: []
+    property bool isAlerting: false
+    property size alertSize: Qt.size(0, 0)
+    property bool isAlertBody: false
 
     readonly property real thickness: Appearance.taskbar.thickness
     readonly property real spineX: thickness / 2
-    readonly property string face: mode === "hidden" ? "idle" : mode
-    readonly property bool isShown: host.isRevealed && !host.isEaten && mode !== "hidden"
+    readonly property string face: isAlerting ? "alert" : mode === "hidden" ? "idle" : mode
+    readonly property bool isShown: (host.isRevealed || (isAlerting && !host.isAway)) && !host.isEaten && (mode !== "hidden" || isAlerting)
     readonly property size expandedSize: leadKey === "call"
         ? Qt.size(Appearance.activity.call.width, Appearance.activity.call.height)
         : Qt.size(Appearance.activity.media.width, Appearance.activity.media.height)
-    readonly property real targetWidth: face === "expanded" ? expandedSize.width : face === "active" ? Appearance.activity.width : Appearance.activity.bead
-    readonly property real targetHeight: face === "expanded" ? expandedSize.height : face === "active" ? Appearance.activity.length : Appearance.activity.bead
+    readonly property real targetWidth: face === "alert" ? alertSize.width : face === "expanded" ? expandedSize.width : face === "active" ? Appearance.activity.width : Appearance.activity.bead
+    readonly property real targetHeight: face === "alert" ? alertSize.height : face === "expanded" ? expandedSize.height : face === "active" ? Appearance.activity.length : Appearance.activity.bead
     readonly property real popScale: mutate.pop
     readonly property real bodyWidth: reshape.width
     readonly property real bodyHeight: reshape.height
     readonly property real bodyLeft: spineX - Math.min(bodyWidth, Appearance.activity.width) / 2
     readonly property real expandedLeft: spineX - Appearance.activity.width / 2
-    readonly property real expansion: Math.max(0, (bodyWidth - Appearance.activity.width) / Math.max(1, expandedSize.width - Appearance.activity.width))
+    readonly property real expansion: isAlertBody ? 0 : Math.max(0, (bodyWidth - Appearance.activity.width) / Math.max(1, expandedSize.width - Appearance.activity.width))
     readonly property bool isFaceShown: mutate.isInnerShown && reshape.isArrived
+    readonly property bool isAlertShown: isFaceShown && face === "alert"
+    readonly property rect alertRect: Qt.rect(x + expandedLeft, y - bodyHeight / 2, bodyWidth, bodyHeight)
     readonly property var satellites: liveKeys.filter(key => key !== leadKey)
     readonly property real satellitePitch: Appearance.activity.satellite + Appearance.activity.satelliteGap
     readonly property bool areSatellitesShown: face === "active" && isShown
@@ -38,6 +43,11 @@ Item {
 
     width: thickness
     height: 0
+
+    onFaceChanged: {
+        if (face === "alert")
+            isAlertBody = true
+    }
 
     function bodyRect() {
         const width = bodyWidth * popScale
@@ -61,12 +71,16 @@ Item {
         id: reshape
         targetWidth: pill.targetWidth
         targetHeight: pill.targetHeight
-        growDuration: Motion.pace(pill.face === "expanded" ? Motion.activity.expand : Motion.activity.spread)
-        shrinkDuration: Motion.pace(Motion.activity.shrink)
-        shrinkDelay: Motion.pace(Motion.activity.shrinkDelay)
-        lag: Motion.pace(Motion.activity.lag)
-        overshoot: Motion.activity.overshoot
-        arriveShare: Motion.activity.arriveShare
+        growDuration: Motion.pace(pill.face === "alert" ? Motion.alerts.grow : pill.face === "expanded" ? Motion.activity.expand : Motion.activity.spread)
+        shrinkDuration: Motion.pace(pill.isAlertBody ? Motion.alerts.shrink : Motion.activity.shrink)
+        shrinkDelay: Motion.pace(pill.isAlertBody ? Motion.alerts.shrinkDelay : Motion.activity.shrinkDelay)
+        lag: Motion.pace(pill.face === "alert" ? Motion.alerts.lag : Motion.activity.lag)
+        overshoot: pill.face === "alert" ? Motion.alerts.overshoot : Motion.activity.overshoot
+        arriveShare: pill.face === "alert" ? Motion.alerts.arriveShare : Motion.activity.arriveShare
+        onIsArrivedChanged: {
+            if (isArrived && pill.face !== "alert")
+                pill.isAlertBody = false
+        }
     }
 
     EdgeFuse {
@@ -124,7 +138,7 @@ Item {
         y: -pill.bodyHeight / 2
         width: pill.bodyWidth
         height: pill.bodyHeight
-        enabled: pill.isShown
+        enabled: pill.isShown && pill.face !== "alert"
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: pill.modeRequested(pill.face === "idle" ? "active" : pill.face === "active" ? "expanded" : "active")

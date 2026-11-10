@@ -15,6 +15,7 @@ Item {
 
     property real burstOpenedAt: 0
     property real pillOpenedAt: 0
+    property real alertOpenedAt: 0
 
     Burst {
         id: burst
@@ -34,6 +35,19 @@ Item {
     Mutate {
         id: pill
         onIsInnerShownChanged: if (isInnerShown) scene.pillOpenedAt = Clock.now()
+    }
+
+    Reshape {
+        id: alertBody
+        targetWidth: Appearance.activity.bead
+        targetHeight: Appearance.activity.bead
+        growDuration: Motion.alerts.grow
+        shrinkDuration: Motion.alerts.shrink
+        shrinkDelay: Motion.alerts.shrinkDelay
+        lag: Motion.alerts.lag
+        overshoot: Motion.alerts.overshoot
+        arriveShare: Motion.alerts.arriveShare
+        onIsArrivedChanged: if (isArrived && isGrowing) scene.alertOpenedAt = Clock.now()
     }
 
     TestCase {
@@ -141,6 +155,25 @@ Item {
                 tryVerify(() => !pill.leave.running, 3000)
             }
             console.info("vados: pill ready after " + Math.round(best) + " ms")
+            verify(best <= Motion.budget.ready.glance, Math.round(best) + " ms is over the " + Motion.budget.ready.glance + " ms glance budget")
+        }
+
+        function test_alertsAreReadyInsideTheGlanceBudget() {
+            let best = Infinity
+            for (let round = 0; round < rounds; round++) {
+                const start = Clock.now()
+                alertBody.targetWidth = Appearance.alerts.width
+                alertBody.targetHeight = Appearance.alerts.height
+                tryVerify(() => !alertBody.isArrived, 1000)
+                tryVerify(() => alertBody.isArrived, 3000)
+                best = Math.min(best, scene.alertOpenedAt - start)
+                tryVerify(() => !alertBody.motion.running, 3000)
+                alertBody.targetWidth = Appearance.activity.bead
+                alertBody.targetHeight = Appearance.activity.bead
+                tryVerify(() => !alertBody.isArrived, 1000)
+                tryVerify(() => alertBody.isArrived && !alertBody.motion.running, 3000)
+            }
+            console.info("vados: alert ready after " + Math.round(best) + " ms")
             verify(best <= Motion.budget.ready.glance, Math.round(best) + " ms is over the " + Motion.budget.ready.glance + " ms glance budget")
         }
     }

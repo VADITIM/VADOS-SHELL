@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
-import "../utils/Geometry.js" as Geometry
+import "../utils/Icons.js" as Icons
 
 Item {
     id: glyph
@@ -10,6 +10,7 @@ Item {
     property real level: 1
     property bool isCharging: false
     property real stroke: name === "dots" ? 3.2 : 1.8
+    readonly property string icon: Icons.pick(name, level, isCharging)
 
     implicitWidth: 20
     implicitHeight: 20
@@ -60,48 +61,12 @@ Item {
         return path
     }
 
-    function strokeFor(glyphName, glyphLevel, charging) {
+    function strokeFor(glyphName) {
+        if (Icons.has(glyphName))
+            return Icons.strokeOf(glyphName)
         switch (glyphName) {
-        case "power":
-            return "M12 3 V12 M6.34 7.34 A8 8 0 1 0 17.66 7.34"
-        case "settings":
-            return "M19 12 a7 7 0 1 0 -14 0 a7 7 0 1 0 14 0 M14.5 12 a2.5 2.5 0 1 0 -5 0 a2.5 2.5 0 1 0 5 0 M19 12 H21.5 M16.95 16.95 L18.72 18.72 M12 19 V21.5 M7.05 16.95 L5.28 18.72 M5 12 H2.5 M7.05 7.05 L5.28 5.28 M12 5 V2.5 M16.95 7.05 L18.72 5.28"
         case "dots":
             return "M5.5 12 h0.01 M12 12 h0.01 M18.5 12 h0.01"
-        case "usb":
-            return "M12 3 L10 5.5 H14 Z M12 5.5 V17 M12 14 L7.5 11 V8.8 M12 12 L16.5 9 V7.2 M15.5 5.2 H17.5 V7.2 H15.5 Z M7.5 8.8 m-1.3 0 a1.3 1.3 0 1 0 2.6 0 a1.3 1.3 0 1 0 -2.6 0 M12 17 m-1.8 1.6 a1.8 1.8 0 1 0 3.6 0 a1.8 1.8 0 1 0 -3.6 0"
-        case "speaker": {
-            let path = "M4 9.5 H7.5 L12 5.5 V18.5 L7.5 14.5 H4 Z"
-            if (glyphLevel > 0.01)
-                path += " M15 9.5 a3.5 3.5 0 0 1 0 5"
-            if (glyphLevel > 0.5)
-                path += " M17.5 7 a7 7 0 0 1 0 10"
-            return path
-        }
-        case "muted":
-            return "M4 9.5 H7.5 L12 5.5 V18.5 L7.5 14.5 H4 Z M15.5 9.5 L20 14 M20 9.5 L15.5 14"
-        case "wifi": {
-            let path = "M11.2 19 a0.8 0.8 0 1 0 1.6 0 a0.8 0.8 0 1 0 -1.6 0"
-            if (glyphLevel <= 0)
-                return path + " M9.17 16.17 a4 4 0 0 1 5.66 0 M6.34 13.34 a8 8 0 0 1 11.32 0 M3.51 10.51 a12 12 0 0 1 16.98 0 M4 4 L20 20"
-            if (glyphLevel > 0.05)
-                path += " M9.17 16.17 a4 4 0 0 1 5.66 0"
-            if (glyphLevel > 0.4)
-                path += " M6.34 13.34 a8 8 0 0 1 11.32 0"
-            if (glyphLevel > 0.7)
-                path += " M3.51 10.51 a12 12 0 0 1 16.98 0"
-            return path
-        }
-        case "battery":
-            return charging
-                ? "M3.5 8 H18.5 V16 H3.5 Z M20.5 10.5 V13.5 M12 9.5 L9.5 12.5 H12.5 L10 15"
-                : "M3.5 8 H18.5 V16 H3.5 Z M20.5 10.5 V13.5"
-        case "lock":
-            return "M6.5 11 H17.5 V19.5 H6.5 Z M9 11 V8 a3 3 0 0 1 6 0 V11"
-        case "moon":
-            return "M19 14.5 A7.5 7.5 0 1 1 9.5 5 A6 6 0 0 0 19 14.5 Z"
-        case "restart":
-            return "M19 12 a7 7 0 1 1 -2.05 -4.95 M17 3.5 V7 H13.5"
         case "eject":
             return "M12 5 L18.5 13 H5.5 Z M5.5 17.5 H18.5"
         case "search":
@@ -116,28 +81,24 @@ Item {
             return "M3 5 H21 V17 H3 Z M3 14 H21 M9 21 H15 M12 17 V21"
         case "style-bare":
             return "M3 3 V21 M11.5 7 h0.01 M11.5 12 h0.01 M11.5 17 h0.01"
-        case "user":
-            return "M12 4 a4 4 0 1 0 0 8 a4 4 0 1 0 0 -8 Z M4.5 20 a7.5 7.5 0 0 1 15 0"
-        case "brush":
-            return "M4 20 C4 17 6 16 8 16 a3 3 0 0 1 0 4 Z M9.5 15 L19 5.5 a1.5 1.5 0 0 1 0 2 L11 16"
         case "drop":
             return "M12 3.5 C9 7.5 6 10.8 6 14 a6 6 0 0 0 12 0 C18 10.8 15 7.5 12 3.5 Z"
-        case "bolt":
-            return "M13 3 L7 13 H12 L11 21 L17 11 H12 Z"
         case "close":
             return "M7 7 L17 17 M17 7 L7 17"
-        case "music":
-            return "M9 17.5 V6 L19 4 V15.5 M9 9.5 L19 7.5 M9 17.5 a2.5 2.5 0 1 1 -5 0 a2.5 2.5 0 1 1 5 0 M19 15.5 a2.5 2.5 0 1 1 -5 0 a2.5 2.5 0 1 1 5 0"
+        case "bell":
+            return "M6 16.5 V11 a6 6 0 0 1 12 0 V16.5 L19.5 18 H4.5 Z M10 20.5 a2 2 0 0 0 4 0"
+        case "chat":
+            return "M6.5 4.5 H17.5 a2 2 0 0 1 2 2 V14 a2 2 0 0 1 -2 2 H10.5 L6.5 19.5 V16 a2 2 0 0 1 -2 -2 V6.5 a2 2 0 0 1 2 -2 Z"
+        case "send":
+            return "M20.5 3.5 L3.5 10.5 L10 13.5 L13.5 20.5 Z M20.5 3.5 L10 13.5"
+        case "mail":
+            return "M4 6 H20 V18 H4 Z M4 6 L12 13 L20 6"
         case "headset":
             return "M4.5 14 V12 a7.5 7.5 0 0 1 15 0 V14 M4.5 13.5 H7.5 V18.5 H4.5 Z M16.5 13.5 H19.5 V18.5 H16.5 Z M19.5 18 a4 4 0 0 1 -4 3.5 H13"
         case "headphones":
             return "M4.5 17 V12 a7.5 7.5 0 0 1 15 0 V17 M4.5 13.5 H7.5 V19.5 H4.5 Z M16.5 13.5 H19.5 V19.5 H16.5 Z"
         case "deafened":
             return "M4.5 17 V12 a7.5 7.5 0 0 1 15 0 V17 M4.5 13.5 H7.5 V19.5 H4.5 Z M16.5 13.5 H19.5 V19.5 H16.5 Z M3.5 3.5 L20.5 20.5"
-        case "mic":
-            return "M9.5 5.5 a2.5 2.5 0 0 1 5 0 V11.5 a2.5 2.5 0 0 1 -5 0 Z M6.5 11 a5.5 5.5 0 0 0 11 0 M12 16.5 V20 M9 20 H15"
-        case "mic-off":
-            return "M9.5 5.5 a2.5 2.5 0 0 1 5 0 V11.5 a2.5 2.5 0 0 1 -5 0 Z M6.5 11 a5.5 5.5 0 0 0 11 0 M12 16.5 V20 M9 20 H15 M4.5 4.5 L19.5 19.5"
         case "play":
             return "M8 5.5 L18.5 12 L8 18.5 Z"
         case "pause":
@@ -175,15 +136,6 @@ Item {
         }
     }
 
-    function fillFor(glyphName, glyphLevel, charging) {
-        if (glyphName !== "battery" || charging)
-            return ""
-        const filled = 11 * Geometry.clampUnit(glyphLevel)
-        if (filled < 0.5)
-            return ""
-        return "M5.5 10 H" + (5.5 + filled).toFixed(2) + " V14 H5.5 Z"
-    }
-
     Shape {
         width: 24
         height: 24
@@ -197,13 +149,13 @@ Item {
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
             joinStyle: ShapePath.RoundJoin
-            PathSvg { path: glyph.strokeFor(glyph.name, glyph.level, glyph.isCharging) }
+            PathSvg { path: glyph.strokeFor(glyph.icon) }
         }
 
         ShapePath {
             strokeColor: "transparent"
             fillColor: glyph.color
-            PathSvg { path: glyph.fillFor(glyph.name, glyph.level, glyph.isCharging) }
+            PathSvg { path: Icons.fillOf(glyph.icon) }
         }
     }
 }

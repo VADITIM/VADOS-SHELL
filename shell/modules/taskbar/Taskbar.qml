@@ -38,6 +38,8 @@ Item {
     readonly property bool isArriving: visitor !== null && visitor.isReleasing === true && visitor.release > 0
     property string activityMode: "idle"
     property string activityLead: "media"
+    property bool isAlerting: false
+    property size alertSize: Qt.size(0, 0)
 
     signal compactRequested(bool isCompact)
     signal settingsRequested()
@@ -53,6 +55,8 @@ Item {
     readonly property real pitch: Appearance.taskbar.item + Appearance.taskbar.itemGap
     readonly property bool isCarrying: carried.isActive
     readonly property real inputWidth: inputZone.width
+    readonly property rect alertRect: activityPill.alertRect
+    readonly property bool isAlertShown: activityPill.isAlertShown
     readonly property real activityCenter: {
         let stackBottom = Appearance.taskbar.margin
         for (const pill of allPills()) {
@@ -669,6 +673,8 @@ Item {
         mode: shell.activityMode
         leadKey: shell.activityLead
         liveKeys: Activities.liveKeys
+        isAlerting: shell.isAlerting
+        alertSize: shell.alertSize
         x: shell.inset
         y: shell.activityCenter
         onModeRequested: mode => shell.activityModeRequested(mode)
@@ -775,7 +781,7 @@ Item {
         }
 
         width: !shell.isRevealed
-            ? Appearance.taskbar.edgeStrip
+            ? Math.max(Appearance.taskbar.edgeStrip, activityPill.isShown ? activityPill.reachRight : 0)
             : carried.isActive
                 ? shell.width
                 : Math.min(shell.width, Math.max(Appearance.taskbar.reach, idleReach + Appearance.taskbar.idleGap, tip.reachRight + Appearance.taskbar.tipGap, activityPill.isShown ? activityPill.reachRight : 0))

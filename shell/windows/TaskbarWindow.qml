@@ -6,6 +6,7 @@ import qs.state
 import qs.services
 import qs.modules.taskbar
 import qs.modules.extension
+import qs.modules.alerts
 
 PanelWindow {
     id: window
@@ -14,6 +15,7 @@ PanelWindow {
     readonly property string screenName: screen?.name ?? ""
     property string extensionKey: ""
     property rect extensionOrigin: Qt.rect(0, 0, 0, 0)
+    readonly property var peek: Attention.peek && Attention.peek.screen === screenName && !Overlays.isTaskbarAway(screenName) ? Attention.peek : null
 
     anchors {
         left: !window.isRight
@@ -81,6 +83,8 @@ PanelWindow {
         activityLead: ActivityState.leadKey
         onActivityModeRequested: mode => ActivityState.set(window.screenName, mode)
         onActivityLeadRequested: direction => ActivityState.rotate(direction)
+        isAlerting: window.peek !== null
+        alertSize: alerts.bodySize
         isCovered: Occupancy.isCovered(window.screen?.name ?? "")
         isEaten: extension.isHolding
         onExtensionRequested: (key, origin) => {
@@ -90,6 +94,20 @@ PanelWindow {
         onIsAwayChanged: {
             if (isAway)
                 window.extensionKey = ""
+        }
+    }
+
+    Alerts {
+        id: alerts
+        anchors.fill: parent
+        isMirrored: window.isRight
+        peek: window.peek
+        body: taskbar.alertRect
+        isBodyShown: taskbar.isAlertShown
+        onDismissRequested: Attention.dismissPeek()
+        onOpenRequested: notification => {
+            Notifications.open(notification)
+            Attention.dismissPeek()
         }
     }
 

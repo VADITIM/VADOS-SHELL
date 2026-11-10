@@ -21,7 +21,7 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 | Dashboard | `dashboard` | overlay | the taskbar column | focus | built |
 | Settings | `settings` | overlay | the taskbar column | takeover | built; tabs to add (contract 5) |
 | Frame debugger | `framedebug` | debug | none | ambient | built |
-| Alerts | `alerts` | mutation | the activity pill | glance | planned (contract 1) |
+| Alerts | `alerts` | mutation | the activity pill | glance | built: the alert face (2026-11-10); tray and entries left (contract 1) |
 | Notifications menu | `notifications` | overlay | the taskbar column | focus | planned (contract 2) |
 | Clipboard history | `clipboard` | mutation | the activity pill | focus | planned (contract 3) |
 | Lock screen | `lock` | lock | the power pill | takeover | planned (contract 6); its layout editor is built |
@@ -55,6 +55,8 @@ Note: `Alerts.md`. An alert is the activity pill growing into a bigger pill, liq
 - **To build**: `utils/Alerts.js`, the source catalogue (one row per service: how to recognise it from the notification's app name and desktop entry, its glyph and tint) with a test; `modules/alerts/Alerts.qml` drawn by the taskbar out of the activity pill; the system tray and notification entries inside the pill; fold `state/Activity.qml` into `ActivityState` (`known-issues.md`).
 - **Settings**: `notifications.enabled` turns on by default once alerts draw them (`rules/security.md`: it replaces mako, dunst, swaync, so the README says so).
 - **Done when**: a notification from each catalogued service peeks out of the pill on the focused screen, can be swiped away, opens its app on a tap, and is held under do-not-disturb and fullscreen; nothing is lost while held.
+- **Built (2026-11-10)**: `utils/Alerts.js` (eight sources and `generic`, `tst_alerts`), the `alert` face of `ActivityPill` (`Reshape` to `Appearance.alerts`, ready inside the glance budget, measured in `tst_features`), `modules/alerts/Alerts.qml` over the pill body in `TaskbarWindow` (a swipe dismisses the peek, a tap opens through `Notifications.open`), the preview (`N`, `Shift+N`) and `tst_preview` cases. `architecture.md` § Alerts.
+- **Left**: the system tray and notification entries inside the pill; fold `state/Activity.qml` into `ActivityState`; check on hardware against real Discord, Telegram and WhatsApp clients. **Open**: whether `notifications.enabled` turns on by default (§ Still open 3).
 
 ### 2. Notifications menu (`notifications`)
 
@@ -192,3 +194,4 @@ Settled by the user on 2026-11-10; the contracts above are built on these.
 
 1. **"Move it" in the app manager.** `pacman` cannot move an installed package; the tab is built without a move action until the user says what it should do.
 2. **Keyboard focus for the V/AI widget.** Typing into a widget needs focus on the desktop layer, which the `desktop` surface kind does not grant; an engine change to decide when contract 8 is built.
+3. **The notification daemon by default.** Contract 1 says `notifications.enabled` turns on once alerts draw them; `rules/security.md` says every system role is opt-in and starts off. It stays off until the user picks one.

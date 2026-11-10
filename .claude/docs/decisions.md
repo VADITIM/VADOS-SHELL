@@ -340,4 +340,19 @@ The burst samples its outline every `Appearance.burst.curveStep` pixels. 3 px wa
 
 - **Settings has no clock of its own** (user, 2026-11-09). The taskbar clock stays shown while the taskbar is away (`isShown: (isRevealed || isAway) && !isEaten`), so opening settings never re-types or resets the time and date.
 
+## Alerts (2026-11-10)
+
+- **Chosen:** an alert is a face of the activity pill (`face: "alert"`, `Reshape` to `Appearance.alerts`), and `modules/alerts/Alerts.qml` draws only its content over that body, hosted by `TaskbarWindow` beside the taskbar. **Rejected:** a separate liquid layer like the extension (the alert would not be the same body as the pill and would not neck with the taskbar), and drawing the content inside `ActivityPill` (modules never import each other, and the catalogue belongs to its own surface).
+- **A swipe dismisses the peek, not the notification.** It stays in `Notifications.list` (and later the notifications menu's history); "held notifications are never lost" covers dismissed peeks too. A tap opens and dismisses the peek.
+- **A hidden taskbar shows only the activity pill for an alert** (a window reaching into the edge): the alert must reach the user, but revealing the whole taskbar over the window for seconds is louder than a glance. While an overlay holds the taskbar or the extension eats it, no alert is drawn (`known-issues.md`).
+- **Sources are recognised by desktop entry, then app name, then words of either** (`utils/Alerts.js`), so web apps that name themselves (`WhatsApp Web`) are caught; the source tints are brand colours kept in the catalogue (a `utils` table), not `Appearance` tokens.
+- **`notifications.enabled` stays off by default** for now: `rules/security.md` makes taking over the notification daemon opt-in, which the roadmap's "on by default once alerts draw them" contradicts. Left for the user to decide (`roadmap.md` § Still open 3).
+
 - **The running-app indicator sits 6 px in from the pill edge** (user, 2026-11-09), token `taskbar.indicatorInset` (was a fixed 2), so it reads as attached to its icon.
+
+## The user's icon set (2026-11-10)
+
+- **Chosen:** the user's SVG icons (`tools/icons/source`, one file per glyph name) are converted by `tools/icons/build.py` into 24-unit paths in `utils/IconPaths.js`, and `Glyph` draws them with its own `ShapePath`s, so they take `color` and the accent like every other glyph. **Rejected:** loading the `.svg` files with `Image` (no recolouring without a `MultiEffect`, which only rendering components may own), and hand-copying the paths into `Glyph` (the next icon drop would be done by hand again).
+- **Levels pick whole icons.** `speaker`, `wifi` and `battery` choose one drawn icon per step (`Icons.steps`); the old drawn arcs and the battery's level fill are gone. Thresholds: speaker 0.01 and 0.5 as before; wifi 0, 0.05, 0.4, 0.7 as before; battery full above 0.75, mid above 0.45, low above 0.2, empty above 0.1, otherwise critical, and charging whenever it charges.
+- **One stroke width.** Stroked icons draw at `Glyph.stroke` (1.8 of 24), not the files' 1.5 or 2, so the set matches the glyphs still drawn by hand. Filled icons (`bolt`, `brush`, `user`, `moon`) are filled and ignore `stroke`.
+- **Mapping:** `mic-unmuted` → `mic`, `mic-muted` → `mic-off`, `volume-off` → `muted`, `lightning` → `bolt`, `profile` → `user`, `customization` → `brush`, `hibernate` → `moon` (suspend). New names: `volume-up` / `volume-down` (the audio pill shows them for `Motion.reveal.nudge` after a scroll), `wifi-error` (Wi-Fi on but not connected; `wifi-off` when it is off).

@@ -34,7 +34,7 @@ The registry is load-bearing in three places:
 
 - `Overlays.kinds` is `Features.overlayKinds()`: the built overlay rows with their layer. A planned overlay has no kind, so `Overlays.open` ignores it and the taskbar is never gathered for a surface without a window.
 - `tools/check-rules.py` (`[features]`) reads the rows (one per line) against the tree: every `modules/` folder belongs to a row; a built row has its root, and by surface kind its window, `shell.qml` entry and IPC target; a folder with code but only planned rows fails.
-- `tst_features` checks the rows (every field, valid values, unique keys and roots, `needs` are capabilities, a taskbar-born surface names its origin) and measures the ready time of the shipped enter engines against `Motion.budget.ready` (`Burst.isOpened` inside `focus`, `Mutate.isInnerShown` inside `glance`).
+- `tst_features` checks the rows (every field, valid values, unique keys and roots, `needs` are capabilities, a taskbar-born surface names its origin) and measures the ready time of the shipped enter engines against `Motion.budget.ready` (`Burst.isOpened` inside `focus`, `Mutate.isInnerShown` and the alert's `Reshape.isArrived` inside `glance`).
 
 Things inside a surface are not rows; they are that surface's modules, listed in its catalogue (`utils/Lock.js` `modules`, `Settings.tabs`, `Activities.keys`).
 
@@ -199,6 +199,14 @@ Cheap and kept in modules: `clip` (a scissor rectangle; search body, list and ro
 
 Precedence: shown (`isShown`, opacity) gates every pass; quality decides which passes; motion only decides timing. Quality never changes durations and reduced motion never changes passes.
 
+## Alerts
+
+An alert is a face of the activity pill, not a window of its own (`alerts` row, `surface: "mutation"`, `origin: "activity"`, `impact: "glance"`). Data: `Attention.peek`. `TaskbarWindow` keeps the peek for its own screen while its taskbar is not away (`window.peek`) and maps it two ways: `Taskbar.isAlerting` / `alertSize` turn the activity pill's `face` to `alert`, so `Reshape` grows the same body to `Appearance.alerts` (`Motion.alerts`: grow 300 ms OutBack, `lag`, `arriveShare` 0.5, ready at about 195 ms, inside the glance budget); and `Alerts` (`modules/alerts/Alerts.qml`) gets the peek, the pill body rect (`Taskbar.alertRect`) and `isBodyShown` (`Taskbar.isAlertShown`, the pill's `Reshape.isArrived`) and draws the content over that body: the source badge (a ring and glyph in the source tint), the source label (caps, `+N` for a batched peek), the summary and the body typed in (`TypedText`, clipped by `Alerts.clip`), each a `Turn` staggered by `Motion.alerts.stagger`. The leave is the faces leaving over `faceLeave` while the pill shrinks back after `alerts.shrinkDelay` (`isAlertBody` keeps the alert shrink timing, and the expanded views' `expansion` at 0, until the body has arrived back).
+
+The source comes from the catalogue `utils/Alerts.js` (`sources`: key, label, glyph, tint, desktop ids): the notification's desktop entry, then its app name, each as given and without a `.desktop` suffix, first against the ids, then as words against the keys (`WhatsApp Web` is WhatsApp); anything else is `generic` with the app name as label, a bell and the accent. Adding a source is one row.
+
+Input: a `Gesture` over the body. The content follows the finger sideways (`slide`, fading out over the body width); a release past `Motion.alerts.swipe` or faster than `fling` throws it out and asks `dismissRequested` (the window calls `Attention.dismissPeek()`: the notification stays in `Notifications.list`, never lost); a shorter one settles back. A tap asks `openRequested(lead)`: `Notifications.open` invokes the `default` action, else runs the desktop entry, and the peek is dismissed. While the taskbar is hidden by a window (`isCovered`), only the activity pill is shown for the alert and the input zone widens to it; while an overlay holds the taskbar or the extension eats it, no alert is drawn.
+
 ## Activity and notifications
 
 `state/Activity.qml` is the shared state of the activity bar (roadmap 1), the sideways channel its pieces will read: `openScreen`, `pinnedKind`, `entries` merged from services (`notifications` from `Notifications`, `tray` from `Tray`; each `{ kind, count, unread, isUrgent, latest }`), and `current`: the pinned entry, else the first urgent, else the first unread, else the first. `open(screen)` marks notifications read. Media and calls will join `entries` as services for them land.
@@ -226,7 +234,7 @@ Entry points before the bar exists: the Hyprland shortcut `vados:activity`, IPC 
 
 ## Attention engine
 
-`state/Attention.qml` decides whether a notification may interrupt (`rules/interaction.md`). It listens to `Notifications.received`; `mayPeek` lets critical through always, holds low always, and holds normal ones under do-not-disturb (`attention.doNotDisturb`) or while the active window is fullscreen. Admitted notifications gather for `Motion.attention.batch` and then become one `peek` `{ notifications, isUrgent, screen }` on the focused screen, which expires after the longest own timeout (`expireTimeout`, seconds) or `Motion.attention.peek`; urgent peeks stay until dismissed, and a peek drops notifications as they are dismissed. The alert band will draw `peek`; held notifications are still counted by `Activity`.
+`state/Attention.qml` decides whether a notification may interrupt (`rules/interaction.md`). It listens to `Notifications.received`; `mayPeek` lets critical through always, holds low always, and holds normal ones under do-not-disturb (`attention.doNotDisturb`) or while the active window is fullscreen. Admitted notifications gather for `Motion.attention.batch` and then become one `peek` `{ notifications, isUrgent, screen }` on the focused screen, which expires after the longest own timeout (`expireTimeout`, seconds) or `Motion.attention.peek`; urgent peeks stay until dismissed, and a peek drops notifications as they are dismissed. The alerts draw `peek` out of the activity pill (§ Alerts); held notifications are still counted by `Activity`.
 
 ## Configuration
 

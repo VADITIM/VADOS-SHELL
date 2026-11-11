@@ -16,6 +16,7 @@ OverlayWindow {
         anchors.fill: parent
         isOpen: window.isOpen
         parts: window.parts
+        shouldStream: window.shouldStream
         isMirrored: Config.data.taskbar.side === "right"
         canHandOff: window.canHandOff
         isHandingOver: window.isHandingOver

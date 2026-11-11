@@ -10,6 +10,7 @@ Item {
     required property bool isMirrored
     property bool isShown: false
     property bool isPressed: false
+    readonly property bool isRecording: key === "recording"
     readonly property bool isCall: key === "call"
     readonly property bool isMedia: key === "media"
     readonly property bool isCounted: key === "notifications" || key === "tray"
@@ -33,7 +34,15 @@ Item {
         isSlung: true
         leaveWindow: 0
 
+        RecordDot {
+            visible: glance.isRecording
+            anchors.centerIn: parent
+            isPaused: Capture.isPaused
+            isPulsing: glance.isShown
+        }
+
         Glyph {
+            visible: !glance.isRecording
             width: Appearance.activity.glyph
             height: width
             name: Appearance.activity.glyphs[glance.key] ?? "music"
@@ -73,6 +82,21 @@ Item {
             transform: Upright {
                 isMirrored: glance.isMirrored
                 axis: Appearance.activity.glyph / 2
+            }
+        }
+
+        Text {
+            id: clockText
+            visible: glance.isRecording
+            anchors.centerIn: parent
+            text: Capture.clock
+            color: Capture.isPaused ? Appearance.color.textMuted : Appearance.color.text
+            font.family: Appearance.font.mono
+            font.pixelSize: Appearance.font.chip
+            font.bold: true
+            transform: Upright {
+                isMirrored: glance.isMirrored
+                axis: clockText.width / 2
             }
         }
 

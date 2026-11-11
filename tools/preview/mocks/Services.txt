@@ -136,16 +136,15 @@ QtObject {
     property real temperature: 28
     property real rainChance: 0
     property string kind: "partly"
-    readonly property int forecastDays: 6
+    readonly property int forecastDays: 3
     property var days: [
-        { kind: "clear", high: 20 }, { kind: "clear", high: 20 }, { kind: "partly", high: 21 },
-        { kind: "cloudy", high: 17 }, { kind: "rain", high: 15 }, { kind: "storm", high: 22 }
+        { kind: "clear", high: 20 }, { kind: "clear", high: 20 }, { kind: "partly", high: 21 }
     ]
 }
 Activities|pragma Singleton
 import QtQuick
 QtObject {
-    readonly property var keys: ["call", "media", "notifications", "tray"]
+    readonly property var keys: ["recording", "call", "media", "notifications", "tray"]
     readonly property int notificationCount: Notifications.list.length
     readonly property int unreadCount: Notifications.unreadCount
     readonly property var trayItems: Tray.items
@@ -166,9 +165,9 @@ QtObject {
     property bool isDeafened: false
     property int callSeconds: 754
     readonly property var liveKeys: keys.filter(key => isLive(key))
-    readonly property var order: liveKeys.concat(keys.filter(key => !isLive(key)))
+    readonly property var order: liveKeys.concat(keys.filter(key => !isLive(key) && key !== "recording"))
     readonly property bool isAnyLive: liveKeys.length > 0
-    function isLive(key) { return key === "call" ? isCalling : key === "media" ? hasMedia : key === "notifications" ? Notifications.hasUnread : false }
+    function isLive(key) { return key === "recording" ? Capture.isRecording : key === "call" ? isCalling : key === "media" ? hasMedia : key === "notifications" ? Notifications.hasUnread : false }
     function togglePlaying() { isPlaying = !isPlaying }
     function next() { track = (track + 1) % tracks.length; position = 0 }
     function previous() { track = (track + tracks.length - 1) % tracks.length; position = 0 }
@@ -306,4 +305,40 @@ QtObject {
     property bool isPicking: false
     property var asked: []
     function choose(title, kind, onChosen) { asked = asked.concat([kind]); onChosen([]); return true }
+}
+Capture|pragma Singleton
+import QtQuick
+import "../utils/Capture.js" as Shots
+QtObject {
+    property string defaultScreenshots: "/home/vadim/Pictures/Screenshots"
+    property string defaultRecordings: "/home/vadim/Videos/Recordings"
+    property string screenshotFolder: defaultScreenshots
+    property string recordingFolder: defaultRecordings
+    property string shootingScreen: ""
+    property bool isShooting: false
+    property int frameStamp: 0
+    property string lastScreenshot: ""
+    property var recorder: Shots.recorders[0]
+    readonly property bool canRecord: recorder !== null
+    readonly property bool canPause: recorder?.canPause ?? false
+    property bool isRecording: false
+    property string recordingScreen: ""
+    property string recordingFile: ""
+    property bool isPaused: false
+    property int seconds: 0
+    readonly property string clock: Shots.clockOf(seconds)
+    property var delivered: []
+    signal shot(string screenName)
+    function frameOf(screenName) { return "" }
+    function cutPath() { return "" }
+    function shoot(screenName) { shootingScreen = screenName; frameStamp++; shot(screenName) }
+    function deliver(file) { delivered = delivered.concat([file]) }
+    function toggleRecording(screenName) { if (isRecording) stop(); else record(screenName) }
+    function record(screenName) { if (isRecording || !recorder) return; recordingScreen = screenName; isPaused = false; seconds = 0; isRecording = true }
+    function togglePause() { if (isRecording && canPause) isPaused = !isPaused }
+    function stop() { isRecording = false; isPaused = false }
+    property Timer ticker: Timer {
+        interval: 1000; repeat: true; running: isRecording && !isPaused
+        onTriggered: seconds++
+    }
 }

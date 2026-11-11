@@ -144,9 +144,9 @@ Item {
         isArriving: taskPill.host.isArriving
         hasArrived: taskPill.host.hasArrivedAt(taskPill.y + taskPill.height / 2)
         enterDelay: taskPill.enterDelay
-        isHolding: taskPill.host.isGathering
+        isHolding: taskPill.host.isHoldingParts
         leaveDelay: Motion.pill.slingLead
-        leaveSpreadDuration: taskPill.host.isGathering ? Motion.pill.gatherRetract : Motion.pill.leaveSpread
+        leaveSpreadDuration: taskPill.host.isGathering || taskPill.host.isShrinking ? Motion.pill.gatherRetract : Motion.pill.leaveSpread
         onDeparted: taskPill.departed()
     }
 

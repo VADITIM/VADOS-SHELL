@@ -77,6 +77,13 @@ Singleton {
         file.writeAdapter()
     }
 
+    function setTaskbarGather(gather) {
+        if (!accept("taskbar.gather", gather))
+            return
+        adapter.taskbar.gather = gather
+        file.writeAdapter()
+    }
+
     function setAccent(color) {
         if (!accept("appearance.accent", color))
             return
@@ -99,10 +106,33 @@ Singleton {
         file.writeAdapter()
     }
 
+    function setScreenshotFolder(folder) {
+        if (!accept("capture.screenshots", folder))
+            return
+        adapter.capture.screenshots = folder
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setRecordingFolder(folder) {
+        if (!accept("capture.recordings", folder))
+            return
+        adapter.capture.recordings = folder
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
     function setReducedMotion(isReduced) {
         if (!accept("motion.reduced", isReduced))
             return
         adapter.motion.reduced = isReduced
+        file.writeAdapter()
+    }
+
+    function setBurstStyle(style) {
+        if (!accept("motion.burst", style))
+            return
+        adapter.motion.burst = style
         file.writeAdapter()
     }
 
@@ -145,6 +175,13 @@ Singleton {
         if (!accept("send.devices", entries))
             return
         adapter.send.devices = entries
+        file.writeAdapter()
+    }
+
+    function setTaskIcons(isShowing) {
+        if (!accept("dashboard.taskIcons", isShowing))
+            return
+        adapter.dashboard.taskIcons = isShowing
         file.writeAdapter()
     }
 
@@ -280,6 +317,7 @@ Singleton {
                 property string style: "floating"
                 property string side: "left"
                 property bool compact: false
+                property string gather: "merge"
             }
             property JsonObject appearance: JsonObject {
                 property string accent: "#ffffff"
@@ -311,6 +349,9 @@ Singleton {
             property JsonObject weather: JsonObject {
                 property string location: ""
             }
+            property JsonObject dashboard: JsonObject {
+                property bool taskIcons: false
+            }
             property JsonObject notifications: JsonObject {
                 property bool enabled: false
                 property int history: 200
@@ -324,8 +365,13 @@ Singleton {
                 property int size: 150
                 property bool images: true
             }
+            property JsonObject capture: JsonObject {
+                property string screenshots: ""
+                property string recordings: ""
+            }
             property JsonObject motion: JsonObject {
                 property bool reduced: false
+                property string burst: "static"
             }
             property JsonObject attention: JsonObject {
                 property bool doNotDisturb: false

@@ -8,7 +8,7 @@ import qs.config
 Singleton {
     id: activities
 
-    readonly property var keys: ["call", "media", "notifications", "tray"]
+    readonly property var keys: ["recording", "call", "media", "notifications", "tray"]
     readonly property var callApplications: ["discord", "vesktop", "webcord", "armcord", "webrtc voiceengine"]
 
     readonly property var players: Mpris.players.values
@@ -38,10 +38,12 @@ Singleton {
     readonly property var trayItems: Tray.items
 
     readonly property var liveKeys: keys.filter(key => isLive(key))
-    readonly property var order: liveKeys.concat(keys.filter(key => !isLive(key)))
+    readonly property var order: liveKeys.concat(keys.filter(key => !isLive(key) && key !== "recording"))
     readonly property bool isAnyLive: liveKeys.length > 0
 
     function isLive(key) {
+        if (key === "recording")
+            return Capture.isRecording
         if (key === "call")
             return isCalling
         if (key === "media")

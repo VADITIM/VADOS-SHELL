@@ -2,6 +2,7 @@ import QtQuick
 import QtTest
 import qs.config
 import qs.components
+import "../../shell/utils/Variation.js" as Variation
 
 Item {
     width: 1600
@@ -210,7 +211,31 @@ Item {
         function cleanup() {
             releasing.isShown = false
             tryCompare(releasing, "isActive", false, 3000)
+            releasing.shouldStream = true
             releaseLandings.clear()
+        }
+
+        function test_withoutStreamsTheCircleGrowsAloneAndGivesNothingBack() {
+            releasing.shouldStream = false
+            releasing.isShown = true
+            releasing.stopAll()
+            releasing.merge = Motion.burst.handShare + (1 - Motion.burst.handShare - Motion.burst.settleShare) / 2
+            compare(releasing.gulp, 0)
+            fuzzyCompare(releasing.arrived, 0.5, 0.01)
+            fuzzyCompare(releasing.form.x, releasing.seedX, 0.01)
+            verify(releasing.form.width > 0 && releasing.form.width < Appearance.burst.ball, "the circle grows at the seed on its own")
+            releasing.merge = 0
+            releasing.isShown = false
+            tryCompare(releasing, "isActive", false, 3000)
+            verify(Motion.burst.grow < Motion.burst.converge, "the burst starts sooner than after a merge")
+            releasing.isShown = true
+            tryCompare(releasing, "phase", "active", 3000)
+            releasing.isShown = false
+            tryCompare(releasing, "isLeaving", true, 1000)
+            verify(!releasing.isReleasing, "no part streams back to the taskbar")
+            verify(!releasing.shouldHandOff)
+            tryCompare(releaseLandings, "count", 1, 3000)
+            verify(!releasing.isHandedOff && !releasing.isReleasing)
         }
 
         function test_partsStreamBackToTheTaskbarBeforeItReturns() {
@@ -518,6 +543,7 @@ Item {
             burst.isShown = false
             tryCompare(burst, "isActive", false, 3000)
             Config.setReducedMotion(false)
+            Config.setBurstStyle("static")
             burst.lifecycle.watchdog.interval = Motion.lifecycle.stuck
             burst.seedY = 450
             burst.formHeight = 900
@@ -668,6 +694,42 @@ Item {
                 return burst.spread >= 1
             }, 3000)
             verify(worst > Appearance.burst.crest / 2, "the crest rose only " + worst + " px off a free edge")
+        }
+
+        function test_aStaticBurstIsTheSameEveryTime() {
+            burst.isShown = true
+            tryCompare(burst, "phase", "active", 3000)
+            compare(JSON.stringify(burst.variation), JSON.stringify(Variation.identity()))
+        }
+
+        function test_aProceduralBurstRollsItsOwnWaveEachTime() {
+            Config.setBurstStyle("procedural")
+            verify(burst.isProcedural, "the setting reaches the burst")
+            const rolls = []
+            for (let attempt = 0; attempt < 3; attempt++) {
+                burst.isShown = true
+                tryCompare(burst, "phase", "active", 3000)
+                rolls.push(JSON.stringify(burst.variation))
+                verify(burst.variation.blobs.length >= Motion.burst.blobsLeast && burst.variation.blobs.length <= Motion.burst.blobsMost)
+                burst.isShown = false
+                tryCompare(burst, "isActive", false, 3000)
+            }
+            verify(rolls[0] !== rolls[1] || rolls[1] !== rolls[2], "every burst is its own")
+        }
+
+        function test_blobsShootOutOfTheWallAndFallBack() {
+            Config.setBurstStyle("procedural")
+            burst.isShown = true
+            tryCompare(burst, "phase", "active", 3000)
+            burst.stopAll()
+            const blob = burst.variation.blobs[0]
+            burst.impact = blob.launch + blob.flight / 2
+            const flying = burst.blobForm(blob)
+            verify(flying.size > 0.5, "the blob is out mid flight")
+            verify(flying.x > burst.edgeXAt(burst.formTop + burst.form.height * blob.along) + blob.reach / 2, "it flew away from the wall")
+            burst.impact = 1
+            compare(burst.blobForm(blob).size, 0)
+            burst.lifecycle.send("settle")
         }
 
         function test_reducedMotionOpensAtOnce() {

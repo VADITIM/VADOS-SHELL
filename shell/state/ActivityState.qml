@@ -1,6 +1,7 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import qs.config
 import qs.services
 
 Singleton {
@@ -15,6 +16,60 @@ Singleton {
     readonly property bool isReading: Overlays.stack.indexOf("notifications") >= 0
     property string clipboardScreen: ""
     readonly property bool canClipboard: Clipboard.isEnabled
+    readonly property bool isRecording: Capture.isRecording
+    property var places: ({})
+
+    function place(name, where) {
+        const next = Object.assign({}, places)
+        next[name] = where
+        places = next
+    }
+
+    function placeOn(name) {
+        return places[name] ?? null
+    }
+
+    function copiedNotice(path) {
+        return {
+            id: "vados-screenshot",
+            isNotice: true,
+            appName: "Screenshot",
+            desktopEntry: "vados-screenshot",
+            summary: "COPIED",
+            body: path,
+            expireTimeout: Motion.capture.announce / 1000,
+            urgency: 1,
+            actions: []
+        }
+    }
+
+    onIsRecordingChanged: {
+        if (isRecording) {
+            lead = "recording"
+            if (mode === "hidden" || mode === "idle")
+                mode = "active"
+            Attention.announce(recordingNotice(), Capture.recordingScreen)
+            return
+        }
+        if (mode === "expanded" && lead === "recording")
+            fold()
+        if (lead === "recording")
+            lead = ""
+    }
+
+    function recordingNotice() {
+        return {
+            id: "vados-recorder",
+            isNotice: true,
+            appName: "Screen",
+            desktopEntry: "vados-recorder",
+            summary: "RECORDING NOW",
+            body: Capture.recordingFolder,
+            expireTimeout: Motion.capture.announce / 1000,
+            urgency: 1,
+            actions: []
+        }
+    }
 
     onIsAnyLiveChanged: {
         if (mode === "expanded")

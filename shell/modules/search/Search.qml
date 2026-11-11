@@ -13,6 +13,7 @@ FocusScope {
     property string profileName: ""
     property string profilePicture: ""
     property var parts: []
+    property bool shouldStream: true
     property bool isMirrored: false
     property bool canHandOff: false
     property bool isHandingOver: false
@@ -149,14 +150,14 @@ FocusScope {
         const shown = isMirrored ? favoriteView.contentWidth - start - cellWidth : start
         const lowest = shown + cellWidth - favoriteView.width
         const highest = shown - favoriteView.lead
-        favoriteView.contentX = Math.max(0, Math.max(lowest, Math.min(highest, favoriteView.contentX)))
+        favoriteDrift.glideTo(Math.max(0, Math.max(lowest, Math.min(highest, favoriteDrift.destination()))))
     }
 
     function keepRowShown(index) {
         const rowY = index * look.row
         const lowest = rowY + look.row - listView.height
         const highest = rowY - listLead
-        listView.contentY = Math.max(lowest, Math.min(highest, listView.contentY))
+        listDrift.glideTo(Math.max(lowest, Math.min(highest, listDrift.destination())))
     }
 
     function revealDelay(localX, row) {
@@ -243,6 +244,7 @@ FocusScope {
                 label: "search burst"
                 isShown: search.isOpen
                 parts: search.parts
+                shouldStream: search.shouldStream
                 rootX: search.rootX
                 seedX: search.rootX + Appearance.taskbar.thickness / 2
                 seedY: search.middleY
@@ -303,6 +305,10 @@ FocusScope {
                 model: search.listApps
                 currentIndex: search.zone === "list" ? search.cursor : -1
                 onCurrentIndexChanged: if (currentIndex >= 0) search.keepRowShown(currentIndex)
+
+                Drift {
+                    id: listDrift
+                }
 
                 delegate: ResultRow {
                     required property var modelData
@@ -483,6 +489,12 @@ FocusScope {
             contentX: search.isMirrored ? contentWidth - width : 0
             flickableDirection: Flickable.HorizontalFlick
             boundsBehavior: Flickable.DragOverBounds
+
+            Drift {
+                id: favoriteDrift
+                isHorizontal: true
+                isReversed: search.isMirrored
+            }
 
             GridView {
                 id: favoriteGrid

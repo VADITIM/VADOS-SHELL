@@ -11,6 +11,7 @@ Text {
     property int untypeInterval: Motion.type.untype
     property bool holdsWidth: false
     property int leaveBudget: 0
+    property int typeBudget: 0
     property real nextStep: 0
     readonly property real fullWidth: measure.implicitWidth
 
@@ -28,7 +29,7 @@ Text {
             return leaveBudget > 0 ? Math.min(untypeInterval, Motion.pace(leaveBudget) / Math.max(1, target.length)) : untypeInterval
         }
         shown = wanted.slice(0, shown.length + 1)
-        return characterInterval
+        return typeBudget > 0 ? Math.max(1, Math.min(characterInterval, Motion.pace(typeBudget) / Math.max(1, wanted.length))) : characterInterval
     }
 
     function step() {

@@ -44,6 +44,7 @@ QtObject {
     }
 
     function iconFor(appId) { return "" }
+    function findIcon(appId) { return "" }
 
     function activate(group) {
         const current = group.windows.findIndex(window => window.activated)

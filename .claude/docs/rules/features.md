@@ -2,7 +2,7 @@
 
 How a surface joins the shell (brief `Refactor.md`, 2026-11-10). Enforced by `tools/check-rules.py` (`[features]`) and `tst_features` where marked ✓; the rest is checked in review. The steps to add one are in `architecture.md` § Features; what is planned, and each planned feature's contract, in `roadmap.md`.
 
-- **Every surface is a row in `utils/Features.js`** ✓. One row per line with `key`, `folder` (under `modules/`), `root` (the module's root type), `surface`, `origin`, `impact`, `needs`, `isBuilt`, and `layer` on an overlay. Every folder in `modules/` belongs to a row and every row names an existing folder. A planned surface is a row with `isBuilt: false` and an empty folder; nothing loads it.
+- **Every surface is a row in `utils/Features.js`** ✓. One row per line with `key`, `folder` (under `modules/`), `root` (the module's root type), `surface`, `origin`, `impact`, `needs`, `isBuilt`, and `layer` and `keepsTaskbar` on an overlay. Every folder in `modules/` belongs to a row and every row names an existing folder. A planned surface is a row with `isBuilt: false` and an empty folder; nothing loads it.
 - **A row is built only when its surface is wired** ✓. `isBuilt: true` needs the root `modules/<folder>/<Root>.qml`. An overlay also needs `windows/<Root>Window.qml` with `overlayKey: "<key>"`, its `OverlaySlot` with the same key per screen in `shell.qml` (the window exists only while wanted) and an IPC target `<key>` in `Shortcuts.qml`; the lock needs `windows/LockWindow.qml` and `services/Lock.qml`; the desktop layer needs `windows/WidgetWindow.qml`. A folder that holds code while all its rows are planned fails.
 - **Overlays come from the registry** ✓. `Overlays.kinds` is `Features.overlayKinds()`, the built overlay rows, never a second list. A planned overlay cannot open and never takes the taskbar.
 - **The surface kind decides the host, the keyboard and the taskbar.** A feature picks one kind and takes everything in its row; a need the table does not cover is an engine change with a line in `decisions.md`, never a local exception.
@@ -11,7 +11,7 @@ How a surface joins the shell (brief `Refactor.md`, 2026-11-10). Enforced by `to
 |---|---|---|---|---|
 | `bar` | `TaskbarWindow` | none | is part of it | `Mutate` per pill |
 | `mutation` | `TaskbarWindow`, drawn in the taskbar's liquid | none: pointer and wheel | stays; the surface grows out of one pill and back into it | `Mutate` and `Reshape` on that pill |
-| `overlay` | an `OverlayWindow` | owns it while topmost (`Overlays.top`) | absorbed, then given back out of the surface | `Burst`, or another `Lifecycle` host |
+| `overlay` | an `OverlayWindow` | owns it while topmost (`Overlays.top`) | absorbed, then given back out of the surface; untouched when the row `keepsTaskbar` (the screenshot, whose frozen frame already shows it) | `Burst`, or another `Lifecycle` host |
 | `lock` | `LockWindow` (`WlSessionLock`) | the lock's own | absorbed at the power pill | its own `Lifecycle`; unlocking never waits on it (`rules/security.md`) |
 | `desktop` | `WidgetWindow`, below app windows, one per monitor | none | untouched; never hidden with it | `Turn` or `Mutate` per widget |
 | `debug` | `FrameWindow` | while held | untouched | none |

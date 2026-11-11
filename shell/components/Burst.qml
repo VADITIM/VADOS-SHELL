@@ -3,6 +3,7 @@ import QtQuick.Shapes
 import qs.config
 import "../utils/Liquid.js" as Liquid
 import "../utils/Geometry.js" as Geometry
+import "../utils/Variation.js" as Variation
 
 Item {
     id: burst
@@ -24,6 +25,7 @@ Item {
     property bool hasSideStep: false
     property bool isHandingOver: false
     property bool hasCircle: false
+    property bool shouldStream: true
     property var wall: []
     property real splitAt: 0
     property real splitGap: 0
@@ -47,6 +49,8 @@ Item {
     property bool hasLanded: false
     property bool isSwapped: false
     property bool startsFromCircle: false
+    property bool isProcedural: Motion.burst.isProcedural
+    property var variation: Variation.identity()
 
     readonly property var look: Appearance.burst
     readonly property var pace: Motion.burst
@@ -79,12 +83,12 @@ Item {
     readonly property real farthest: flights.reduce((longest, flight) => Math.max(longest, flight.distance), 0)
     readonly property real longestExtension: flights.reduce((longest, flight) => Math.max(longest, flight.extension), 0)
     readonly property real totalArea: flights.reduce((sum, flight) => sum + flight.area, 0)
-    readonly property real arrived: totalArea > 0
+    readonly property real arrived: shouldStream && totalArea > 0
         ? flights.reduce((sum, flight) => sum + flight.area * absorbedShare(flight), 0) / totalArea
         : Geometry.smooth(gatherShare)
     readonly property real gatherShare: Geometry.clampUnit((merge - pace.handShare) / (1 - pace.handShare - pace.settleShare))
     readonly property real calm: Geometry.clampUnit((merge - 1 + pace.settleShare) / pace.settleShare)
-    readonly property real gulp: Math.max(-pace.gulpLimit, Math.min(pace.gulpLimit, flights.reduce((sum, flight) => sum + gulpOf(flight), 0) * (1 - calm * calm)))
+    readonly property real gulp: !shouldStream ? 0 : Math.max(-pace.gulpLimit, Math.min(pace.gulpLimit, flights.reduce((sum, flight) => sum + gulpOf(flight), 0) * (1 - calm * calm)))
     readonly property real recoil: isReleasing ? pace.recoil * Liquid.ring(Motion.liquid.gulp, release * pace.release / 1000) : 0
 
     readonly property var closed: ({ x: seedX, y: seedY, width: 0, height: 0, left: 0, right: 0 })
@@ -174,7 +178,7 @@ Item {
             return { x: seedX, y: seedY, width: size * (1 + squash), height: size * (1 - squash), left: narrow, right: narrow }
         }
         const grip = Geometry.smooth(Geometry.clampUnit(opening / pace.rootShare))
-        const wobble = look.impactPush * impactWobble()
+        const wobble = look.impactPush * variation.push * impactWobble()
         const left = seedX - startReach + (rootX - seedX + startReach) * grip
         const right = seedX + front + wobble
         const drag = 1 - pace.drag * Math.max(0, widthShare - 1)
@@ -390,9 +394,9 @@ Item {
             edgeFade: look.edgeFade,
             curveStep: look.curveStep,
             troughStep: look.troughStep,
-            crestLength: look.crestLength,
-            troughLength: look.troughLength,
-            trough: look.trough,
+            crestLength: look.crestLength * variation.crestLength,
+            troughLength: look.troughLength * variation.troughLength,
+            trough: look.trough * variation.trough,
             crestInset: look.crestInset
         }
     }
@@ -505,7 +509,7 @@ Item {
         const closeness = 1 - Geometry.clampUnit(splitShare)
         const pinch = Geometry.smooth(Geometry.clampUnit(closeness / Motion.liquid.neck.merge))
         const neckWidth = Geometry.mix(look.splitNeck, 1, closeness) * length / 2
-        const height = crestHeight()
+        const height = crestHeight() * sideScale(-1)
         const head = cutHead(right, context)
         const count = Geometry.samplesFor(length, look.troughStep)
         const upper = []
@@ -594,7 +598,7 @@ Item {
         if (!track)
             return []
         const context = traceContext()
-        const scale = crestHeight() / look.crest
+        const scale = crestHeight() * sideScale(side) / look.crest
         const head = waveHead(track.total)
         const from = head - context.crestLength / 2 - context.troughLength
         const to = head + context.crestLength / 2 + context.troughLength
@@ -628,8 +632,12 @@ Item {
         return points
     }
 
+    function sideScale(side) {
+        return side < 0 ? variation.crestTop : variation.crestBottom
+    }
+
     function crestPath(side) {
-        const height = crestHeight()
+        const height = crestHeight() * sideScale(side)
         const track = trackOf(side)
         if (height < 0.5 || !track)
             return []
@@ -667,16 +675,49 @@ Item {
             return 0
         const swell = impact < pace.moundPeak ? Math.sin(Math.PI / 2 * impact / pace.moundPeak) : 1
         const sink = Geometry.smooth(Geometry.clampUnit((impact - pace.moundPeak) / pace.moundSink))
-        return look.crest * Geometry.clampUnit(since / pace.crestRise) * (1 + pace.moundRise * swell) * (1 - sink)
+        return look.crest * variation.crest * Geometry.clampUnit(since / pace.crestRise) * (1 + pace.moundRise * swell) * (1 - sink)
     }
 
     function jetForm() {
         const flight = Geometry.clampUnit(impact / pace.jetShare)
         const isFlying = impact > 0 && flight < 1
         return {
-            x: farFront + look.jetReach * 4 * flight * (1 - flight),
+            x: farFront + look.jetReach * variation.jetReach * 4 * flight * (1 - flight),
             y: seedY,
-            size: isFlying ? look.jet * (1 - flight * flight) : 0
+            size: isFlying ? look.jet * variation.jet * (1 - flight * flight) : 0
+        }
+    }
+
+    function edgeXAt(y) {
+        if (wallOutline.length > 0)
+            return wallXAt(y)
+        const half = form.height / 2
+        const radius = Math.min(form.right, half)
+        const away = Math.abs(y - form.y) - (half - radius)
+        return away <= 0 ? formRight : formRight - radius + Math.sqrt(Math.max(0, radius * radius - away * away))
+    }
+
+    function blobForm(blob) {
+        const flight = Variation.blobAt(blob, impact)
+        if (flight.size <= 0)
+            return { x: 0, y: 0, size: 0 }
+        const y = formTop + form.height * blob.along
+        return { x: edgeXAt(y) + flight.out, y: y + flight.rise, size: flight.size }
+    }
+
+    function rangeOf() {
+        return {
+            spread: pace.variance,
+            sideSpread: pace.sideVariance,
+            blobsLeast: pace.blobsLeast,
+            blobsMost: pace.blobsMost,
+            launch: pace.blobLaunch,
+            flight: pace.blobFlight,
+            band: look.blobBand,
+            reach: look.blobReach,
+            size: look.blob,
+            sizeSpread: look.blobVariance,
+            lift: look.blobLift
         }
     }
 
@@ -692,7 +733,7 @@ Item {
             const height = look.stepSideHeight * grow
             return {
                 x: formRight - look.stepSideCorner,
-                y: seedY + look.stepSideOffset * grow - height / 2,
+                y: seedY - height / 2,
                 width: rise + look.stepSideCorner,
                 height: height,
                 rise: rise,
@@ -710,7 +751,7 @@ Item {
     function cornerSplashForm(index) {
         const side = index === 0 ? -1 : 1
         const since = sinceCross(1)
-        const arc = since < 0 ? 0 : Math.sin(Math.PI * Geometry.clampUnit(since / pace.splashSpan))
+        const arc = since < 0 ? 0 : variation.splash * Math.sin(Math.PI * Geometry.clampUnit(since / pace.splashSpan))
         if (hasWall && wallOutline.length > 0) {
             const corner = index === 0 ? wallOutline[0] : wallOutline[wallOutline.length - 1]
             const reach = look.cornerReach * arc * Math.SQRT1_2
@@ -731,6 +772,7 @@ Item {
     function prepare() {
         stopAll()
         startsFromCircle = hasCircle
+        variation = isProcedural ? Variation.roll(Math.random, rangeOf()) : Variation.identity()
         merge = startsFromCircle ? 1 : 0
         spread = 0
         impact = 0
@@ -783,7 +825,7 @@ Item {
         exit = 0
         release = 0
         isSwapped = isHandingOver
-        shouldHandOff = canHandOff
+        shouldHandOff = canHandOff && shouldStream
         isReleasing = shouldHandOff && flights.length > 0 && !isSwapped
         hasLanded = false
         if (isReleasing)
@@ -857,7 +899,7 @@ Item {
         LiquidShape {
             required property var modelData
             readonly property var stream: burst.streamForm(modelData)
-            visible: burst.isCarrying && burst.isShown && !burst.isLeaving && burst.spread <= 0 && stream.height > 0.5
+            visible: burst.shouldStream && burst.isCarrying && burst.isShown && !burst.isLeaving && burst.spread <= 0 && stream.height > 0.5
             width: stream.width
             height: stream.height
             x: stream.x - width / 2
@@ -965,6 +1007,20 @@ Item {
         }
     }
 
+    Repeater {
+        model: burst.variation.blobs
+
+        LiquidShape {
+            required property var modelData
+            readonly property var blob: burst.blobForm(modelData)
+            visible: burst.isSplashing && blob.size > 0.5
+            width: blob.size
+            height: blob.size
+            x: blob.x - width / 2
+            y: blob.y - height / 2
+        }
+    }
+
     SequentialAnimation {
         paused: Motion.isHeld && running
         id: enter
@@ -973,7 +1029,7 @@ Item {
             target: burst
             property: "merge"
             to: 1
-            duration: Motion.pace(burst.startsFromCircle ? 0 : Motion.burst.converge)
+            duration: Motion.pace(burst.startsFromCircle ? 0 : burst.shouldStream ? Motion.burst.converge : Motion.burst.grow)
         }
         ScriptAction { script: burst.lifecycle.send("prepared") }
         ParallelAnimation {

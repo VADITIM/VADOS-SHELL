@@ -15,7 +15,7 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 | Feature | Row (`key`) | Surface | Born from | Impact | State |
 |---|---|---|---|---|---|
 | Taskbar | `taskbar` | bar | the screen edge | ambient | built |
-| Activity pill | `activity` | mutation | the activity pill | glance | built: music, Discord calls, the bell (opens the notifications menu), tray |
+| Activity pill | `activity` | mutation | the activity pill | glance | built: music, Discord calls, the bell (opens the notifications menu), tray, screen recording (2026-11-11) |
 | Extension (Wi-Fi) | `extension` | mutation | an idle pill | focus | built |
 | Search | `search` | overlay | the taskbar column | focus | built; phase 2 finishes it |
 | Dashboard | `dashboard` | overlay | the taskbar column | focus | built |
@@ -23,6 +23,7 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 | Frame debugger | `framedebug` | debug | none | ambient | built |
 | Alerts | `alerts` | mutation | the activity pill | glance | built: the alert face, the bell and the tray in the pill (2026-11-10); hardware checks left |
 | Notifications menu | `notifications` | overlay | the taskbar column | focus | built (2026-11-10): history and send tray, `SUPER + N`; hardware checks left |
+| Screenshot | `screenshot` | overlay (keeps the taskbar) | the activity pill | focus | built (2026-11-11): frozen frame, select, move and resize, the toolbar as a copy of the activity pill (select, colour wheel, paint, erase, editable shapes), ink on the whole screen, Ctrl+C with COPIED, Esc; the wheel and handles still to check on a real screen |
 | Clipboard history | `clipboard` | mutation | the activity pill | focus | built (2026-11-11): six rows, pins, kinds, secrets, the bump, `SUPER + V`; checks on a real session left |
 | Lock screen | `lock` | lock | the power pill | takeover | planned (contract 6); its layout editor is built |
 | Widgets | `widgets` | desktop | none | ambient | planned (contract 7) |
@@ -178,7 +179,6 @@ Installation and upgrade, configuration validation and migration (shipped), logg
 - **Search**: calculator and file results, actions ("shutdown", "settings"), drag a result tile onto the taskbar to pin it.
 - **Unified icon set** stored in V/AS, replacing the theme lookup.
 - **Per-compositor blur** for driftwm through layer rules once its layer-rule syntax is confirmed.
-- **Screenshot interface** in the style of Lightshot: instant region select, fast and smooth.
 - **Text action pill** (proposed in `Additional.md`, kept for later, § Decided 9): a small pill with actions for selected text (translate, explain through V/AI, search the clipboard history). Wayland does not show the shell another app's selection, only the primary selection where the compositor offers data control, so this is feasible as actions on the primary selection and on clipboard entries, and belongs after contracts 3 and 8.
 
 ## Decided

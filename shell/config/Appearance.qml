@@ -130,7 +130,7 @@ Singleton {
         readonly property int carry: 26
         readonly property int gulp: 9
         readonly property real gulpStretch: 0.5
-        readonly property var glyphs: ({ call: "headset", media: "music", notifications: "bell", tray: "dots" })
+        readonly property var glyphs: ({ recording: "record", call: "headset", media: "music", notifications: "bell", tray: "dots" })
         readonly property QtObject expanded: QtObject {
             readonly property real factor: 1.3
             readonly property int detailGap: Math.round(14 * factor)
@@ -197,6 +197,52 @@ Singleton {
         readonly property int bumpGlyph: 22
     }
 
+    readonly property QtObject capture: QtObject {
+        readonly property color tint: "#ff4d4d"
+        readonly property real dim: 0.5
+        readonly property real outline: 1.5
+        readonly property int smallest: 6
+        readonly property int nudge: 1
+        readonly property int nudgeFar: 10
+        readonly property int sizeHeight: 22
+        readonly property int sizeGap: 8
+        readonly property int sizePadding: 8
+        readonly property int toolbarThickness: activity.width
+        readonly property int tool: 36
+        readonly property int toolGlyph: 20
+        readonly property int toolGap: 2
+        readonly property int toolPadding: 4
+        readonly property int swatch: 30
+        readonly property int swatchGlyph: 18
+        readonly property int swatchGap: 8
+        readonly property int menuGap: 8
+        readonly property int stroke: 4
+        readonly property int eraser: 10
+        readonly property int dot: 10
+        readonly property color ink: "#ff4d4d"
+        readonly property int handle: 10
+        readonly property int grab: 14
+        readonly property int wheel: 150
+        readonly property real wheelTurn: -90
+        readonly property int knob: 16
+        readonly property int slider: 12
+        readonly property int gap: 10
+        readonly property int wheelPadding: 14
+        readonly property int wheelRadius: 28
+        readonly property int textSize: 24
+        readonly property int textPadding: 6
+        readonly property real textLift: 0.75
+        readonly property QtObject recording: QtObject {
+            readonly property int width: Math.round(232 * activity.expanded.factor)
+            readonly property int height: Math.round(60 * activity.expanded.factor)
+            readonly property int padding: Math.round(10 * activity.expanded.factor)
+            readonly property int head: Math.round(40 * activity.expanded.factor)
+            readonly property int dot: Math.round(14 * activity.expanded.factor)
+            readonly property int control: Math.round(34 * activity.expanded.factor)
+            readonly property int controlGap: Math.round(6 * activity.expanded.factor)
+        }
+    }
+
     readonly property QtObject alerts: QtObject {
         readonly property int width: 288
         readonly property int height: 80
@@ -209,6 +255,16 @@ Singleton {
         readonly property int count: 18
         readonly property int titleCharacters: 40
         readonly property int bodyCharacters: 72
+        readonly property int expandedWidth: 400
+        readonly property int radius: 40
+        readonly property int titleLines: 3
+        readonly property int bodyLines: 10
+        readonly property int imageGap: 12
+        readonly property int sectionGap: 10
+        readonly property int openLabel: 12
+        readonly property int openTitle: 16
+        readonly property int imageHeight: 200
+        readonly property int imageRadius: 12
     }
 
     readonly property QtObject extension: QtObject {
@@ -246,6 +302,7 @@ Singleton {
         readonly property int field: 40
         readonly property int fieldPadding: 16
         readonly property int fieldWidth: 220
+        readonly property int pathWidth: 360
         readonly property int hexText: 14
         readonly property int option: 36
         readonly property int optionGap: 6
@@ -262,6 +319,12 @@ Singleton {
             readonly property real crest: 0.2
             readonly property real swell: 1.6
             readonly property int outline: 2
+        }
+        readonly property QtObject ascii: QtObject {
+            readonly property int size: 16
+            readonly property int gap: 96
+            readonly property real angle: -25
+            readonly property real shade: 0.08
         }
         readonly property QtObject home: QtObject {
             readonly property int bannerSize: 21
@@ -338,10 +401,14 @@ Singleton {
         readonly property int stepCorner: 64
         readonly property int stepSide: 56
         readonly property int stepSideHeight: 244
-        readonly property int stepSideOffset: 22
         readonly property int stepSideCorner: 36
         readonly property int cornerSplash: 30
         readonly property int cornerReach: 46
+        readonly property int blob: 16
+        readonly property real blobVariance: 0.45
+        readonly property int blobReach: 72
+        readonly property int blobLift: 40
+        readonly property real blobBand: 0.18
         readonly property int trough: 30
         readonly property int troughLength: 200
         readonly property int troughStep: 8
@@ -378,6 +445,12 @@ Singleton {
         readonly property var temperatureBands: [60, 70, 85]
         readonly property var usageBands: [0.75, 0.85, 0.95]
         readonly property int temperatureScale: 100
+        readonly property QtObject font: QtObject {
+            readonly property int label: 14
+            readonly property int reading: 22
+            readonly property int degrees: 56
+            readonly property int day: 17
+        }
         readonly property QtObject gauge: QtObject {
             readonly property int blockWidth: 246
             readonly property int blockHeight: 224
@@ -392,21 +465,35 @@ Singleton {
             readonly property int knob: 9
             readonly property real knobStroke: 4
             readonly property int chip: 128
-            readonly property int loadText: 20
+            readonly property real chipStroke: 4
+            readonly property int chipText: 22
+            readonly property int chipTextShift: 1
+            readonly property int usageGap: 14
+            readonly property real usageStroke: 3
+            readonly property real usageTrack: 0.3
+            readonly property int nameLift: 26
+            readonly property int name: 16
+            readonly property int nameSweep: 76
+            readonly property real nameTilt: 22
+            readonly property point graphicsReadout: Qt.point(0, 222)
+            readonly property point processorReadout: Qt.point(160, 222)
+            readonly property point memoryReadout: Qt.point(264, 69)
+            readonly property int readoutGap: 0
+            readonly property int readout: 32
+            readonly property int caption: 18
+            readonly property int spin: 360
             readonly property int bar: 8
             readonly property int barGap: 26
-            readonly property int arcGap: 14
-            readonly property int textInset: 16
-            readonly property int textSweep: 150
+            readonly property int arcGap: 26
             readonly property int arcStart: 180
-            readonly property int arcSweep: 90
+            readonly property int arcSweep: 66
             readonly property int labelGap: 12
-            readonly property int fraction: 10
+            readonly property int fraction: 16
             readonly property int fractionGap: 2
         }
         readonly property QtObject drive: QtObject {
             readonly property int width: 360
-            readonly property int glyph: 26
+            readonly property int glyph: 30
             readonly property int glyphGap: 14
             readonly property int rowGap: 12
             readonly property int barHeight: 8
@@ -418,7 +505,8 @@ Singleton {
             readonly property int gap: 12
             readonly property int dividerGap: 24
             readonly property int inset: 14
-            readonly property int header: 24
+            readonly property int header: 32
+            readonly property int pingCeiling: 999
             readonly property int graphGap: 8
             readonly property int valueGap: 6
             readonly property int columnGap: 28
@@ -441,44 +529,61 @@ Singleton {
             readonly property var bands: [0.1, 0.2, 0.4, 0.6]
         }
         readonly property QtObject task: QtObject {
-            readonly property int width: 480
-            readonly property int minWidth: 400
-            readonly property int height: 860
-            readonly property int edgeGap: 40
-            readonly property int bodyGap: 120
-            readonly property int corner: 56
-            readonly property int fillet: 36
-            readonly property int neck: 60
-            readonly property int neckTop: 120
-            readonly property int overlap: 24
-            readonly property int padding: 22
-            readonly property int tab: 34
-            readonly property int tabPadding: 16
-            readonly property int tabGap: 6
-            readonly property int headerGap: 16
-            readonly property int header: 46
-            readonly property int cell: 72
-            readonly property int cellPadding: 8
-            readonly property int row: 30
-            readonly property int fade: 24
-            readonly property int sortMark: 5
+            readonly property int width: 700
+            readonly property int minWidth: 460
+            readonly property int height: 900
+            readonly property int edgeGap: 36
+            readonly property int bodyGap: 140
+            readonly property int corner: 64
+            readonly property int fillet: 40
+            readonly property int shot: 190
+            readonly property int shotFrom: 96
+            readonly property int shotInset: 44
+            readonly property real shotStretch: 0.55
+            readonly property int shotSink: 46
+            readonly property real shotSquash: 0.35
+            readonly property int wave: 40
+            readonly property real waveRun: 0.3
+            readonly property int crests: 4
+            readonly property int padding: 26
+            readonly property int tab: 58
+            readonly property int tabGlyph: 26
+            readonly property int tabGap: 14
+            readonly property int tabOut: 16
+            readonly property int header: 66
+            readonly property int cell: 106
+            readonly property int cellPadding: 10
+            readonly property int row: 38
+            readonly property int iconRow: 50
+            readonly property int icon: 30
+            readonly property int iconGap: 12
+            readonly property int toggleGap: 8
+            readonly property int toggleGlyph: 18
+            readonly property int fade: 28
+            readonly property int sortMark: 6
             readonly property real heat: 0.3
             readonly property real selection: 0.18
-            readonly property int menuWidth: 168
-            readonly property int menuItem: 32
-            readonly property int menuPadding: 6
-            readonly property int menuCorner: 18
+            readonly property int menuWidth: 210
+            readonly property int menuItem: 40
+            readonly property int menuPadding: 7
+            readonly property int menuCorner: 22
+            readonly property QtObject font: QtObject {
+                readonly property int name: 16
+                readonly property int cell: 14
+                readonly property int count: 13
+                readonly property int label: 14
+                readonly property int summary: 19
+                readonly property int menu: 13
+            }
         }
         readonly property QtObject weather: QtObject {
             readonly property int icon: 112
             readonly property int iconGap: 18
-            readonly property int rain: 14
+            readonly property int rain: 18
             readonly property int daysY: 150
-            readonly property int dayTile: 44
-            readonly property int dayGlyph: 26
-            readonly property int dayGap: 10
-            readonly property int vacantY: 250
-            readonly property int vacantHeight: 254
+            readonly property int dayTile: 64
+            readonly property int dayGlyph: 36
+            readonly property int dayGap: 16
         }
     }
 

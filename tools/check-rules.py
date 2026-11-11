@@ -20,6 +20,7 @@ ENGINE_TESTS = {
     "shell/utils/Phases.js": "tst_lifecycle.qml",
     "shell/components/Lifecycle.qml": "tst_lifecycle.qml",
     "shell/utils/Geometry.js": "tst_geometry.qml",
+    "shell/utils/Variation.js": "tst_variation.qml",
     "shell/utils/Platform.js": "tst_platform.qml",
     "shell/utils/Schema.js": "tst_schema.qml",
     "shell/components/LiquidLayer.qml": "tst_rendering.qml",
@@ -38,6 +39,10 @@ ENGINE_TESTS = {
     "shell/utils/Processes.js": "tst_processes.qml",
     "shell/utils/Clipboard.js": "tst_clipboard.qml",
     "shell/components/Gulp.qml": "tst_gulp.qml",
+    "shell/components/Drift.qml": "tst_drift.qml",
+    "shell/components/Roll.qml": "tst_roll.qml",
+    "shell/utils/Capture.js": "tst_capture.qml",
+    "shell/utils/Ink.js": "tst_capture.qml",
 }
 
 FEATURE_REGISTRY = "shell/utils/Features.js"
@@ -62,7 +67,7 @@ VISUAL_TYPES = r"Item|Rectangle|Text|TextInput|TextEdit|Image|IconImage|Shape|Sh
 
 COMPONENT_TOKENS = {
     "Appearance": {"unit", "radius", "color", "font", "liquid", "rising", "burst"},
-    "Motion": {"isReduced", "pace", "isHeld", "holdAgain", "stateDuration", "hoverIn", "hoverOut", "press", "pill", "type", "sweep", "gesture", "lifecycle", "burst", "rising", "liquid"},
+    "Motion": {"isReduced", "pace", "isHeld", "holdAgain", "stateDuration", "hoverIn", "hoverOut", "press", "pill", "type", "roll", "sweep", "gesture", "drift", "lifecycle", "burst", "rising", "liquid"},
 }
 
 COMPOSITOR_SUPPORT_BACKENDS = ["driftwm", "hyprland", "generic"]

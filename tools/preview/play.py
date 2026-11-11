@@ -17,6 +17,7 @@ QtObject {
             property string style: "floating"
             property string side: "left"
             property bool compact: false
+            property string gather: "merge"
         }
         property QtObject appearance: QtObject { property string accent: "#ffffff" }
         property QtObject desktop: QtObject { property string mode: "canvas" }
@@ -25,8 +26,9 @@ QtObject {
         property QtObject notifications: QtObject { property bool enabled: false; property int history: 200 }
         property QtObject send: QtObject { property string app: "blip"; property var devices: [] }
         property QtObject clipboard: QtObject { property bool enabled: true; property int size: 150; property bool images: true }
+        property QtObject capture: QtObject { property string screenshots: ""; property string recordings: "" }
         property QtObject attention: QtObject { property bool doNotDisturb: false }
-        property QtObject motion: QtObject { property bool reduced: false }
+        property QtObject motion: QtObject { property bool reduced: false; property string burst: "static" }
         property QtObject rendering: QtObject { property string quality: "full" }
         property QtObject profile: QtObject {
             property string name: ""
@@ -48,15 +50,19 @@ QtObject {
     function setTaskbarStyle(style) { data.taskbar.style = style }
     function setTaskbarSide(side) { data.taskbar.side = side }
     function setTaskbarCompact(isCompact) { data.taskbar.compact = isCompact }
+    function setTaskbarGather(gather) { data.taskbar.gather = gather }
     function setAccent(color) { data.appearance.accent = color }
     function setWindowMode(mode) { data.desktop.mode = mode }
     function setWeatherLocation(location) { data.weather.location = location }
+    function setScreenshotFolder(folder) { data.capture.screenshots = folder }
+    function setRecordingFolder(folder) { data.capture.recordings = folder }
     function setNotificationsEnabled(isEnabled) { data.notifications.enabled = isEnabled }
     function setNotificationHistory(count) { data.notifications.history = count }
     function setSendApp(key) { data.send.app = key }
     function setSendDevices(entries) { data.send.devices = entries }
     function setDoNotDisturb(isQuiet) { data.attention.doNotDisturb = isQuiet }
     function setReducedMotion(isReduced) { data.motion.reduced = isReduced }
+    function setBurstStyle(style) { data.motion.burst = style }
     function setRenderQuality(quality) { data.rendering.quality = quality }
     function setProfileName(value) { data.profile.name = value }
     function setProfileSecondName(value) { data.profile.secondName = value }
@@ -128,7 +134,7 @@ def build():
     write_module("qs.config", tokens + [("Config.qml", CONFIG_MOCK)])
     write_module("qs.components", qml_files(os.path.join(SHELL, "components")))
     write_module("qs.state", qml_files(os.path.join(SHELL, "state")))
-    for module in ("taskbar", "alerts", "clipboard", "search", "settings", "dashboard", "notifications", "framedebug"):
+    for module in ("taskbar", "alerts", "clipboard", "search", "settings", "dashboard", "notifications", "framedebug", "screenshot"):
         write_module("qs.modules." + module, qml_files(os.path.join(SHELL, "modules", module)))
     write_module("qs.services", mock_services())
     write_module("qs.windows", [(os.path.join(SHELL, "windows", "FrameTap.qml"), None)])
@@ -199,7 +205,7 @@ def main():
     build()
     os.environ["QML_IMPORT_PATH"] = BUILD
     os.environ["QSG_RENDER_LOOP"] = "basic"
-    print("Running. Ctrl+P settings, G or Ctrl+G search, D or Ctrl+D dashboard, Ctrl+Left/Right activity pill state, Ctrl+Up activity lead, C call, M media, Esc closes, 0 or Num 0 holds every animation (Num 0 works everywhere, also in the search field), Up/Right steps a frame, Down/Left goes back, + or Num + copies a screenshot to the clipboard. Close the window to quit.")
+    print("Running. Ctrl+P settings, G or Ctrl+G search, D or Ctrl+D dashboard, Ctrl+Left/Right activity pill state, Ctrl+Up activity lead, C call, M media, P or Print screenshot, R or Shift+Print recording, Esc closes, 0 or Num 0 holds every animation (Num 0 works everywhere, also in the search field), Up/Right steps a frame, Down/Left goes back, + or Num + copies a screenshot to the clipboard. Close the window to quit.")
     return run_window()
 
 

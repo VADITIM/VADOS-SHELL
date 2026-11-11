@@ -20,11 +20,18 @@ Singleton {
         return order.map(appId => byApp[appId])
     }
 
-    function iconFor(appId) {
-        const entry = typeof DesktopEntries.heuristicLookup === "function"
+    function entryFor(appId) {
+        return typeof DesktopEntries.heuristicLookup === "function"
             ? DesktopEntries.heuristicLookup(appId)
             : DesktopEntries.byId(appId)
-        return Quickshell.iconPath(entry?.icon || appId.toLowerCase(), "application-x-executable")
+    }
+
+    function iconFor(appId) {
+        return Quickshell.iconPath(entryFor(appId)?.icon || appId.toLowerCase(), "application-x-executable")
+    }
+
+    function findIcon(appId) {
+        return Quickshell.iconPath(entryFor(appId)?.icon || appId.toLowerCase(), true)
     }
 
     function activate(group) {

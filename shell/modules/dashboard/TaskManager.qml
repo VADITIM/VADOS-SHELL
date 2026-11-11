@@ -12,6 +12,7 @@ FocusScope {
     property var sorts: ({ processes: { key: "cpu", isDescending: true }, history: { key: "cpuTime", isDescending: true } })
     property string selectedKey: ""
     property string menuKey: ""
+    property bool hasIcons: false
     readonly property var look: Appearance.dashboard.task
     readonly property var columns: ProcessTable.columns[tab]
     readonly property var sort: sorts[tab]
@@ -42,6 +43,8 @@ FocusScope {
             disk: ProcessTable.rate(Processes.diskRate),
             network: ProcessTable.rate(Traffic.download + Traffic.upload)
         }
+
+    signal iconsToggled()
 
     function refill() {
         ProcessTable.sync(listModel, rows)
@@ -100,7 +103,7 @@ FocusScope {
         selectedKey = ProcessTable.step(rows, selectedKey, offset)
         const at = rows.findIndex(row => row.key === selectedKey)
         if (at >= 0)
-            list.positionViewAtIndex(at, ListView.Contain)
+            listDrift.glideAround(() => list.positionViewAtIndex(at, ListView.Contain))
     }
 
     onRowsChanged: if (isShown) refill()
@@ -143,94 +146,9 @@ FocusScope {
     }
 
     Item {
-        id: tabs
-        x: manager.look.padding
-        y: manager.look.padding
-        width: manager.listWidth
-        height: manager.look.tab
-
-        Rectangle {
-            readonly property Item current: tabRepeater.count > 0 ? tabRepeater.itemAt(manager.isHistory ? 1 : 0) : null
-
-            x: current ? current.x : 0
-            width: current ? current.width : 0
-            height: parent.height
-            radius: height / 2
-            color: Appearance.color.accent
-            scale: tabTurn.presence
-
-            Behavior on x {
-                NumberAnimation {
-                    duration: Motion.pace(Motion.dashboard.taskTab)
-                    easing.type: Easing.OutBack
-                }
-            }
-
-            Behavior on width {
-                NumberAnimation {
-                    duration: Motion.pace(Motion.dashboard.taskTab)
-                    easing.type: Easing.OutCubic
-                }
-            }
-
-            Turn {
-                id: tabTurn
-                isShown: manager.isShown
-                isFlipping: false
-                enterEasing: Easing.OutBack
-                leaveWindow: 0
-            }
-        }
-
-        Row {
-            id: tabRow
-            height: parent.height
-            spacing: manager.look.tabGap
-
-            Repeater {
-                id: tabRepeater
-                model: ProcessTable.tabs
-
-                Item {
-                    id: tabItem
-
-                    required property var modelData
-                    required property int index
-                    readonly property bool isCurrent: manager.tab === modelData.key
-
-                    width: tabLabel.fullWidth + manager.look.tabPadding * 2
-                    height: tabRow.height
-
-                    TypedText {
-                        id: tabLabel
-                        x: manager.look.tabPadding
-                        anchors.verticalCenter: parent.verticalCenter
-                        target: tabItem.modelData.label
-                        isShown: manager.isShown
-                        holdsWidth: true
-                        characterInterval: Motion.type.quick
-                        untypeInterval: Motion.type.quickUntype
-                        color: tabItem.isCurrent ? Appearance.color.ground : Appearance.color.textMuted
-                        font.family: Appearance.font.mono
-                        font.pixelSize: Appearance.font.label
-                        font.letterSpacing: Appearance.font.labelSpacing
-                        font.bold: true
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: manager.pickTab(tabItem.modelData.key)
-                    }
-                }
-            }
-        }
-    }
-
-    Item {
         id: header
         x: manager.look.padding
-        y: tabs.y + tabs.height + manager.look.headerGap
+        y: manager.look.padding
         width: manager.listWidth
         height: manager.look.header
 
@@ -250,37 +168,51 @@ FocusScope {
                 height: header.height
 
                 Turn {
-                    width: parent.width
-                    height: parent.height
+                    anchors.right: headerCell.isName ? undefined : parent.right
+                    anchors.rightMargin: manager.look.cellPadding
+                    x: headerCell.isName ? manager.look.cellPadding : 0
                     isShown: manager.isShown
-                    enterDelay: headerCell.index * Motion.dashboard.taskStagger
+                    flipAngle: 0
+                    spinAngle: headerCell.isName ? Motion.notifications.iconSpin : 0
+                    enterDelay: headerCell.index * Motion.dashboard.taskCellStagger
+                    enterDuration: Motion.notifications.iconEnter
+                    enterEasing: Easing.OutBack
+                    leaveDuration: Motion.notifications.rowLeave
                     leaveWindow: 0
 
                     Text {
-                        anchors.right: headerCell.isName ? undefined : parent.right
-                        anchors.rightMargin: manager.look.cellPadding
-                        x: headerCell.isName ? manager.look.cellPadding : 0
-                        y: 0
                         text: manager.summary[headerCell.modelData.key] ?? ""
                         color: Appearance.color.text
                         font.family: Appearance.font.mono
-                        font.pixelSize: Appearance.font.body
+                        font.pixelSize: manager.look.font.summary
                         font.bold: true
                     }
+                }
+
+                LabelReveal {
+                    id: headerLabel
+                    label: "task header label"
+                    anchors.right: headerCell.isName ? undefined : parent.right
+                    anchors.rightMargin: manager.look.cellPadding
+                    x: headerCell.isName ? manager.look.cellPadding : 0
+                    anchors.bottom: parent.bottom
+                    width: headerRow.implicitWidth
+                    height: headerRow.implicitHeight
+                    isShown: manager.isShown
+                    leaveDuration: Motion.notifications.rowLeave
+                    barColor: headerCell.isSorted ? Appearance.color.accent : Appearance.color.textMuted
 
                     Row {
-                        anchors.right: headerCell.isName ? undefined : parent.right
-                        anchors.rightMargin: manager.look.cellPadding
-                        x: headerCell.isName ? manager.look.cellPadding : 0
-                        anchors.bottom: parent.bottom
+                        id: headerRow
                         spacing: manager.look.sortMark
 
                         Text {
                             text: headerCell.modelData.label
                             color: headerCell.isSorted ? Appearance.color.accent : Appearance.color.textMuted
                             font.family: Appearance.font.mono
-                            font.pixelSize: Appearance.font.chip
+                            font.pixelSize: manager.look.font.label
                             font.letterSpacing: Appearance.font.labelSpacing / 2
+                            font.bold: headerCell.isSorted
                         }
 
                         Text {
@@ -288,7 +220,7 @@ FocusScope {
                             text: manager.sort.isDescending ? "▼" : "▲"
                             color: Appearance.color.accent
                             font.family: Appearance.font.mono
-                            font.pixelSize: Appearance.font.chip
+                            font.pixelSize: manager.look.font.label
                         }
                     }
                 }
@@ -297,6 +229,33 @@ FocusScope {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: manager.sortBy(headerCell.modelData.key)
+                }
+
+                Turn {
+                    visible: headerCell.isName
+                    x: headerLabel.x + headerLabel.width + manager.look.toggleGap
+                    y: headerLabel.y + (headerLabel.height - height) / 2
+                    width: iconToggle.width
+                    height: iconToggle.height
+                    isShown: manager.isShown && headerCell.isName
+                    flipAngle: 0
+                    spinAngle: Motion.notifications.iconSpin
+                    enterDelay: Motion.dashboard.taskCellStagger
+                    enterDuration: Motion.notifications.iconEnter
+                    enterEasing: Easing.OutBack
+                    leaveDuration: Motion.notifications.rowLeave
+                    leaveWindow: 0
+
+                    GlyphButton {
+                        id: iconToggle
+                        width: implicitWidth
+                        height: implicitHeight
+                        glyphName: "grid"
+                        glyphSize: manager.look.toggleGlyph
+                        color: Appearance.color.textMuted
+                        isSelected: manager.hasIcons
+                        onClicked: manager.iconsToggled()
+                    }
                 }
             }
         }
@@ -329,6 +288,10 @@ FocusScope {
         boundsBehavior: Flickable.StopAtBounds
         interactive: manager.menuKey.length === 0
 
+        Drift {
+            id: listDrift
+        }
+
         move: Transition {
             NumberAnimation {
                 property: "y"
@@ -359,6 +322,7 @@ FocusScope {
             columns: manager.columns
             totals: manager.totals
             nameWidth: manager.nameWidth
+            hasIcons: manager.hasIcons
             isShown: manager.isShown
             isSelected: manager.selectedKey === key
             isMenuTarget: manager.menuKey === key

@@ -11,7 +11,7 @@ Item {
     width: Math.max(time.fullWidth, date.fullWidth)
     height: time.height + date.height
 
-    TypedText {
+    Roll {
         id: time
         target: DateTime.time
         isShown: clock.isShown
@@ -21,7 +21,7 @@ Item {
         font.bold: true
     }
 
-    TypedText {
+    Roll {
         id: date
         y: time.height
         target: DateTime.date

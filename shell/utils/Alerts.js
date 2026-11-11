@@ -1,6 +1,6 @@
 .pragma library
 
-const glyphs = ["chat", "send", "mail", "music", "bell"]
+const glyphs = ["chat", "send", "mail", "music", "bell", "record", "shape-box"]
 
 const generic = { key: "generic", label: "", glyph: "bell", tint: "", ids: [] }
 
@@ -12,7 +12,9 @@ const sources = [
     { key: "slack", label: "Slack", glyph: "chat", tint: "#e01e5a", ids: ["slack", "com.slack.slack"] },
     { key: "element", label: "Element", glyph: "chat", tint: "#0dbd8b", ids: ["element", "element-desktop", "im.riot.riot"] },
     { key: "thunderbird", label: "Thunderbird", glyph: "mail", tint: "#0a84ff", ids: ["thunderbird", "org.mozilla.thunderbird", "betterbird", "eu.betterbird.betterbird"] },
-    { key: "spotify", label: "Spotify", glyph: "music", tint: "#1db954", ids: ["spotify", "com.spotify.client"] }
+    { key: "spotify", label: "Spotify", glyph: "music", tint: "#1db954", ids: ["spotify", "com.spotify.client"] },
+    { key: "recorder", label: "Screen", glyph: "record", tint: "#ff4d4d", ids: ["vados-recorder"] },
+    { key: "screenshot", label: "Screenshot", glyph: "shape-box", tint: "#ffffff", ids: ["vados-screenshot"] }
 ]
 
 const entities = { "&lt;": "<", "&gt;": ">", "&quot;": "\"", "&#39;": "'", "&apos;": "'", "&nbsp;": " ", "&amp;": "&" }

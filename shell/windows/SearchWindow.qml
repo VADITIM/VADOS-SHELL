@@ -17,6 +17,7 @@ OverlayWindow {
         profileName: Config.data.profile.name
         profilePicture: Config.data.profile.picture
         parts: window.parts
+        shouldStream: window.shouldStream
         isMirrored: Config.data.taskbar.side === "right"
         canHandOff: window.canHandOff
         isHandingOver: window.isHandingOver

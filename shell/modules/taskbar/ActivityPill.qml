@@ -22,7 +22,7 @@ Item {
     readonly property string face: isAlerting ? "alert" : isClipboardOpen ? "clipboard" : mode === "hidden" ? "idle" : mode
     readonly property bool isSummoned: isAlerting || isClipboardOpen
     readonly property bool isShown: (host.isRevealed || (isSummoned && !host.isAway)) && !host.isEaten && (mode !== "hidden" || isSummoned)
-    readonly property var views: ({ media: mediaView, call: callView, tray: trayView })
+    readonly property var views: ({ recording: recordingView, media: mediaView, call: callView, tray: trayView })
     readonly property size expandedSize: (views[leadKey] ?? mediaView).bodySize
     readonly property size faceSize: face === "alert" ? alertSize
         : face === "clipboard" ? clipboardSize
@@ -40,7 +40,8 @@ Item {
     readonly property real expansion: isSpreadBody ? 0 : Math.max(0, (bodyWidth - Appearance.activity.width) / Math.max(1, expandedSize.width - Appearance.activity.width))
     readonly property real carry: Appearance.activity.carry * (1 - Math.min(1, expansion))
     readonly property bool isFaceShown: mutate.isInnerShown && reshape.isArrived
-    readonly property bool isAlertShown: isFaceShown && face === "alert"
+    property bool hasAlertArrived: false
+    readonly property bool isAlertShown: face === "alert" && mutate.isInnerShown && (reshape.isArrived || hasAlertArrived)
     readonly property bool isClipboardShown: isFaceShown && face === "clipboard"
     readonly property rect spreadRect: Qt.rect(x + expandedLeft, y - bodyHeight / 2, bodyWidth, bodyHeight)
     readonly property var satellites: liveKeys.filter(key => key !== leadKey)
@@ -54,6 +55,8 @@ Item {
     readonly property real bumpCenterY: -bodyHeight / 2 + Appearance.clipboard.padding + Appearance.clipboard.header / 2
     property real bumpReach: bumpArea.containsMouse ? Appearance.clipboard.bumpReach : 0
     readonly property bool isBumpHovered: bumpArea.containsMouse
+    readonly property bool isRecordingLead: leadKey === "recording"
+    property bool hasHoveredRecording: false
     readonly property real reachRight: x + bodyLeft + Math.max(bodyWidth, Appearance.activity.media.head * Math.min(1, expansion), bumpSize > 0.5 ? bumpCenterX - bodyLeft + bumpSize / 2 : 0) * popScale + Appearance.taskbar.idleGap
 
     signal modeRequested(string mode)
@@ -63,6 +66,10 @@ Item {
     height: 0
 
     onFaceChanged: {
+        if (face !== "expanded")
+            hasHoveredRecording = false
+        if (face !== "alert")
+            hasAlertArrived = false
         if (face === "alert")
             isAlertBody = true
         if (face === "clipboard")
@@ -90,9 +97,13 @@ Item {
         hasArrived: pill.host.hasArrivedAt(pill.y)
         hasSpread: false
         enterDelay: Motion.reveal.stagger
-        isHolding: pill.host.isGathering
+        isHolding: pill.host.isHoldingParts
         leaveDelay: Motion.pill.sling
         popDuration: Motion.stateDuration
+        onIsInnerShownChanged: {
+            if (!isInnerShown)
+                pill.hasAlertArrived = false
+        }
     }
 
     Reshape {
@@ -112,6 +123,7 @@ Item {
         onIsArrivedChanged: {
             if (!isArrived)
                 return
+            pill.hasAlertArrived = pill.face === "alert" && mutate.isInnerShown
             if (pill.face !== "alert")
                 pill.isAlertBody = false
             if (pill.face !== "clipboard")
@@ -142,7 +154,7 @@ Item {
         parent: pill.host.liquidShapes
         width: pill.bodyWidth + swellWidth
         height: pill.bodyHeight + swellHeight
-        radius: pill.isClipboardBody ? Math.min(Math.min(width, height) / 2, Appearance.clipboard.radius) : Math.min(width, height) / 2
+        radius: Math.min(Math.min(width, height) / 2, pill.isClipboardBody ? Appearance.clipboard.radius : pill.isAlertBody ? Appearance.alerts.radius : Infinity)
         x: pill.x + pill.bodyLeft - swellWidth / 2
         y: pill.y - height / 2
         transform: Scale {
@@ -206,11 +218,48 @@ Item {
         enabled: pill.isShown && !pill.isSummoned
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
-        onClicked: pill.modeRequested(pill.face === "idle" ? "active" : pill.face === "active" ? "expanded" : "active")
+        onClicked: {
+            if (pill.face === "active" && pill.isRecordingLead && Capture.canPause) {
+                Capture.togglePause()
+                return
+            }
+            pill.modeRequested(pill.face === "idle" ? "active" : pill.face === "active" ? "expanded" : "active")
+        }
         onWheel: wheel => {
             if (wheel.angleDelta.y !== 0)
                 pill.leadRequested(wheel.angleDelta.y > 0 ? -1 : 1)
         }
+    }
+
+    Item {
+        x: pill.bodyLeft
+        y: -pill.bodyHeight / 2
+        width: pill.bodyWidth
+        height: pill.bodyHeight
+        enabled: pill.isShown && !pill.isSummoned
+
+        HoverHandler {
+            id: bodyHover
+            onHoveredChanged: {
+                if (hovered && pill.isRecordingLead)
+                    pill.hasHoveredRecording = true
+            }
+        }
+    }
+
+    Timer {
+        interval: Motion.capture.dwell
+        running: pill.isRecordingLead && pill.face === "active" && bodyHover.hovered
+        onTriggered: {
+            pill.hasHoveredRecording = true
+            pill.modeRequested("expanded")
+        }
+    }
+
+    Timer {
+        interval: Motion.capture.linger
+        running: pill.isRecordingLead && pill.face === "expanded" && pill.hasHoveredRecording && !bodyHover.hovered
+        onTriggered: pill.modeRequested("active")
     }
 
     MouseArea {
@@ -287,6 +336,16 @@ Item {
             isShown: pill.isFaceShown && pill.face === "active" && pill.leadKey === modelData
             isPressed: area.pressed
         }
+    }
+
+    ActivityRecording {
+        id: recordingView
+        host: pill.host
+        pill: pill
+        x: pill.expandedLeft - pill.carry
+        y: -height / 2
+        expansion: pill.leadKey === "recording" ? pill.expansion : 0
+        isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey === "recording"
     }
 
     ActivityMedia {

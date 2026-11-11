@@ -96,7 +96,7 @@ Item {
         hasSpread: false
         hasArrivalPop: true
         enterDelay: idle.host.isArriving ? (idle.order - 1) * Motion.reveal.arrivalStagger : idle.order * Motion.reveal.stagger
-        isHolding: idle.host.isGathering
+        isHolding: idle.host.isHoldingParts
         leaveDelay: idle.stretch > 0.01 ? Motion.pill.fold + Motion.pill.sizeFollow : Motion.pill.sling
         popDuration: Motion.stateDuration
         character: Motion.liquid.circle

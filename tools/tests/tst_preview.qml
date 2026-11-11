@@ -120,6 +120,27 @@ TestCase {
         finishAlert(peeked.taskbar)
     }
 
+    function test_hoveringAnAlertOpensItAndHoldsIt() {
+        failOnWarning(/.*/)
+        window.sampleIndex = 0
+        const peeked = peekOnce()
+        const rest = Qt.size(peeked.taskbar.alertRect.width, peeked.taskbar.alertRect.height)
+        const body = peeked.taskbar.alertRect
+        mouseMove(peeked.alerts, body.x + body.width / 2, body.y + body.height / 2)
+        tryVerify(() => peeked.alerts.isExpanded, 2000, "hovering opens the alert")
+        verify(Attention.isHeld, "and holds its peek")
+        tryVerify(() => peeked.taskbar.alertRect.height > rest.height && Math.abs(peeked.taskbar.alertRect.height - peeked.alerts.bodySize.height) < 1, 3000, "the body grows to fit the whole message")
+        verify(peeked.taskbar.isAlertShown, "the face stays while the body grows")
+        wait(Motion.attention.peek + 300)
+        verify(Attention.peek !== null, "a hovered alert never goes")
+        mouseMove(peeked.alerts, body.x + body.width / 2, body.y - Appearance.alerts.expandedWidth)
+        tryVerify(() => !peeked.alerts.isExpanded, 2000, "leaving the alert retracts it")
+        verify(!Attention.isHeld)
+        tryVerify(() => Math.abs(peeked.taskbar.alertRect.height - rest.height) < 1, 3000, "back to its normal size")
+        verify(Attention.peek !== null, "it lingers after the hover")
+        finishAlert(peeked.taskbar)
+    }
+
     function test_alertsTogglingFasterThanTheirMotionEndAtRest() {
         failOnWarning(/.*/)
         const taskbar = sceneChild("alertRect")
@@ -365,5 +386,99 @@ TestCase {
         ActivityState.closeClipboard()
         tryVerify(() => !taskbar.isClipboardShown, 3000)
         tryVerify(() => taskbar.clipboardRect.width < Appearance.clipboard.width / 2, 3000)
+    }
+    function openScreenshot() {
+        const shot = overlayModule("strokes")
+        verify(shot !== null)
+        Capture.shoot(window.screenName)
+        tryVerify(() => Overlays.phaseOf("screenshot", window.screenName) === "active", 2000, "the screen darkens at once")
+        verify(!Overlays.isTaskbarAway(window.screenName), "the screenshot keeps the taskbar where it is")
+        tryVerify(() => shot.activeFocus, 1000, "the screenshot owns the keyboard")
+        return shot
+    }
+
+    function test_screenshotSelectsDrawsAndCopies() {
+        failOnWarning(/.*/)
+        const shot = openScreenshot()
+        const toolbar = findItem(shot, item => item.wheelShare !== undefined)
+        verify(toolbar !== null)
+        verify(toolbar.isShown, "the toolbar is there at once, before an area is chosen")
+        const pill = ActivityState.placeOn(window.screenName)
+        fuzzyCompare(toolbar.startSize.height, pill.height, 0.5, "it starts as the activity pill")
+        fuzzyCompare(shot.pillCenterY, pill.centerY, 0.5, "right on top of it")
+        tryVerify(() => toolbar.growth > 0.99, 1000, "and grows along the taskbar")
+        mouseDrag(shot, 400, 200, 500, 300)
+        verify(shot.hasSelection)
+        fuzzyCompare(shot.selection.width, 500, 2)
+        fuzzyCompare(shot.selection.height, 300, 2)
+        shot.pick("paint")
+        mouseDrag(shot, 1000, 600, 80, 40)
+        compare(shot.strokes.length, 1, "paint draws outside the area too")
+        shot.pick("shape")
+        mouseDrag(shot, 600, 260, 60, 60)
+        mouseDrag(shot, 700, 300, 40, 40)
+        compare(shot.strokes.length, 3, "several shapes stay")
+        mouseDrag(shot, 660, 320, 40, 20)
+        compare(shot.strokes.length, 3, "a corner drag reshapes, it draws nothing new")
+        fuzzyCompare(shot.strokes[1].points[1].x, 700, 2)
+        fuzzyCompare(shot.strokes[1].points[1].y, 340, 2)
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(shot.strokes.length, 2, "Ctrl+Z takes the last stroke back")
+        shot.pick("select")
+        mouseDrag(shot, 450, 250, 100, 0)
+        fuzzyCompare(shot.selection.x, 500, 2)
+        const tapX = 300
+        const tapY = shot.height - 100
+        mouseClick(shot, tapX, tapY)
+        compare(Overlays.phaseOf("screenshot", window.screenName), "active", "a tap outside never closes")
+        fuzzyCompare(shot.selection.x, Math.max(0, Math.min(shot.width - 500, tapX - 250)), 2, "it moves the area there")
+        fuzzyCompare(shot.selection.y, Math.max(0, Math.min(shot.height - 300, tapY - 150)), 2)
+        shot.toggleMenu("color")
+        tryVerify(() => toolbar.wheelShare > 0.99, 1000, "the colour wheel pops out of the pill")
+        shot.toggleMenu("color")
+        tryVerify(() => toolbar.wheelShare < 0.01, 1000)
+        const delivered = Capture.delivered.length
+        keyClick(Qt.Key_C, Qt.ControlModifier)
+        tryVerify(() => Capture.delivered.length === delivered + 1, 2000, "Ctrl+C copies the area")
+        tryVerify(() => Attention.peek !== null && Attention.peek.notifications[0].summary === "COPIED", 2000, "and says so")
+        tryVerify(() => Overlays.phaseOf("screenshot", window.screenName) === "idle", 2000, "and the screen comes back")
+        Attention.dismissPeek()
+    }
+
+    function test_escapeRestoresTheScreenFast() {
+        failOnWarning(/.*/)
+        const shot = openScreenshot()
+        mouseDrag(shot, 300, 200, 200, 150)
+        const delivered = Capture.delivered.length
+        keyClick(Qt.Key_Escape)
+        tryVerify(() => Overlays.phaseOf("screenshot", window.screenName) === "idle", Motion.capture.leave + 600)
+        compare(Capture.delivered.length, delivered, "Escape copies nothing")
+    }
+
+    function test_recordingPillPausesOnClickAndOpensOnHover() {
+        failOnWarning(/.*/)
+        Activities.isCalling = false
+        Activities.hasMedia = false
+        Capture.record(window.screenName)
+        const pill = findItem(window.contentItem, item => item.isRecordingLead !== undefined)
+        verify(pill !== null)
+        tryCompare(Attention, "peek", null, 3000, "RECORDING NOW gives way after its moment")
+        tryVerify(() => pill.face === "active" && pill.isFaceShown, 3000, "the pill turns into the recording pill")
+        const center = pill.mapToItem(window.contentItem, pill.spineX, 0)
+        mouseClick(window.contentItem, center.x, center.y)
+        verify(Capture.isPaused, "a click pauses")
+        mouseClick(window.contentItem, center.x, center.y)
+        verify(!Capture.isPaused, "and a second click resumes")
+        mouseMove(window.contentItem, center.x, center.y)
+        tryCompare(ActivityState, "mode", "expanded", 2000, "hovering opens the recording controls")
+        const view = findItem(window.contentItem, item => item.controls !== undefined)
+        tryVerify(() => view.isShown, 3000)
+        mouseMove(window.contentItem, window.width / 2, 40)
+        tryCompare(ActivityState, "mode", "active", 2000, "leaving folds it back")
+        Capture.stop()
+        tryVerify(() => ActivityState.leadKey !== "recording", 1000)
+        Activities.isCalling = true
+        Activities.hasMedia = true
+        ActivityState.lead = ""
     }
 }

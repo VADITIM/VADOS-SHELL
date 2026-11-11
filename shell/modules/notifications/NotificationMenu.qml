@@ -9,6 +9,7 @@ FocusScope {
 
     property bool isOpen: false
     property var parts: []
+    property bool shouldStream: true
     property bool isMirrored: false
     property bool canHandOff: false
     property bool isHandingOver: false
@@ -263,6 +264,7 @@ FocusScope {
                 label: "notifications burst"
                 isShown: menu.isOpen
                 parts: menu.parts
+                shouldStream: menu.shouldStream
                 rootX: menu.rootX
                 seedX: menu.rootX + Appearance.taskbar.thickness / 2
                 seedY: menu.middleY
@@ -312,7 +314,11 @@ FocusScope {
                 boundsBehavior: Flickable.DragOverBounds
                 model: rows
                 currentIndex: menu.zone === "list" ? menu.cursor : -1
-                onCurrentIndexChanged: if (currentIndex >= 0) positionViewAtIndex(currentIndex, ListView.Contain)
+                onCurrentIndexChanged: if (currentIndex >= 0) listDrift.glideAround(() => positionViewAtIndex(currentIndex, ListView.Contain))
+
+                Drift {
+                    id: listDrift
+                }
 
                 delegate: NotificationRow {
                     required property string key

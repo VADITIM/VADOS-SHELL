@@ -17,6 +17,7 @@ PanelWindow {
     readonly property bool isHandingOver: Overlays.isHandingOver(overlayKey, screenName)
     readonly property bool hasCircle: Overlays.hasCircle(overlayKey, screenName)
     readonly property var parts: Overlays.taskbarParts[screenName] ?? []
+    readonly property bool shouldStream: Config.data.taskbar.gather === "merge"
     readonly property bool canHandOff: Config.data.taskbar.style !== "bare" && !Occupancy.isCovered(screenName, true)
 
     function requestClose() {

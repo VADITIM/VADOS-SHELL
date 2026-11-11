@@ -12,7 +12,7 @@ Item {
     readonly property var look: Appearance.dashboard.weather
     readonly property bool isPresent: now.presence > 0.5
 
-    height: look.daysY + look.dayTile + Appearance.font.label * 2
+    height: look.daysY + look.dayTile + Appearance.dashboard.font.label * 2
 
     function degrees(value) {
         return Weather.isReady ? Math.round(value) + "°" : "--°"
@@ -37,14 +37,14 @@ Item {
         TypedText {
             id: temperature
             x: forecast.look.icon + forecast.look.iconGap
-            y: (forecast.look.icon - height) / 2 - Appearance.font.label
+            y: (forecast.look.icon - height) / 2 - Appearance.dashboard.font.label
             target: forecast.degrees(Weather.temperature)
             isShown: forecast.isPresent
             characterInterval: Motion.type.quick
             untypeInterval: Motion.type.quickUntype
             color: Appearance.color.text
             font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.degrees
+            font.pixelSize: Appearance.dashboard.font.degrees
         }
 
         Row {
@@ -60,7 +60,7 @@ Item {
                 untypeInterval: Motion.type.quickUntype
                 color: Appearance.color.textMuted
                 font.family: Appearance.font.mono
-                font.pixelSize: Appearance.font.label
+                font.pixelSize: Appearance.dashboard.font.label
             }
 
             Glyph {
@@ -86,7 +86,7 @@ Item {
                 required property var modelData
                 readonly property var reading: typeof modelData === "object" ? modelData : null
                 width: forecast.look.dayTile
-                height: forecast.look.dayTile + Appearance.font.label * 2
+                height: forecast.look.dayTile + Appearance.dashboard.font.label * 2
                 isShown: forecast.isShown
                 enterDelay: forecast.enterDelay + index * forecast.stagger
                 enterDuration: Motion.search.tileEnter
@@ -104,6 +104,7 @@ Item {
                         width: forecast.look.dayGlyph
                         height: forecast.look.dayGlyph
                         name: "weather-" + (day.reading?.kind ?? "cloudy")
+                        stroke: Appearance.dashboard.iconStroke * 24 / width
                         color: Appearance.color.text
                     }
                 }
@@ -114,7 +115,7 @@ Item {
                     text: forecast.degrees(day.reading?.high ?? 0)
                     color: Appearance.color.text
                     font.family: Appearance.font.mono
-                    font.pixelSize: Appearance.font.body
+                    font.pixelSize: Appearance.dashboard.font.day
                 }
             }
         }

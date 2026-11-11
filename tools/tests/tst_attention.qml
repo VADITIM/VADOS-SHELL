@@ -66,6 +66,32 @@ TestCase {
         compare(Attention.peek.notifications[0].id, 5)
     }
 
+    function test_heldPeekStaysThenLingers() {
+        arrive(make(9, 1, 1))
+        settleBatch()
+        verify(Attention.peek !== null)
+        Attention.holdPeek(true)
+        wait(1500)
+        verify(Attention.peek !== null, "a hovered peek never expires")
+        arrive(make(10, 1, 1))
+        settleBatch()
+        wait(1300)
+        compare(Attention.peek.notifications.length, 2, "a peek that grows while hovered stays")
+        Attention.holdPeek(false)
+        wait(Motion.attention.linger - 300)
+        verify(Attention.peek !== null, "the peek lingers after the hover leaves")
+        tryCompare(Attention, "peek", null, 1000)
+        verify(!Attention.isHeld)
+    }
+
+    function test_dismissReleasesTheHold() {
+        arrive(make(11, 1, 0))
+        settleBatch()
+        Attention.holdPeek(true)
+        Attention.dismissPeek()
+        verify(!Attention.isHeld)
+    }
+
     function test_peekExpiresWithItsTimeout() {
         arrive(make(7, 1, 1))
         settleBatch()

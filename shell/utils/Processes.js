@@ -3,8 +3,8 @@
 const unknown = -1
 
 const tabs = [
-    { key: "processes", label: "PROCESSES" },
-    { key: "history", label: "APP HISTORY" }
+    { key: "processes", label: "PROCESSES", glyph: "grid" },
+    { key: "history", label: "APP HISTORY", glyph: "history" }
 ]
 
 const columns = {

@@ -34,30 +34,37 @@ Item {
         return path
     }
 
-    function chip(isPadded) {
-        let path = "M7 5.5 H17 a1.5 1.5 0 0 1 1.5 1.5 V17 a1.5 1.5 0 0 1 -1.5 1.5 H7 a1.5 1.5 0 0 1 -1.5 -1.5 V7 a1.5 1.5 0 0 1 1.5 -1.5 Z"
+    function squircle(left, top, right, bottom, bend) {
+        const near = bend * 0.08
+        const number = value => value.toFixed(2)
+        return "M" + number(left + bend) + " " + number(top)
+            + " H" + number(right - bend)
+            + " C" + number(right - near) + " " + number(top) + " " + number(right) + " " + number(top + near) + " " + number(right) + " " + number(top + bend)
+            + " V" + number(bottom - bend)
+            + " C" + number(right) + " " + number(bottom - near) + " " + number(right - near) + " " + number(bottom) + " " + number(right - bend) + " " + number(bottom)
+            + " H" + number(left + bend)
+            + " C" + number(left + near) + " " + number(bottom) + " " + number(left) + " " + number(bottom - near) + " " + number(left) + " " + number(bottom - bend)
+            + " V" + number(top + bend)
+            + " C" + number(left) + " " + number(top + near) + " " + number(left + near) + " " + number(top) + " " + number(left + bend) + " " + number(top) + " Z"
+    }
+
+    function chip(hasDots) {
+        let path = squircle(5.5, 5.5, 18.5, 18.5, 3.6)
         for (const offset of [9, 12, 15]) {
-            if (isPadded) {
-                path += " M" + (offset - 0.8) + " 2.6 h1.6 v1.6 h-1.6 Z M" + (offset - 0.8) + " 19.8 h1.6 v1.6 h-1.6 Z"
-                path += " M2.6 " + (offset - 0.8) + " h1.6 v1.6 h-1.6 Z M19.8 " + (offset - 0.8) + " h1.6 v1.6 h-1.6 Z"
-            } else {
-                path += " M" + offset + " 5.5 V3 M" + offset + " 18.5 V21 M5.5 " + offset + " H3 M18.5 " + offset + " H21"
-            }
+            path += " M" + offset + " 5.5 V3.5 M" + offset + " 18.5 V20.5 M5.5 " + offset + " H3.5 M18.5 " + offset + " H20.5"
+            if (hasDots)
+                path += " M" + offset + " 1.6 h0.01 M" + offset + " 22.4 h0.01 M1.6 " + offset + " h0.01 M22.4 " + offset + " h0.01"
         }
         return path
     }
 
     function ram() {
-        let path = "M5.5 8.5 A3 3 0 0 0 8.5 5.5 M15.5 5.5 A3 3 0 0 0 18.5 8.5 M18.5 15.5 A3 3 0 0 0 15.5 18.5 M8.5 18.5 A3 3 0 0 0 5.5 15.5"
-        path += " M5.5 5.5 H18.5 V18.5 H5.5 Z"
-        for (const offset of [7.2, 9.6, 12, 14.4, 16.8]) {
-            const near = (offset - 0.6).toFixed(1)
-            const far = (offset + 0.6).toFixed(1)
-            path += " M" + near + " 5.5 V2.7 H" + far + " V5.5"
-            path += " M" + near + " 18.5 V21.3 H" + far + " V18.5"
-            path += " M5.5 " + near + " H2.7 V" + far + " H5.5"
-            path += " M18.5 " + near + " H21.3 V" + far + " H18.5"
-        }
+        let path = squircle(2.5, 6.5, 21.5, 16.5, 2.6)
+        path += " M11 16.5 V15 a1 1 0 0 1 2 0 V16.5"
+        for (const offset of [5.5, 8, 16, 18.5])
+            path += " M" + offset + " 16.5 V19"
+        for (const offset of [7, 12, 17])
+            path += " M" + offset + " 6.5 V4.5"
         return path
     }
 
@@ -133,6 +140,26 @@ Item {
             return cloud(6.5, 15.5, 10) + " M8 19 h0.01 M12 20.5 h0.01 M16 19 h0.01"
         case "weather-storm":
             return cloud(6.5, 15.5, 10) + " M13 16.5 L10.8 19.5 H13.4 L11.4 22.5"
+        case "pointer":
+            return "M6 4 L6 18 L9.8 14.6 L12.3 20 L14.6 19 L12.1 13.6 L17 13.4 Z"
+        case "pen":
+            return "M15.5 4.5 L19.5 8.5 L9 19 L4.5 19.5 L5 15 Z M13.5 6.5 L17.5 10.5"
+        case "eraser":
+            return "M8.5 19.5 L4.5 15.5 L14.5 5.5 L19.5 10.5 L10.5 19.5 Z M9.5 10.5 L14.5 15.5 M10.5 19.5 H19.5"
+        case "shape-box":
+            return "M5.5 5.5 H18.5 V18.5 H5.5 Z"
+        case "shape-circle":
+            return "M12 5 a7 7 0 1 0 0.01 0 Z"
+        case "shape-line":
+            return "M5.5 18.5 L18.5 5.5"
+        case "shape-arrow":
+            return "M5.5 18.5 L18.5 5.5 M11 5.5 H18.5 V13"
+        case "text":
+            return "M5.5 6 H18.5 M12 6 V19 M9 19 H15"
+        case "stop":
+            return "M7 7 H17 V17 H7 Z"
+        case "record":
+            return "M12 3.5 a8.5 8.5 0 1 0 0.01 0 Z M12 8.5 a3.5 3.5 0 1 0 0.01 0 Z"
         default:
             return "M6 5 H18 a1 1 0 0 1 1 1 V18 a1 1 0 0 1 -1 1 H6 a1 1 0 0 1 -1 -1 V6 a1 1 0 0 1 1 -1 Z"
         }

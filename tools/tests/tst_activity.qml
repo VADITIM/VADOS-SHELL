@@ -15,6 +15,8 @@ TestCase {
     }
 
     function cleanup() {
+        Capture.stop()
+        Attention.dismissPeek()
         ActivityState.closeClipboard()
         Clipboard.isEnabled = true
         Overlays.close("notifications")
@@ -149,5 +151,49 @@ TestCase {
         ActivityState.toggleClipboard("screen")
         Clipboard.isEnabled = false
         verify(!ActivityState.isClipboardOn("screen"), "turning it off closes it")
+    }
+    function test_recordingLeadsAndAnnouncesItself() {
+        quiet()
+        Attention.dismissPeek()
+        verify(!Activities.order.includes("recording"), "recording is never reached while nothing records")
+        Capture.record("screen")
+        compare(ActivityState.leadKey, "recording")
+        compare(ActivityState.mode, "active")
+        verify(Attention.peek !== null, "the pill peeks RECORDING NOW")
+        compare(Attention.peek.notifications[0].summary, "RECORDING NOW")
+        compare(Attention.peek.screen, "screen")
+        tryCompare(Attention, "peek", null, 3000, "the notice gives way to the recording pill")
+        Capture.stop()
+        verify(ActivityState.leadKey !== "recording")
+        compare(ActivityState.mode, "idle")
+    }
+
+    function test_recordingTakesTheLeadFromMedia() {
+        quiet()
+        Activities.hasMedia = true
+        ActivityState.pin("media")
+        compare(ActivityState.leadKey, "media")
+        Capture.record("screen")
+        compare(ActivityState.leadKey, "recording")
+        Capture.stop()
+        compare(ActivityState.leadKey, "media")
+    }
+
+    function test_noticeSurvivesNotificationChanges() {
+        quiet()
+        Capture.record("screen")
+        Notifications.post("discord", "discord", "Mira", "are you there", 1)
+        Notifications.clear()
+        verify(Attention.peek !== null, "a shell notice is not a notification that can be dismissed from the list")
+    }
+
+    function test_stoppingFoldsAnExpandedRecording() {
+        quiet()
+        Capture.record("screen")
+        ActivityState.set("screen", "expanded")
+        compare(ActivityState.mode, "expanded")
+        compare(ActivityState.lead, "recording")
+        Capture.stop()
+        compare(ActivityState.mode, "idle")
     }
 }

@@ -11,6 +11,7 @@ Singleton {
     readonly property bool isFullscreen: Compositor.activeWindow?.isFullscreen ?? false
     property var peek: null
     property var held: []
+    property bool isHeld: false
 
     function mayPeek(notification) {
         if (Notifications.isCritical(notification))
@@ -39,11 +40,25 @@ Singleton {
         }
         const isUrgent = notifications.some(notification => Notifications.isCritical(notification))
         peek = { notifications: notifications, isUrgent: isUrgent, screen: screenName }
-        if (isUrgent) {
+        if (isUrgent || isHeld) {
             expiry.stop()
             return
         }
         expiry.interval = durationOf(notifications)
+        expiry.restart()
+    }
+
+    function holdPeek(isOn) {
+        if (isHeld === isOn)
+            return
+        isHeld = isOn
+        if (isOn) {
+            expiry.stop()
+            return
+        }
+        if (!peek || peek.isUrgent)
+            return
+        expiry.interval = Motion.attention.linger
         expiry.restart()
     }
 
@@ -56,8 +71,17 @@ Singleton {
         place(shown, peek ? peek.screen : Compositor.focusedScreen)
     }
 
+    function announce(notice, screenName) {
+        place([notice], screenName)
+    }
+
+    function isKept(notification) {
+        return notification.isNotice === true || Notifications.isAlive(notification)
+    }
+
     function dismissPeek() {
         expiry.stop()
+        isHeld = false
         peek = null
     }
 
@@ -75,7 +99,7 @@ Singleton {
         function onListChanged() {
             if (!attention.peek)
                 return
-            const alive = attention.peek.notifications.filter(notification => Notifications.isAlive(notification))
+            const alive = attention.peek.notifications.filter(notification => attention.isKept(notification))
             if (alive.length !== attention.peek.notifications.length)
                 attention.place(alive, attention.peek.screen)
         }

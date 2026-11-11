@@ -31,6 +31,11 @@ Item {
         return { value: String(Math.round(bits / 1e3)), unit: "Kbps" }
     }
 
+    function millisecondsText(value) {
+        const shown = throughput.hasPing ? String(Math.min(Math.round(value), look.pingCeiling)) : "--"
+        return shown.padStart(String(look.pingCeiling).length, " ") + "ms"
+    }
+
     function pointX(index, count) {
         return width * (Motion.dashboard.trafficSamples - count + index) / (Motion.dashboard.trafficSamples - 1)
     }
@@ -85,7 +90,7 @@ Item {
                         text: parent.modelData.arrow
                         color: parent.modelData.tint
                         font.family: Appearance.font.mono
-                        font.pixelSize: Appearance.font.label
+                        font.pixelSize: Appearance.dashboard.font.label
                     }
 
                     TypedText {
@@ -97,7 +102,7 @@ Item {
                         untypeInterval: Motion.type.quickUntype
                         color: Appearance.color.text
                         font.family: Appearance.font.mono
-                        font.pixelSize: Appearance.font.reading
+                        font.pixelSize: Appearance.dashboard.font.reading
                         font.bold: true
                     }
 
@@ -106,22 +111,23 @@ Item {
                         text: parent.shownRate.unit
                         color: Appearance.color.textMuted
                         font.family: Appearance.font.mono
-                        font.pixelSize: Appearance.font.label
+                        font.pixelSize: Appearance.dashboard.font.label
                     }
                 }
             }
         }
 
-        TypedText {
+        Roll {
             x: throughput.width - fullWidth
             y: (throughput.look.header - height) / 2
-            target: throughput.hasPing ? "PING " + Math.round(throughput.ping) + "ms  JITTER " + Math.round(throughput.jitter) + "ms" : "PING --ms  JITTER --ms"
+            target: "PING " + throughput.millisecondsText(throughput.ping) + "  JITTER " + throughput.millisecondsText(throughput.jitter)
             isShown: throughput.isPresent
+            holdsWidth: true
             characterInterval: Motion.type.quick
             untypeInterval: Motion.type.quickUntype
             color: Appearance.color.textMuted
             font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.label
+            font.pixelSize: Appearance.dashboard.font.label
             font.letterSpacing: Appearance.font.labelSpacing / 2
         }
 
@@ -130,7 +136,7 @@ Item {
             text: throughput.rate(throughput.peak).value
             color: Appearance.color.textFaint
             font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.label
+            font.pixelSize: Appearance.dashboard.font.label
             opacity: throughput.drawn
         }
 

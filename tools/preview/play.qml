@@ -11,6 +11,7 @@ import qs.modules.settings
 import qs.modules.dashboard
 import qs.modules.notifications
 import qs.modules.framedebug
+import qs.modules.screenshot
 import qs.windows
 import QtCore as Core
 
@@ -108,6 +109,8 @@ Window {
 
         Taskbar {
             id: taskbar
+            onActivityPlaceChanged: ActivityState.place(root.screenName, activityPlace)
+            Component.onCompleted: ActivityState.place(root.screenName, activityPlace)
             x: root.isRight ? root.width - width : 0
             width: Appearance.taskbar.windowWidth
             height: scene.height
@@ -140,6 +143,7 @@ Window {
             body: taskbar.alertRect
             isBodyShown: taskbar.isAlertShown
             onDismissRequested: Attention.dismissPeek()
+            onHoldRequested: isOn => Attention.holdPeek(isOn)
             onOpenRequested: notification => {
                 Notifications.open(notification)
                 Attention.dismissPeek()
@@ -208,8 +212,10 @@ Window {
             onStyleRequested: style => Config.setTaskbarStyle(style)
             onModeRequested: mode => Config.setWindowMode(mode)
             isReducedMotion: Config.data.motion.reduced
+            burstStyle: Config.data.motion.burst
             isQuiet: Config.data.attention.doNotDisturb
             onReducedMotionRequested: isReduced => Config.setReducedMotion(isReduced)
+            onBurstStyleRequested: style => Config.setBurstStyle(style)
             onQuietRequested: isQuiet => Config.setDoNotDisturb(isQuiet)
             profileName: Config.data.profile.name
             profileSecondName: Config.data.profile.secondName
@@ -272,6 +278,48 @@ Window {
             onLanded: root.landOverlay()
             onQuietRequested: isQuiet => Attention.setQuiet(isQuiet)
         }
+
+        Screenshot {
+            id: screenshot
+            anchors.fill: parent
+            visible: isPresent
+            isOpen: root.isOverlayOpen("screenshot")
+            isMirrored: root.isRight
+            readonly property var pill: ActivityState.placeOn(root.screenName)
+            pillSpineX: pill?.spineX ?? Appearance.taskbar.margin + Appearance.taskbar.thickness / 2
+            pillCenterY: pill?.centerY ?? height / 2
+            pillSize: Qt.size(pill?.width ?? 0, pill?.height ?? 0)
+            pillGlyph: pill?.glyph ?? ""
+            onPhaseChanged: Overlays.reportPhase("screenshot", root.screenName, phase)
+            onCloseRequested: Overlays.close("screenshot")
+            onCutReady: result => {
+                Capture.deliver(result.url)
+                Attention.announce(ActivityState.copiedNotice(result.url), root.screenName)
+                Overlays.close("screenshot")
+            }
+        }
+    }
+
+    Connections {
+        target: Capture
+
+        function onShot(screenName) {
+            Overlays.open("screenshot", screenName)
+        }
+    }
+
+    Shortcut {
+        sequences: ["Print", "P"]
+        enabled: !Overlays.isOpen("search", root.screenName) && !Overlays.isWanted("screenshot", root.screenName)
+        context: Qt.ApplicationShortcut
+        onActivated: Capture.shoot(root.screenName)
+    }
+
+    Shortcut {
+        sequences: ["Shift+Print", "R"]
+        enabled: !Overlays.isOpen("search", root.screenName)
+        context: Qt.ApplicationShortcut
+        onActivated: Capture.toggleRecording(root.screenName)
     }
 
     Connections {

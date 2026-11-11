@@ -34,6 +34,7 @@ Singleton {
         readonly property real slingSpin: -120
         readonly property int gatherRetract: 150
         readonly property int awayHold: leaveWindow / 2 + sling + 20
+        readonly property int shrinkHold: Math.max(slingLead + gatherRetract, sling) + leavePop + 20
         readonly property int fold: 105
         readonly property int elementStagger: 28
         readonly property int slide: 160
@@ -74,6 +75,28 @@ Singleton {
         readonly property int tick: 1000
     }
 
+    readonly property QtObject capture: QtObject {
+        readonly property int tick: 1000
+        readonly property int announce: 1300
+        readonly property int dwell: 200
+        readonly property int linger: 350
+        readonly property int pulse: 1400
+        readonly property real pulseDepth: 0.22
+        readonly property int dim: 70
+        readonly property int leave: 140
+        readonly property int grow: 160
+        readonly property int shrink: 120
+        readonly property int wheel: 200
+        readonly property int lag: 40
+        readonly property real overshoot: 1.4
+        readonly property real arriveShare: 0.5
+        readonly property int faceEnter: 120
+        readonly property int faceLeave: 80
+        readonly property int stagger: 30
+        readonly property int menu: 180
+        readonly property int outline: 90
+    }
+
     readonly property QtObject alerts: QtObject {
         readonly property int grow: 300
         readonly property int shrink: 170
@@ -85,6 +108,11 @@ Singleton {
         readonly property int faceLeave: 90
         readonly property int stagger: 40
         readonly property int settle: 160
+        readonly property int typeBudget: 280
+        readonly property int imagePop: 260
+        readonly property real imageOvershoot: 1.6
+        readonly property int imageCorner: 180
+        readonly property int imageLeave: 110
         readonly property real swipe: 64
         readonly property real fling: 900
     }
@@ -122,6 +150,13 @@ Singleton {
         readonly property int untype: 30
         readonly property int quick: 22
         readonly property int quickUntype: 10
+    }
+
+    readonly property QtObject roll: QtObject {
+        readonly property int duration: 320
+        readonly property int carry: 45
+        readonly property real rise: 0.45
+        readonly property real leaveShare: 0.5
     }
 
     readonly property QtObject tip: QtObject {
@@ -182,6 +217,9 @@ Singleton {
         readonly property int dimOut: 200
         readonly property int pageSwap: 140
         readonly property int revealLeave: pageSwap
+        readonly property int asciiEnter: 600
+        readonly property int asciiLeave: 140
+        readonly property real asciiSpeed: 14
         readonly property int stagger: 40
         readonly property int waveRun: 700
         readonly property int slide: 200
@@ -206,14 +244,22 @@ Singleton {
         readonly property int pingSamples: 10
         readonly property int weatherPoll: 900000
         readonly property int historySave: 30000
-        readonly property real taskAt: 0.55
-        readonly property int taskGrow: 640
-        readonly property int taskShrink: 180
-        readonly property int taskLag: 140
-        readonly property real taskOvershoot: 1.1
-        readonly property real taskArrive: 0.6
-        readonly property int taskStagger: 14
-        readonly property int taskStaggerRows: 16
+        readonly property real taskAt: 0.3
+        readonly property int taskShot: 190
+        readonly property real taskShotLand: 0.8
+        readonly property real taskShotBounce: 1.6
+        readonly property int taskShotBack: 160
+        readonly property int taskGrow: 440
+        readonly property int taskShrink: 170
+        readonly property int taskLag: 50
+        readonly property real taskOvershoot: 1.4
+        readonly property real taskArrive: 0.45
+        readonly property int taskTabStagger: 60
+        readonly property int taskTabLeave: 70
+        readonly property real taskTabSpin: -120
+        readonly property int taskStagger: 34
+        readonly property int taskCellStagger: 30
+        readonly property int taskStaggerRows: 12
         readonly property int taskMove: 220
         readonly property int taskTab: 260
         readonly property int menu: 160
@@ -222,10 +268,20 @@ Singleton {
         readonly property int dimOut: 200
         readonly property real reveal: 0.3
         readonly property int level: 600
+        readonly property int gaugeSpin: 420
+        readonly property int gaugeSpinBack: 260
     }
 
     readonly property QtObject burst: QtObject {
+        readonly property bool isProcedural: Config.data.motion.burst === "procedural"
+        readonly property real variance: 0.3
+        readonly property real sideVariance: 0.25
+        readonly property int blobsLeast: 2
+        readonly property int blobsMost: 6
+        readonly property real blobLaunch: 0.4
+        readonly property real blobFlight: 0.4
         readonly property int converge: 540
+        readonly property int grow: 260
         readonly property real handShare: 0.4
         readonly property real settleShare: 0.16
         readonly property real convergeLag: 0.35
@@ -345,6 +401,7 @@ Singleton {
 
     readonly property QtObject attention: QtObject {
         readonly property int peek: 5000
+        readonly property int linger: 1200
         readonly property int batch: 600
         readonly property int ownerProbe: 1000
     }
@@ -352,6 +409,14 @@ Singleton {
     readonly property QtObject gesture: QtObject {
         readonly property real slop: 6
         readonly property real velocityBlend: 0.4
+    }
+
+    readonly property QtObject drift: QtObject {
+        readonly property real notch: 72
+        readonly property real notchAngle: 120
+        readonly property real glide: 0.12
+        readonly property real rest: 0.5
+        readonly property real restVelocity: 6
     }
 
     readonly property QtObject liquid: QtObject {
@@ -390,6 +455,11 @@ Singleton {
         readonly property QtObject dock: QtObject {
             readonly property real response: 0.38
             readonly property real damping: 0.7
+            readonly property real expansion: 0
+        }
+        readonly property QtObject drift: QtObject {
+            readonly property real response: 0.3
+            readonly property real damping: 0.9
             readonly property real expansion: 0
         }
         readonly property QtObject droplet: QtObject {

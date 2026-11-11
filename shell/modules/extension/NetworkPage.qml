@@ -105,6 +105,8 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         model: Network.isEnabled ? Network.networks : []
 
+        Drift {}
+
         delegate: NetworkRow {
             isShown: page.isShown
             isSettled: page.isSettled

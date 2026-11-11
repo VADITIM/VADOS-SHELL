@@ -10,6 +10,7 @@ FocusScope {
 
     property bool isOpen: false
     property var parts: []
+    property bool shouldStream: true
     property bool isMirrored: false
     property bool canHandOff: false
     property bool isHandingOver: false
@@ -17,10 +18,16 @@ FocusScope {
     property color accent: Appearance.color.defaultAccent
     property string taskbarSide: "left"
     property string barStyle: "floating"
+    property string taskbarGather: "merge"
     property string windowMode: "canvas"
     property bool canSwitchMode: false
     property bool isReducedMotion: false
+    property string burstStyle: "static"
     property bool isQuiet: false
+    property string screenshotFolder: ""
+    property string recordingFolder: ""
+    property string defaultScreenshots: ""
+    property string defaultRecordings: ""
     property string profileName: ""
     property string profileSecondName: ""
     property string profilePicture: ""
@@ -85,9 +92,12 @@ FocusScope {
     signal accentRequested(color value)
     signal sideRequested(string side)
     signal styleRequested(string style)
+    signal gatherRequested(string gather)
     signal modeRequested(string mode)
     signal reducedMotionRequested(bool isReduced)
+    signal burstStyleRequested(string style)
     signal quietRequested(bool isQuiet)
+    signal folderRequested(string kind, string folder)
     signal profileRequested(string field, string value)
     signal pictureRequested()
     signal pillRequested(string field, var value)
@@ -247,6 +257,7 @@ FocusScope {
                 label: "settings burst"
                 isShown: settings.isOpen
                 parts: settings.parts
+                shouldStream: settings.shouldStream
                 rootX: settings.rootX
                 seedX: settings.rootX + Appearance.taskbar.thickness / 2
                 seedY: settings.centerY
@@ -319,6 +330,24 @@ FocusScope {
                 ceiling: burst.form.y - burst.form.height / 2
                 floor: burst.form.y + burst.form.height / 2
             }
+        }
+    }
+
+    Masked {
+        x: settings.edgeX(settings.rootX, width)
+        width: settings.formWidth
+        height: settings.height
+        visible: ascii.presence > 0.01
+
+        mask: Rectangle {
+            anchors.fill: parent
+            radius: settings.look.corner
+        }
+
+        AsciiBackground {
+            id: ascii
+            anchors.fill: parent
+            isShown: settings.isContentShown && settings.shownTab !== "home"
         }
     }
 
@@ -444,6 +473,20 @@ FocusScope {
                     }
 
                     OptionGroup {
+                        label: "BURST"
+                        options: ["static", "procedural"]
+                        current: settings.burstStyle
+                        onPicked: option => settings.burstStyleRequested(option)
+                    }
+
+                    OptionGroup {
+                        label: "TASKBAR GATHER"
+                        options: ["merge", "shrink"]
+                        current: settings.taskbarGather
+                        onPicked: option => settings.gatherRequested(option)
+                    }
+
+                    OptionGroup {
                         label: "NOTIFICATIONS"
                         options: ["open", "quiet"]
                         current: settings.isQuiet ? "quiet" : "open"
@@ -456,6 +499,22 @@ FocusScope {
                         options: ["canvas", "desktop"]
                         current: settings.windowMode
                         onPicked: option => settings.modeRequested(option)
+                    }
+
+                    TextField {
+                        label: "SCREENSHOTS FOLDER (EMPTY FOR DEFAULT)"
+                        placeholder: settings.defaultScreenshots
+                        value: settings.screenshotFolder
+                        fieldWidth: settings.look.pathWidth
+                        onEdited: value => settings.folderRequested("screenshots", value)
+                    }
+
+                    TextField {
+                        label: "RECORDINGS FOLDER (EMPTY FOR DEFAULT)"
+                        placeholder: settings.defaultRecordings
+                        value: settings.recordingFolder
+                        fieldWidth: settings.look.pathWidth
+                        onEdited: value => settings.folderRequested("recordings", value)
                     }
                 }
             }
@@ -625,6 +684,8 @@ FocusScope {
         visible: settings.isLockShown || cardsLinger.running
         clip: true
         boundsBehavior: Flickable.DragOverBounds
+
+        Drift {}
 
         Timer {
             id: cardsLinger

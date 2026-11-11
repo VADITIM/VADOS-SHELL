@@ -10,10 +10,12 @@ FocusScope {
     property bool isOpen: false
     property bool isMirrored: false
     property var parts: []
+    property bool shouldStream: true
     property bool canHandOff: false
     property bool isHandingOver: false
     property bool hasCircle: false
-    readonly property bool isPresent: isOpen || burst.isActive || rising.living > 0
+    property bool hasTaskIcons: false
+    readonly property bool isPresent: isOpen || burst.isActive || rising.living > 0 || taskRising.living > 0
     readonly property string phase: burst.phase
 
     property real dim: isOpen ? 1 : 0
@@ -30,17 +32,21 @@ FocusScope {
     readonly property var disk: Hardware.disks.length > 0 ? Hardware.disks[Math.min(diskPage, Hardware.disks.length - 1)] : null
 
     readonly property var task: look.task
-    readonly property real taskBodyFar: rootX + look.width
+    readonly property real taskBodyFar: rootX + look.width + (Battery.isPresent ? Appearance.burst.stepSide : 0)
     readonly property real taskWidth: Math.min(task.width, width - taskBodyFar - task.bodyGap)
     readonly property real taskHeight: Math.min(task.height, height - task.edgeGap * 2)
     readonly property real taskTop: Math.round((height - taskHeight) / 2)
     readonly property real taskLeft: isMirrored ? 0 : width - taskWidth
-    readonly property real neckCenter: Battery.isPresent ? bodyTop + task.neckTop + task.neck / 2 : centerY
+    readonly property real shotY: centerY
+    readonly property real shotStart: burst.formRight + (Battery.isPresent ? burst.sideStep.rise : 0) - task.shotInset
+    readonly property real shotDistance: width + task.shotSink - task.shot / 2 - taskBodyFar + task.shotInset
     readonly property bool hasTaskRoom: taskWidth >= task.minWidth
     readonly property bool isTaskWanted: isOpen && hasTaskRoom && !burst.isLeaving && burst.spread >= Motion.dashboard.taskAt
+    readonly property bool isShotLanded: isTaskWanted && taskShot.isArrived && taskShot.width > shotDistance / 2
 
     signal closeRequested()
     signal landed()
+    signal taskIconsToggled()
 
     function heatColor(temperature, isKnown) {
         return isKnown ? Appearance.bandColor(temperature, look.temperatureBands) : Appearance.color.textMuted
@@ -55,11 +61,11 @@ FocusScope {
     }
 
     function percentText(share, isKnown) {
-        return isKnown ? Math.round(share * 100) + "%" : "--%"
+        return (isKnown ? String(Math.round(share * 100)) : "--").padStart(3, " ") + "%"
     }
 
     function temperatureText(temperature, isKnown) {
-        return isKnown && temperature > 0 ? Math.round(temperature) + "°C" : "--°C"
+        return (isKnown && temperature > 0 ? String(Math.round(temperature)) : "--").padStart(3, " ") + "°C"
     }
 
     function gigabytes(bytes) {
@@ -114,9 +120,20 @@ FocusScope {
     }
 
     Reshape {
+        id: taskShot
+        targetWidth: dashboard.isTaskWanted ? dashboard.shotDistance : 0
+        targetHeight: targetWidth
+        growDuration: Motion.pace(Motion.dashboard.taskShot)
+        shrinkDuration: Motion.pace(Motion.dashboard.taskShotBack)
+        shrinkDelay: Motion.pace(Motion.dashboard.taskShrink)
+        overshoot: Motion.dashboard.taskShotBounce
+        arriveShare: Motion.dashboard.taskShotLand
+    }
+
+    Reshape {
         id: taskGrowth
-        targetWidth: dashboard.isTaskWanted ? dashboard.width + dashboard.task.corner - dashboard.taskBodyFar + dashboard.task.overlap : 0
-        targetHeight: dashboard.isTaskWanted ? dashboard.taskHeight : 0
+        targetWidth: dashboard.isShotLanded ? dashboard.taskWidth : 0
+        targetHeight: dashboard.isShotLanded ? dashboard.taskHeight : 0
         growDuration: Motion.pace(Motion.dashboard.taskGrow)
         shrinkDuration: Motion.pace(Motion.dashboard.taskShrink)
         lag: Motion.pace(Motion.dashboard.taskLag)
@@ -146,6 +163,7 @@ FocusScope {
                 label: "dashboard burst"
                 isShown: dashboard.isOpen
                 parts: dashboard.parts
+                shouldStream: dashboard.shouldStream
                 rootX: dashboard.rootX
                 seedX: dashboard.rootX + Appearance.taskbar.thickness / 2
                 seedY: dashboard.centerY
@@ -165,10 +183,15 @@ FocusScope {
             TaskShape {
                 id: taskShape
                 anchors.fill: parent
-                neckStart: Math.min(dashboard.taskBodyFar, burst.formRight) - dashboard.task.overlap
-                neckCenter: dashboard.neckCenter
-                neckHeight: dashboard.task.neck
-                reach: taskGrowth.width
+                shotStart: dashboard.shotStart
+                shotY: dashboard.shotY
+                shotFrom: dashboard.task.shotFrom
+                shotSize: dashboard.task.shot
+                shotStretch: dashboard.task.shotStretch
+                shotSink: dashboard.task.shotSink
+                shotSquash: dashboard.task.shotSquash
+                travel: dashboard.shotDistance > 0 ? taskShot.width / dashboard.shotDistance : 0
+                grownWidth: taskGrowth.width
                 grownHeight: taskGrowth.height
                 edgeX: liquid.width
                 columnWidth: dashboard.taskWidth
@@ -176,6 +199,14 @@ FocusScope {
                 columnHeight: dashboard.taskHeight
                 corner: dashboard.task.corner
                 fillet: dashboard.task.fillet
+                wave: dashboard.task.wave
+                waveRun: dashboard.task.waveRun
+                crests: dashboard.task.crests
+            }
+
+            Item {
+                id: tabShapes
+                anchors.fill: parent
             }
 
             Rising {
@@ -186,6 +217,16 @@ FocusScope {
                 toX: burst.form.x + burst.form.width / 2 - dashboard.look.corner * 0.6
                 ceiling: burst.form.y - burst.form.height / 2
                 floor: burst.form.y + burst.form.height / 2
+            }
+
+            Rising {
+                id: taskRising
+                anchors.fill: parent
+                isRunning: taskManager.isShown
+                fromX: taskShape.bodyLeft + dashboard.task.corner
+                toX: taskShape.edgeX - dashboard.task.corner
+                ceiling: dashboard.taskTop
+                floor: dashboard.taskTop + dashboard.taskHeight
             }
         }
     }
@@ -217,9 +258,15 @@ FocusScope {
                 ringShare: dashboard.heatShare(Hardware.gpuTemperature, Hardware.hasGpu)
                 ringColor: dashboard.heatColor(Hardware.gpuTemperature, Hardware.hasGpu)
                 glyphColor: dashboard.usageColor(Hardware.gpuLoad, Hardware.hasGpu)
-                centerText: dashboard.percentText(Hardware.gpuLoad, Hardware.hasGpu)
+                chipLabel: "GPU"
+                hasUsage: true
+                usageShare: Hardware.hasGpu ? Hardware.gpuLoad : 0
+                usageColor: dashboard.usageColor(Hardware.gpuLoad, Hardware.hasGpu)
+                readout: dashboard.percentText(Hardware.gpuLoad, Hardware.hasGpu)
                 caption: dashboard.temperatureText(Hardware.gpuTemperature, Hardware.hasGpu)
-                captionColor: dashboard.heatColor(Hardware.gpuTemperature, Hardware.hasGpu)
+                readoutAt: dashboard.look.gauge.graphicsReadout
+                nameTilt: dashboard.look.gauge.nameTilt
+                isMirrored: dashboard.isMirrored
                 hasBar: true
                 barUsed: Hardware.videoMemoryUsed
                 barTotal: Hardware.videoMemoryTotal
@@ -235,9 +282,14 @@ FocusScope {
                 ringShare: dashboard.heatShare(Hardware.cpuTemperature, true)
                 ringColor: dashboard.heatColor(Hardware.cpuTemperature, true)
                 glyphColor: dashboard.usageColor(Hardware.cpuLoad, true)
-                centerText: dashboard.percentText(Hardware.cpuLoad, true)
+                chipLabel: "CPU"
+                hasUsage: true
+                usageShare: Hardware.cpuLoad
+                usageColor: dashboard.usageColor(Hardware.cpuLoad, true)
+                readout: dashboard.percentText(Hardware.cpuLoad, true)
                 caption: dashboard.temperatureText(Hardware.cpuTemperature, true)
-                captionColor: dashboard.heatColor(Hardware.cpuTemperature, true)
+                readoutAt: dashboard.look.gauge.processorReadout
+                isMirrored: dashboard.isMirrored
                 isShown: dashboard.isContentShown
                 enterDelay: dashboard.revealDelay(dashboard.look.processorX) + Motion.pill.elementStagger
             }
@@ -248,9 +300,14 @@ FocusScope {
                 chipName: "ram"
                 ringShare: dashboard.memoryShare
                 ringColor: dashboard.usageColor(dashboard.memoryShare, true)
+                name: "MEMORY"
                 glyphColor: dashboard.usageColor(dashboard.memoryShare, true)
-                centerText: "RAM"
-                caption: dashboard.gigabytes(Hardware.memoryUsed) + "GB/" + dashboard.gigabytes(Hardware.memoryTotal) + "GB"
+                chipLabel: "RAM"
+                usageColor: dashboard.usageColor(dashboard.memoryShare, true)
+                readout: dashboard.percentText(dashboard.memoryShare, true)
+                caption: dashboard.gigabytes(Hardware.memoryUsed).padStart(dashboard.gigabytes(Hardware.memoryTotal).length, " ") + "GB/" + dashboard.gigabytes(Hardware.memoryTotal) + "GB"
+                readoutAt: dashboard.look.gauge.memoryReadout
+                isMirrored: dashboard.isMirrored
                 isShown: dashboard.isContentShown
                 enterDelay: dashboard.revealDelay(dashboard.look.memoryX) + Motion.pill.elementStagger * 2
             }
@@ -302,15 +359,6 @@ FocusScope {
                 isShown: dashboard.isContentShown
                 enterDelay: dashboard.revealDelay(dashboard.look.weatherX)
                 stagger: Motion.pill.elementStagger
-            }
-
-            Vacant {
-                x: dashboard.placeX(dashboard.look.weatherX, width)
-                y: dashboard.bodyTop + dashboard.look.top + dashboard.look.weather.vacantY
-                width: dashboard.look.weatherWidth
-                height: dashboard.look.weather.vacantHeight
-                isShown: dashboard.isContentShown
-                enterDelay: dashboard.revealDelay(dashboard.look.weatherX) + Motion.pill.elementStagger * 3
             }
         }
     }
@@ -376,7 +424,7 @@ FocusScope {
 
             Charge {
                 x: dashboard.placeX(dashboard.look.width + (Appearance.burst.stepSide - width) / 2 - dashboard.look.battery.pull, width)
-                y: dashboard.centerY + Appearance.burst.stepSideOffset - height / 2
+                y: dashboard.centerY - height / 2
                 level: Battery.level
                 isCharging: Battery.isCharging
                 isShown: dashboard.isContentShown && sideClip.step.rise > Appearance.burst.stepSide / 2
@@ -388,23 +436,39 @@ FocusScope {
     Item {
         id: taskClip
 
-        readonly property real top: Math.max(dashboard.taskTop, taskShape.bodyTop)
-        readonly property real bottom: Math.min(dashboard.taskTop + dashboard.taskHeight, taskShape.bodyTop + taskShape.bodyHeight)
+        readonly property real clipTop: Math.max(dashboard.taskTop, taskShape.bodyTop)
+        readonly property real clipBottom: Math.min(dashboard.taskTop + dashboard.taskHeight, taskShape.bodyTop + taskShape.bodyHeight)
+        readonly property real clipLeft: Math.max(taskShape.columnLeft, taskShape.bodyLeft)
+        readonly property real clipRight: Math.min(taskShape.edgeX, taskShape.bodyRight)
 
         visible: taskShape.isGrown
-        x: dashboard.isMirrored ? dashboard.taskWidth - width : dashboard.taskLeft
-        y: top
-        width: Math.max(0, Math.min(dashboard.taskWidth, taskShape.bodyWidth))
-        height: Math.max(0, bottom - top)
+        x: dashboard.isMirrored ? dashboard.width - clipRight : clipLeft
+        y: clipTop
+        width: Math.max(0, clipRight - clipLeft)
+        height: Math.max(0, clipBottom - clipTop)
         clip: true
 
         TaskManager {
+            id: taskManager
             x: dashboard.taskLeft - taskClip.x
             y: dashboard.taskTop - taskClip.y
             width: dashboard.taskWidth
             height: dashboard.taskHeight
             focus: true
-            isShown: dashboard.isTaskWanted && taskGrowth.isArrived
+            hasIcons: dashboard.hasTaskIcons
+            isShown: dashboard.isShotLanded && taskGrowth.isArrived
+            onIconsToggled: dashboard.taskIconsToggled()
         }
+    }
+
+    TaskTabs {
+        anchors.fill: parent
+        shapes: tabShapes
+        isMirrored: dashboard.isMirrored
+        isShown: taskManager.isShown
+        current: taskManager.tab
+        stackRight: taskShape.bodyLeft - dashboard.task.tabOut
+        centerY: taskShape.bodyCenter
+        onPicked: key => taskManager.pickTab(key)
     }
 }

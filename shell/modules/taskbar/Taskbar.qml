@@ -33,6 +33,9 @@ Item {
     property bool isMirrored: false
     property bool isAway: false
     property bool isGathering: false
+    property bool isMerging: true
+    readonly property bool isHoldingParts: isGathering && isMerging
+    readonly property bool isShrinking: isAway && !isMerging
     property bool hasSlung: false
     readonly property bool isVeiled: isAway && hasSlung && !isGathering
     property bool wasRevealed: false
@@ -66,6 +69,13 @@ Item {
     readonly property rect clipboardRect: activityPill.spreadRect
     readonly property bool isClipboardShown: activityPill.isClipboardShown
     readonly property bool isClipboardBumpHovered: activityPill.isBumpHovered
+    readonly property var activityPlace: ({
+        spineX: inset + Appearance.taskbar.thickness / 2,
+        centerY: activityCenter,
+        width: activityPill.isShown ? activityPill.bodyWidth : 0,
+        height: activityPill.isShown ? activityPill.bodyHeight : 0,
+        glyph: activityPill.isShown && activityPill.face === "active" ? Appearance.activity.glyphs[activityPill.leadKey] ?? "" : ""
+    })
     readonly property real activityCenter: {
         let stackBottom = Appearance.taskbar.margin
         for (const pill of allPills()) {
@@ -492,7 +502,7 @@ Item {
 
     Timer {
         id: veilDelay
-        interval: Motion.pill.awayHold
+        interval: shell.isMerging ? Motion.pill.awayHold : Motion.pill.shrinkHold
         onTriggered: shell.hasSlung = shell.isAway
     }
 
@@ -547,7 +557,7 @@ Item {
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
         melt: Appearance.taskbar.melt
-        opacity: shell.isBare || (shell.isAway && !shell.isGathering) ? 0 : 1
+        opacity: shell.isBare || (shell.isAway && !shell.isGathering && (shell.isMerging || shell.hasSlung)) ? 0 : 1
 
         Lobe {
             readonly property var visitor: shell.visitor

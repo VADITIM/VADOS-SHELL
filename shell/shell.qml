@@ -82,6 +82,19 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
 
+        OverlaySlot {
+            id: screenshotSlot
+            overlayKey: "screenshot"
+
+            ScreenshotWindow {
+                screen: screenshotSlot.modelData
+            }
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
         FrameWindow {
             required property ShellScreen modelData
             screen: modelData

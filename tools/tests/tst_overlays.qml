@@ -220,4 +220,22 @@ TestCase {
         Overlays.toggle("nonsense", "A")
         verify(!Overlays.isAnyOpen())
     }
+    function test_keptTaskbarIsNeitherGatheredNorWaitedFor() {
+        Overlays.open("search", "A")
+        Overlays.reportPhase("search", "A", "active")
+        const before = gathers
+        Overlays.open("screenshot", "A")
+        compare(Overlays.top, "screenshot")
+        verify(!Overlays.isOpen("search", "A"), "the screenshot sits above every other layer and closes it")
+        verify(!Overlays.isWaiting("screenshot", "A"), "the screenshot opens at once, without waiting for the leave under it")
+        compare(gathers, before, "the frozen frame shows the taskbar, so nothing is gathered again")
+        Overlays.reportPhase("search", "A", "idle")
+        Overlays.close("screenshot")
+        Overlays.reportPhase("screenshot", "A", "idle")
+        verify(!Overlays.isTaskbarAway("A"))
+        Overlays.open("screenshot", "B")
+        verify(!Overlays.isTaskbarAway("B"), "the screenshot keeps the taskbar where it is")
+        compare(gathers, before)
+        Overlays.close("screenshot")
+    }
 }

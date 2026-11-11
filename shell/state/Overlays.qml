@@ -139,10 +139,12 @@ Singleton {
         if (!kinds[key] || screenName.length === 0)
             return
         const layer = kinds[key].layer
-        const isSwap = stack.some(other => other !== key && screens[other] === screenName && phaseOf(other, screenName) !== "idle" && kinds[other].layer <= layer)
+        const isKeeping = kinds[key].keepsTaskbar === true
+        const isSwap = !isKeeping && stack.some(other => other !== key && screens[other] === screenName && phaseOf(other, screenName) !== "idle" && kinds[other].layer <= layer)
         if (isSwap)
             placeSwap(screenName, { to: key, isReady: false })
-        gatherTaskbar(screenName)
+        if (!isKeeping)
+            gatherTaskbar(screenName)
         const displaced = stack.filter(other => other !== key && kinds[other].layer <= layer)
         const placed = Object.assign({}, screens)
         placed[key] = screenName

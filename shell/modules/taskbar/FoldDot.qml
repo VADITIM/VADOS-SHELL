@@ -44,7 +44,7 @@ Item {
         hasArrived: dot.host.hasArrivedAt(dot.origin.y + dot.y + dot.height / 2)
         hasSpread: false
         enterDelay: Motion.fold.dotDelay
-        isHolding: dot.host.isGathering
+        isHolding: dot.host.isHoldingParts
         leaveDelay: 0
         popDuration: Motion.stateDuration
         character: Motion.liquid.circle

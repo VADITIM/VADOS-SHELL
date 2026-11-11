@@ -10,9 +10,15 @@ Item {
     property real ringShare: 0
     property color ringColor: Appearance.color.accent
     property color glyphColor: Appearance.color.text
-    property string centerText: ""
+    property string chipLabel: ""
+    property bool hasUsage: false
+    property real usageShare: 0
+    property color usageColor: Appearance.color.accent
+    property string readout: ""
     property string caption: ""
-    property color captionColor: Appearance.color.text
+    property point readoutAt: Qt.point(0, 0)
+    property real nameTilt: 0
+    property bool isMirrored: false
     property bool hasBar: false
     property real barUsed: 0
     property real barTotal: 0
@@ -23,6 +29,15 @@ Item {
     readonly property bool isPresent: turn.presence > 0.5
     readonly property real ringX: look.bar + look.barGap
     readonly property real barShare: barTotal > 0 ? barUsed / barTotal : 0
+    readonly property bool isHovered: hover.hovered && isPresent
+    property real spin: isHovered ? look.spin : 0
+
+    Behavior on spin {
+        NumberAnimation {
+            duration: Motion.pace(gauge.isHovered ? Motion.dashboard.gaugeSpin : Motion.dashboard.gaugeSpinBack)
+            easing.type: gauge.isHovered ? Easing.OutBack : Easing.OutCubic
+        }
+    }
 
     width: look.blockWidth
     height: look.blockHeight
@@ -61,6 +76,7 @@ Item {
                 color: Appearance.bandColor(gauge.barShare, gauge.bands.usageBands)
                 font.family: Appearance.font.mono
                 font.pixelSize: gauge.look.fraction
+                font.bold: true
             }
 
             Rectangle {
@@ -75,67 +91,109 @@ Item {
                 color: Appearance.color.accent
                 font.family: Appearance.font.mono
                 font.pixelSize: gauge.look.fraction
+                font.bold: true
             }
         }
 
-        Ring {
+        Item {
+            id: ringBox
             x: gauge.ringX
             width: gauge.look.ring
             height: gauge.look.ring
-            value: gauge.ringShare
-            isShown: gauge.isPresent
-            color: gauge.ringColor
 
-            Glyph {
+            HoverHandler {
+                id: hover
+                enabled: gauge.isPresent
+            }
+
+            Ring {
+                anchors.fill: parent
+                value: gauge.ringShare
+                isShown: gauge.isPresent
+                color: gauge.ringColor
+                hasOuter: gauge.hasUsage
+                outerValue: gauge.usageShare
+                outerColor: gauge.usageColor
+            }
+
+            Item {
+                id: chip
                 anchors.centerIn: parent
                 width: gauge.look.chip
                 height: gauge.look.chip
-                name: gauge.chipName
-                stroke: gauge.bands.iconStroke * 24 / width
-                color: gauge.glyphColor
+                rotation: gauge.spin
 
-                Behavior on color {
-                    ColorAnimation {
-                        duration: Motion.pace(Motion.stateDuration)
+                Glyph {
+                    anchors.fill: parent
+                    name: gauge.chipName
+                    stroke: gauge.look.chipStroke * 24 / width
+                    color: gauge.glyphColor
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.pace(Motion.stateDuration)
+                        }
                     }
+                }
+
+                TypedText {
+                    x: (parent.width - fullWidth) / 2
+                    y: (parent.height - height) / 2 + gauge.look.chipTextShift
+                    target: gauge.chipLabel
+                    isShown: gauge.isPresent
+                    characterInterval: Motion.type.quick
+                    untypeInterval: Motion.type.quickUntype
+                    color: gauge.glyphColor
+                    font.family: Appearance.font.mono
+                    font.pixelSize: gauge.look.chipText
+                    font.bold: true
                 }
             }
 
-            TypedText {
-                x: (parent.width - fullWidth) / 2
-                y: (parent.height - height) / 2
-                target: gauge.centerText
-                isShown: gauge.isPresent
+            ArcText {
+                x: parent.width / 2
+                y: parent.height / 2
+                rotation: gauge.nameTilt
+                radius: gauge.look.ring / 2 + gauge.look.nameLift
+                maxSweep: gauge.look.nameSweep
+                target: gauge.name.toUpperCase()
+                isShown: gauge.isHovered
+                color: Appearance.color.text
+                pixelSize: gauge.look.name
+                letterSpacing: Appearance.font.labelSpacing
+            }
+        }
+
+        Item {
+            x: gauge.isMirrored ? gauge.width - gauge.readoutAt.x : gauge.readoutAt.x
+            y: gauge.readoutAt.y
+
+            Roll {
+                id: readoutText
+                x: gauge.isMirrored ? -width : 0
+                target: gauge.readout
+                isShown: gauge.isHovered
+                holdsWidth: true
                 characterInterval: Motion.type.quick
                 untypeInterval: Motion.type.quickUntype
-                color: gauge.glyphColor
+                color: Appearance.color.text
                 font.family: Appearance.font.mono
-                font.pixelSize: gauge.look.loadText
+                font.pixelSize: gauge.look.readout
                 font.bold: true
             }
 
-            ArcText {
-                x: parent.width / 2
-                y: parent.height / 2
-                radius: gauge.look.ring / 2 - gauge.look.textInset
-                maxSweep: gauge.look.textSweep
-                target: gauge.name.toUpperCase()
-                isShown: gauge.isPresent
-                color: Appearance.color.text
-                pixelSize: Appearance.font.label
-                letterSpacing: Appearance.font.labelSpacing
-            }
-
-            ArcText {
-                x: parent.width / 2
-                y: parent.height / 2
-                isBottom: true
-                radius: gauge.look.ring / 2 - gauge.look.textInset
-                maxSweep: gauge.look.textSweep
+            Roll {
+                x: gauge.isMirrored ? -width : 0
+                y: readoutText.height + gauge.look.readoutGap
                 target: gauge.caption
-                isShown: gauge.isPresent
-                color: gauge.captionColor
-                pixelSize: Appearance.font.reading
+                isShown: gauge.isHovered
+                holdsWidth: true
+                characterInterval: Motion.type.quick
+                untypeInterval: Motion.type.quickUntype
+                color: Appearance.color.text
+                font.family: Appearance.font.mono
+                font.pixelSize: gauge.look.caption
+                font.bold: true
             }
         }
     }

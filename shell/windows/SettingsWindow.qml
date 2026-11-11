@@ -27,6 +27,7 @@ OverlayWindow {
         anchors.fill: parent
         isOpen: window.isOpen
         parts: window.parts
+        shouldStream: window.shouldStream
         isMirrored: Config.data.taskbar.side === "right"
         canHandOff: window.canHandOff
         isHandingOver: window.isHandingOver
@@ -36,10 +37,17 @@ OverlayWindow {
         accent: Appearance.color.accent
         taskbarSide: Config.data.taskbar.side
         barStyle: Config.data.taskbar.style
+        taskbarGather: Config.data.taskbar.gather
         windowMode: Config.data.desktop.mode
         canSwitchMode: Confinement.canConfine
         isReducedMotion: Config.data.motion.reduced
+        burstStyle: Config.data.motion.burst
         isQuiet: Config.data.attention.doNotDisturb
+        screenshotFolder: Config.data.capture.screenshots
+        recordingFolder: Config.data.capture.recordings
+        defaultScreenshots: Capture.defaultScreenshots
+        defaultRecordings: Capture.defaultRecordings
+        onFolderRequested: (kind, folder) => kind === "screenshots" ? Config.setScreenshotFolder(folder) : Config.setRecordingFolder(folder)
         profileName: Config.data.profile.name
         profileSecondName: Config.data.profile.secondName
         profilePicture: Config.data.profile.picture
@@ -72,8 +80,10 @@ OverlayWindow {
         onAccentRequested: value => Config.setAccent(value.toString())
         onSideRequested: side => Config.setTaskbarSide(side)
         onStyleRequested: style => Config.setTaskbarStyle(style)
+        onGatherRequested: gather => Config.setTaskbarGather(gather)
         onModeRequested: mode => Config.setWindowMode(mode)
         onReducedMotionRequested: isReduced => Config.setReducedMotion(isReduced)
+        onBurstStyleRequested: style => Config.setBurstStyle(style)
         onQuietRequested: isQuiet => Config.setDoNotDisturb(isQuiet)
     }
 }

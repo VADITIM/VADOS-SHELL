@@ -14,6 +14,12 @@ Scope {
     readonly property string notificationStatus: Notifications.status
     readonly property bool isQuiet: Attention.isQuiet
 
+    function shoot() {
+        const screenName = Compositor.focusedScreen
+        if (!Overlays.isWanted("screenshot", screenName))
+            Capture.shoot(screenName)
+    }
+
     GlobalShortcut {
         appid: "vados"
         name: "search"
@@ -68,6 +74,62 @@ Scope {
         name: "activityPrevious"
         description: "Step the activity pill down: expanded, active, idle, hidden"
         onPressed: ActivityState.step(Compositor.focusedScreen, -1)
+    }
+
+    GlobalShortcut {
+        appid: "vados"
+        name: "screenshot"
+        description: "Freeze the screen and select an area to copy"
+        onPressed: shortcuts.shoot()
+    }
+
+    GlobalShortcut {
+        appid: "vados"
+        name: "record"
+        description: "Start or stop recording the screen"
+        onPressed: Capture.toggleRecording(Compositor.focusedScreen)
+    }
+
+    Connections {
+        target: Capture
+
+        function onShot(screenName) {
+            Overlays.open("screenshot", screenName)
+        }
+    }
+
+    IpcHandler {
+        target: "screenshot"
+
+        function shoot(): void {
+            shortcuts.shoot()
+        }
+
+        function close(): void {
+            Overlays.close("screenshot")
+        }
+    }
+
+    IpcHandler {
+        target: "recording"
+
+        function toggle(): void {
+            Capture.toggleRecording(Compositor.focusedScreen)
+        }
+
+        function pause(): void {
+            Capture.togglePause()
+        }
+
+        function stop(): void {
+            Capture.stop()
+        }
+
+        function status(): string {
+            if (!Capture.isRecording)
+                return Capture.canRecord ? "idle" : "no recorder"
+            return (Capture.isPaused ? "paused " : "recording ") + Capture.clock + " " + Capture.recordingFile
+        }
     }
 
     GlobalShortcut {

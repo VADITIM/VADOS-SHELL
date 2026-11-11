@@ -57,7 +57,7 @@ Item {
             untypeInterval: Motion.type.quickUntype
             color: Appearance.color.text
             font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.label
+            font.pixelSize: Appearance.dashboard.font.label
             font.letterSpacing: Appearance.font.labelSpacing
         }
 
@@ -95,7 +95,7 @@ Item {
             untypeInterval: Motion.type.quickUntype
             color: drive.usageColor
             font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.reading
+            font.pixelSize: Appearance.dashboard.font.reading
         }
 
         LevelBar {

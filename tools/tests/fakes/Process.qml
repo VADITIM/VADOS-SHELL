@@ -18,5 +18,7 @@ QtObject {
 
     function write(data) {}
 
+    function signal(number) {}
+
     onRunningChanged: if (running) started()
 }

@@ -30,7 +30,7 @@ Item {
         preferredRendererType: Shape.CurveRenderer
 
         ShapePath {
-            strokeColor: Appearance.color.textBody
+            strokeColor: Qt.alpha(Appearance.color.accent, crescent.look.usageTrack)
             strokeWidth: crescent.look.bar
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap

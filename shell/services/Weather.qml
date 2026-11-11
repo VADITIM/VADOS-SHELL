@@ -17,7 +17,7 @@ Singleton {
     property var place: null
 
     readonly property string location: Config.data.weather.location
-    readonly property int forecastDays: 6
+    readonly property int forecastDays: 3
 
     function kindOf(code) {
         if (code === 0)

@@ -73,6 +73,8 @@ PanelWindow {
 
     Taskbar {
         id: taskbar
+        onActivityPlaceChanged: ActivityState.place(window.screenName, activityPlace)
+        Component.onCompleted: ActivityState.place(window.screenName, activityPlace)
         anchors.fill: parent
         hostWindow: window
         isMirrored: window.isRight
@@ -83,6 +85,7 @@ PanelWindow {
         onDashboardRequested: Overlays.toggle("dashboard", window.screenName)
         isAway: Overlays.isTaskbarAway(window.screenName)
         isGathering: Overlays.isGathering(window.screenName)
+        isMerging: Config.data.taskbar.gather === "merge"
         visitor: Overlays.visitorOn(window.screenName)
         activityMode: ActivityState.modeOn(window.screenName)
         activityLead: ActivityState.leadKey
@@ -113,8 +116,10 @@ PanelWindow {
         body: taskbar.alertRect
         isBodyShown: taskbar.isAlertShown
         onDismissRequested: Attention.dismissPeek()
+        onHoldRequested: isOn => Attention.holdPeek(isOn)
         onOpenRequested: notification => {
-            Notifications.open(notification)
+            if (notification.isNotice !== true)
+                Notifications.open(notification)
             Attention.dismissPeek()
         }
     }

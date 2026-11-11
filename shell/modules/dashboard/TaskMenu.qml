@@ -95,7 +95,7 @@ Item {
                 text: item.modelData.label
                 color: !item.isEnabled ? Appearance.color.textFaint : item.modelData.key === "kill" ? Appearance.color.danger : Appearance.color.text
                 font.family: Appearance.font.mono
-                font.pixelSize: Appearance.font.label
+                font.pixelSize: menu.look.font.menu
                 font.letterSpacing: Appearance.font.labelSpacing
             }
 

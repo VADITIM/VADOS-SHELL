@@ -21,7 +21,9 @@ Each row is needed only for the feature it names; the rest of the shell works wi
 
 | Dependency | Package | Feature | Without it |
 |---|---|---|---|
-| wl-clipboard (`wl-paste`, `wl-copy`) | `wl-clipboard` | clipboard history (`services/Clipboard.qml`, on by default), the frame debugger's screenshot (`KP_ADD`) | the clipboard history stays empty (its supervisor logs the failure and retries); screenshots are not copied |
+| wl-clipboard (`wl-paste`, `wl-copy`) | `wl-clipboard` | clipboard history (`services/Clipboard.qml`, on by default), screenshots (PRINT, Ctrl+C), the frame debugger's screenshot (`KP_ADD`) | the clipboard history stays empty (its supervisor logs the failure and retries); screenshots are saved but not copied |
+| grim | `grim` | screenshots (PRINT): freezes the screen through wlr-screencopy or ext-image-copy-capture (driftwm and Hyprland offer both) | PRINT does nothing; the log says grim failed |
+| gpu-screen-recorder, or wf-recorder | `gpu-screen-recorder` (AUR) or `wf-recorder` | screen recording (SHIFT + PRINT); gpu-screen-recorder is preferred and the only one that can pause, wf-recorder records without pause or desktop audio | SHIFT + PRINT does nothing; the log says no recorder was found |
 | PipeWire | `pipewire`, `wireplumber` | audio pill (volume, mute), Discord call detection, mic and deafen (`Quickshell.Services.Pipewire`) | no audio pill readings, no call activity |
 | An MPRIS media player | Spotify, `mpv-mpris`, a browser | music in the activity pill (`Quickshell.Services.Mpris`) | no music activity |
 | UPower | `upower` | battery pill and dashboard battery (`Quickshell.Services.UPower`) | no battery readings (desktops have none anyway) |

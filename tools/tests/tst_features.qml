@@ -80,7 +80,7 @@ Item {
 
         function test_everyRowAnswersEveryField() {
             for (const feature of Features.features) {
-                const expected = feature.surface === "overlay" ? fields.concat(["layer"]) : fields
+                const expected = feature.surface === "overlay" ? fields.concat(["layer", "keepsTaskbar"]) : fields
                 compare(Object.keys(feature).sort(), expected.slice().sort(), feature.key)
                 verify(Features.surfaces.indexOf(feature.surface) >= 0, feature.key + " surface " + feature.surface)
                 verify(Features.origins.indexOf(feature.origin) >= 0, feature.key + " origin " + feature.origin)
@@ -92,6 +92,8 @@ Item {
                 compare(typeof feature.isBuilt, "boolean", feature.key)
                 if (feature.surface === "overlay")
                     verify(Number.isInteger(feature.layer) && feature.layer >= 1, feature.key + " layer")
+                if (feature.surface === "overlay")
+                    compare(typeof feature.keepsTaskbar, "boolean", feature.key + " keepsTaskbar")
             }
         }
 
@@ -135,6 +137,8 @@ Item {
             compare(Object.keys(Overlays.kinds).sort(), built.map(feature => feature.key).sort())
             for (const feature of built)
                 compare(Overlays.kinds[feature.key].layer, feature.layer, feature.key)
+            for (const feature of built)
+                compare(Overlays.kinds[feature.key].keepsTaskbar, feature.keepsTaskbar, feature.key)
         }
 
         function test_plannedOverlaysCannotOpen() {

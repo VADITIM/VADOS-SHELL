@@ -11,16 +11,28 @@ OverlayWindow {
     isPresent: settings.isPresent
     phase: settings.phase
 
+    function choosePicture() {
+        const screenName = window.screenName
+        if (!FileChooser.choose("Profile picture", "picture", files => {
+            if (files.length > 0)
+                Config.setProfilePicture("file://" + files[0])
+            Overlays.open("settings", screenName)
+        }))
+            return
+        window.requestClose()
+    }
+
     Settings {
         id: settings
         anchors.fill: parent
         isOpen: window.isOpen
         parts: window.parts
         isMirrored: Config.data.taskbar.side === "right"
-        canHandOff: Config.data.taskbar.style !== "bare"
+        canHandOff: window.canHandOff
         isHandingOver: window.isHandingOver
         hasCircle: window.hasCircle
         onVisitorChanged: window.placeVisitor(visitor)
+        onIsCarryingChanged: window.carry(isCarrying)
         accent: Appearance.color.accent
         taskbarSide: Config.data.taskbar.side
         barStyle: Config.data.taskbar.style
@@ -47,6 +59,7 @@ OverlayWindow {
             picture: Config.setProfilePicture,
             github: Config.setProfileGithub
         })[field](value)
+        onPictureRequested: window.choosePicture()
         onPillRequested: (field, value) => ({
             opacity: Config.setPillOpacity,
             blur: Config.setPillBlur,

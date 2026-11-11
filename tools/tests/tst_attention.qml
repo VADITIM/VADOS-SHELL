@@ -50,12 +50,20 @@ TestCase {
         compare(Attention.peek, null, "a dismissed notification leaves its peek")
     }
 
-    function test_fullscreenAndLowStayQuiet() {
-        Compositor.activeWindow = { isFullscreen: true }
-        arrive(make(5, 1, 0))
+    function test_lowStaysQuiet() {
         arrive(make(6, 0, 0))
         settleBatch()
         compare(Attention.peek, null)
+    }
+
+    function test_fullscreenStillPeeks() {
+        Compositor.activeWindow = { isFullscreen: true }
+        arrive(make(5, 1, 0))
+        arrive(make(8, 0, 0))
+        settleBatch()
+        verify(Attention.peek !== null, "a normal notification peeks over a fullscreen window")
+        compare(Attention.peek.notifications.length, 1)
+        compare(Attention.peek.notifications[0].id, 5)
     }
 
     function test_peekExpiresWithItsTimeout() {

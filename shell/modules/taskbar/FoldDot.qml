@@ -44,6 +44,7 @@ Item {
         hasArrived: dot.host.hasArrivedAt(dot.origin.y + dot.y + dot.height / 2)
         hasSpread: false
         enterDelay: Motion.fold.dotDelay
+        isHolding: dot.host.isGathering
         leaveDelay: 0
         popDuration: Motion.stateDuration
         character: Motion.liquid.circle
@@ -79,9 +80,8 @@ Item {
         width: Appearance.taskbar.foldSpeck
         height: Appearance.taskbar.foldSpeck * 3 + Appearance.taskbar.foldSpeckGap * 2
         isShown: mutate.isInnerShown
-        enterDuration: Motion.stateDuration
-        leaveDuration: Motion.pill.leaveElement
-        leaveWindow: 0
+        isSlung: true
+        leaveWindow: Motion.pill.leaveWindow / 2
 
         Press {
             target: specks

@@ -21,6 +21,7 @@ FocusScope {
     readonly property string phase: burst.phase
     readonly property bool isContentShown: burst.isOpened
     readonly property var visitor: burst.visitor
+    readonly property bool isCarrying: burst.isCarrying
     property real dim: isOpen ? 1 : 0
     property real bud: burst.isOpened ? 1 : 0
     property string zone: "found"

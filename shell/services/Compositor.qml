@@ -17,6 +17,7 @@ Singleton {
 
     property var canvasState: null
     property var activeWindow: null
+    property var lastWindow: null
     property string focusedScreen: Quickshell.screens[0]?.name ?? ""
     property string monitorsText: ""
     property bool hasNoCanvas: false
@@ -74,29 +75,32 @@ Singleton {
         const focusedOutput = outputs.find(viewport => viewport.isActive) ?? outputs[0]
         if (focusedOutput)
             focusedScreen = focusedOutput.name
-        const focused = (state.windows ?? []).find(window => window.is_focused)
-        if (!focused || !focusedOutput) {
-            activeWindow = null
-        } else {
-            const home = outputs.find(viewport => {
-                const rectangle = toScreen(focused, viewport)
-                const middleX = rectangle.x + rectangle.width / 2
-                const middleY = rectangle.y + rectangle.height / 2
-                return middleX >= 0 && middleX <= viewport.width && middleY >= 0 && middleY <= viewport.height
-            }) ?? focusedOutput
-            const rectangle = toScreen(focused, home)
-            activeWindow = {
-                id: focused.id,
-                appId: focused.app_id ?? "",
-                screen: home.name,
-                x: rectangle.x,
-                y: rectangle.y,
-                width: rectangle.width,
-                height: rectangle.height,
-                isFullscreen: isListed(state.fullscreen, focused.id)
-            }
-        }
+        const windows = state.windows ?? []
+        const focused = windows.find(window => window.is_focused)
+        activeWindow = focused && focusedOutput ? describeCanvasWindow(focused, outputs, focusedOutput, state) : null
+        const last = focused ?? windows.find(window => window.id === lastWindow?.id)
+        lastWindow = last && focusedOutput ? describeCanvasWindow(last, outputs, focusedOutput, state) : null
         canvasChanged()
+    }
+
+    function describeCanvasWindow(window, outputs, fallback, state) {
+        const home = outputs.find(viewport => {
+            const rectangle = toScreen(window, viewport)
+            const middleX = rectangle.x + rectangle.width / 2
+            const middleY = rectangle.y + rectangle.height / 2
+            return middleX >= 0 && middleX <= viewport.width && middleY >= 0 && middleY <= viewport.height
+        }) ?? fallback
+        const rectangle = toScreen(window, home)
+        return {
+            id: window.id,
+            appId: window.app_id ?? "",
+            screen: home.name,
+            x: rectangle.x,
+            y: rectangle.y,
+            width: rectangle.width,
+            height: rectangle.height,
+            isFullscreen: isListed(state.fullscreen, window.id)
+        }
     }
 
     function readHyprland(windowText) {
@@ -160,6 +164,11 @@ Singleton {
 
     function action(spec) {
         send(["action"].concat(spec.split(" ")))
+    }
+
+    onActiveWindowChanged: {
+        if (activeWindow && !isDriftwm)
+            lastWindow = activeWindow
     }
 
     Component.onCompleted: {

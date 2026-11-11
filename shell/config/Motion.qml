@@ -27,7 +27,13 @@ Singleton {
         readonly property int leaveWindow: 55
         readonly property int leaveSpread: 105
         readonly property int leavePop: 130
-        readonly property int awayHold: leaveWindow + leaveElement + 20
+        readonly property int sling: 200
+        readonly property int slingIn: 240
+        readonly property int slingLead: 90
+        readonly property real slingBack: 2.4
+        readonly property real slingSpin: -120
+        readonly property int gatherRetract: 150
+        readonly property int awayHold: leaveWindow / 2 + sling + 20
         readonly property int fold: 105
         readonly property int elementStagger: 28
         readonly property int slide: 160
@@ -117,17 +123,14 @@ Singleton {
     }
 
     readonly property QtObject reveal: QtObject {
-        readonly property int dwell: 1500
+        readonly property int dwell: 300
         readonly property int nudge: 700
-        readonly property int linger: 700
+        readonly property int linger: 200
         readonly property int stagger: 30
-        readonly property int arrivalScatter: 80
         readonly property int arrivalStagger: 45
         readonly property int tipDelay: 350
         readonly property int backdropEnter: 360
         readonly property int backdropLeave: 210
-        readonly property real pullThreshold: 56
-        readonly property real pullLimit: 90
         readonly property real beadReach: 12
     }
 
@@ -185,8 +188,13 @@ Singleton {
     }
 
     readonly property QtObject burst: QtObject {
-        readonly property int converge: 240
-        readonly property real convergeLag: 0.5
+        readonly property int converge: 540
+        readonly property real handShare: 0.4
+        readonly property real settleShare: 0.16
+        readonly property real convergeLag: 0.35
+        readonly property real gulp: 0.3
+        readonly property real gulpLimit: 0.4
+        readonly property real recoil: 0.28
         readonly property real shrinkShare: 0.45
         readonly property real travelStart: 0.4
         readonly property real absorbShare: 0.25
@@ -212,14 +220,16 @@ Singleton {
         readonly property int leaveHold: 60
         readonly property int leave: 380
         readonly property real leaveShrink: 0.55
-        readonly property int release: 320
+        readonly property int release: 440
         readonly property real releaseEmerge: 0.2
-        readonly property real releaseTravel: 0.35
+        readonly property real releaseTravel: 0.4
         readonly property real releaseExtendLead: 0.104
         readonly property real releaseExtendSpeed: 0.7
         readonly property real releaseRebound: 1.6
         readonly property real stepRetract: 0.12
         readonly property real leaveFade: 0.2
+        readonly property int split: 420
+        readonly property real splitClose: 0.3
     }
 
     readonly property QtObject rising: QtObject {
@@ -229,6 +239,22 @@ Singleton {
         readonly property real grow: 0.3
         readonly property real life: 9
         readonly property real drain: 0.25
+    }
+
+    readonly property QtObject notifications: QtObject {
+        readonly property int dim: 200
+        readonly property int dimOut: 220
+        readonly property int bud: 380
+        readonly property int budOut: 140
+        readonly property int stagger: 34
+        readonly property int bubbleStagger: 90
+        readonly property int rowEnter: 220
+        readonly property int rowLeave: 110
+        readonly property int iconEnter: 360
+        readonly property real iconSpin: -200
+        readonly property int typeCharacter: 12
+        readonly property int settle: 180
+        readonly property real sendShown: 0.6
     }
 
     readonly property QtObject search: QtObject {
@@ -251,8 +277,8 @@ Singleton {
         readonly property real sampleShare: 0.95
         readonly property QtObject ready: QtObject {
             readonly property int glance: 250
-            readonly property int focus: 500
-            readonly property int takeover: 500
+            readonly property int focus: 700
+            readonly property int takeover: 700
         }
     }
 
@@ -283,6 +309,7 @@ Singleton {
     readonly property QtObject attention: QtObject {
         readonly property int peek: 5000
         readonly property int batch: 600
+        readonly property int ownerProbe: 1000
     }
 
     readonly property QtObject gesture: QtObject {
@@ -311,6 +338,11 @@ Singleton {
         readonly property QtObject circle: QtObject {
             readonly property real response: 0.2493
             readonly property real damping: 0.67
+            readonly property real expansion: 1
+        }
+        readonly property QtObject gulp: QtObject {
+            readonly property real response: 0.14
+            readonly property real damping: 0.3
             readonly property real expansion: 1
         }
         readonly property QtObject follow: QtObject {

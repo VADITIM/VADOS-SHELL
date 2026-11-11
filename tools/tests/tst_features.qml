@@ -152,7 +152,7 @@ Item {
                 best = Math.min(best, scene.pillOpenedAt - start)
                 tryVerify(() => !pill.spreadEnter.running, 3000)
                 pill.isShown = false
-                tryVerify(() => !pill.leave.running, 3000)
+                tryVerify(() => !pill.leave.running && !pill.popLeave.running, 3000)
             }
             console.info("vados: pill ready after " + Math.round(best) + " ms")
             verify(best <= Motion.budget.ready.glance, Math.round(best) + " ms is over the " + Motion.budget.ready.glance + " ms glance budget")

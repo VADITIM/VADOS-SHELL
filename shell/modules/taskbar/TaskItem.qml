@@ -67,7 +67,9 @@ Item {
         width: Appearance.taskbar.item
         height: Appearance.taskbar.item
         isShown: task.pill.areItemsShown && !task.isLeaving && task.shownRoom > 0.6
-        enterDelay: task.host.isArriving ? Math.round(Math.random() * Motion.reveal.arrivalScatter) : task.pill.isSpreading ? task.openingDelay : 0
+        isSlung: true
+        leaveWindow: Motion.pill.leaveWindow / 2
+        enterDelay: task.pill.isSpreading ? task.openingDelay : 0
 
         Press {
             target: face

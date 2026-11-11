@@ -13,6 +13,7 @@ Item {
     property real expansion: 0
 
     readonly property var look: Appearance.activity.media
+    readonly property size bodySize: Qt.size(look.width, look.height)
     readonly property real headSize: look.head * Math.min(1.1, expansion) * pill.popScale
     readonly property real detailsLeft: look.height / 2 + look.ring / 2 + Appearance.activity.detailGap
 

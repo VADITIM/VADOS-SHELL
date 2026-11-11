@@ -6,9 +6,8 @@ import qs.config
 Singleton {
     id: occupancy
 
-    readonly property var window: Compositor.activeWindow
-
-    function isCovered(screenName) {
+    function isCovered(screenName, isHolding) {
+        const window = Compositor.activeWindow ?? (isHolding ? Compositor.lastWindow : null)
         if (!window || window.screen !== screenName)
             return false
         if (window.isFullscreen)

@@ -8,6 +8,7 @@ import qs.modules.alerts
 import qs.modules.search
 import qs.modules.settings
 import qs.modules.dashboard
+import qs.modules.notifications
 import qs.modules.framedebug
 import qs.windows
 import QtCore as Core
@@ -229,6 +230,24 @@ Window {
             onCloseRequested: Overlays.close("dashboard")
             onLanded: root.landOverlay()
         }
+
+        NotificationMenu {
+            id: notificationMenu
+            anchors.fill: parent
+            visible: isPresent
+            isOpen: root.isOverlayOpen("notifications")
+            parts: Overlays.taskbarParts[root.screenName] ?? []
+            isMirrored: root.isRight
+            canHandOff: Config.data.taskbar.style !== "bare"
+            isHandingOver: Overlays.isHandingOver("notifications", root.screenName)
+            hasCircle: Overlays.hasCircle("notifications", root.screenName)
+            isQuiet: Attention.isQuiet
+            onPhaseChanged: Overlays.reportPhase("notifications", root.screenName, phase)
+            onVisitorChanged: Overlays.placeVisitor("notifications", root.screenName, visitor)
+            onCloseRequested: Overlays.close("notifications")
+            onLanded: root.landOverlay()
+            onQuietRequested: isQuiet => Attention.setQuiet(isQuiet)
+        }
     }
 
     Connections {
@@ -354,6 +373,12 @@ Window {
         enabled: !Overlays.isAnyOpen()
         context: Qt.ApplicationShortcut
         onActivated: Overlays.toggle("dashboard", root.screenName)
+    }
+
+    Shortcut {
+        sequences: ["Ctrl+N", "Meta+N"]
+        context: Qt.ApplicationShortcut
+        onActivated: Overlays.toggle("notifications", root.screenName)
     }
 
     Shortcut {

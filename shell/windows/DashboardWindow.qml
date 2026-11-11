@@ -40,10 +40,11 @@ OverlayWindow {
         isOpen: window.isOpen
         isMirrored: Config.data.taskbar.side === "right"
         parts: window.parts
-        canHandOff: Config.data.taskbar.style !== "bare"
+        canHandOff: window.canHandOff
         isHandingOver: window.isHandingOver
         hasCircle: window.hasCircle
         onVisitorChanged: window.placeVisitor(visitor)
+        onIsCarryingChanged: window.carry(isCarrying)
         onCloseRequested: window.requestClose()
         onLanded: window.land()
     }

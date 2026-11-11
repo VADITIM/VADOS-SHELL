@@ -25,6 +25,8 @@ Item {
     property bool isHandingOver: false
     property bool hasCircle: false
     property var wall: []
+    property real splitAt: 0
+    property real splitGap: 0
 
     property real merge: 0
     property real leaveWallShare: 0
@@ -32,7 +34,10 @@ Item {
     property real spread: 0
     property real exit: 0
     property real release: 0
+    property real split: 0
+    property real leaveSplit: 0
     property bool isReleasing: false
+    property bool shouldHandOff: false
     property real impact: 0
     property real leaveSpread: 0
     property real leaveImpact: 0
@@ -52,6 +57,7 @@ Item {
     readonly property string phase: lifecycle.phase
     readonly property bool canRewind: isLeaving && !isHandedOff && exit < pace.leaveShrink
     readonly property bool isOpened: isShown && !isLeaving && spread >= pace.openShare
+    readonly property bool isCarrying: isActive && (isLeaving || startsFromCircle || merge >= pace.handShare)
     readonly property bool isSplashing: !Motion.isReduced && isShown && !isLeaving && spread > pace.impactShare
 
     readonly property var frame: ({ x: seedX, y: seedY, width: formWidth, height: formHeight })
@@ -65,6 +71,7 @@ Item {
     readonly property real heightShare: Liquid.rise(character, opening * pace.heightLead * openTime)
     readonly property real front: startReach + (farDistance - startReach) * widthShare
     readonly property real crossShare: crossOf(pace.heightLead)
+    readonly property real waveShare: pace.impactShare + crossShare * (1 - pace.impactShare)
     readonly property real meetShare: pace.impactShare + (crossShare + pace.crestRun * (1 - crossShare)) * (1 - pace.impactShare)
 
     readonly property var flights: (parts || []).map(part => flightOf(part))
@@ -74,13 +81,17 @@ Item {
     readonly property real totalArea: flights.reduce((sum, flight) => sum + flight.area, 0)
     readonly property real arrived: totalArea > 0
         ? flights.reduce((sum, flight) => sum + flight.area * absorbedShare(flight), 0) / totalArea
-        : Geometry.smooth(merge)
+        : Geometry.smooth(gatherShare)
+    readonly property real gatherShare: Geometry.clampUnit((merge - pace.handShare) / (1 - pace.handShare - pace.settleShare))
+    readonly property real calm: Geometry.clampUnit((merge - 1 + pace.settleShare) / pace.settleShare)
+    readonly property real gulp: Math.max(-pace.gulpLimit, Math.min(pace.gulpLimit, flights.reduce((sum, flight) => sum + gulpOf(flight), 0) * (1 - calm * calm)))
+    readonly property real recoil: isReleasing ? pace.recoil * Liquid.ring(Motion.liquid.gulp, release * pace.release / 1000) : 0
 
     readonly property var closed: ({ x: seedX, y: seedY, width: 0, height: 0, left: 0, right: 0 })
     readonly property var form: !isActive ? closed : isLeaving ? leaveForm(exit, leaveFrom) : enterForm(spread)
     readonly property real formRight: form.x + form.width / 2
     readonly property real restSize: isSwapped ? look.ball : look.leaveBall
-    readonly property bool isHandedOff: (canHandOff || isSwapped) && !isReleasing && isLeaving && exit >= pace.leaveShrink
+    readonly property bool isHandedOff: (shouldHandOff || isSwapped) && !isReleasing && isLeaving && exit >= pace.leaveShrink
     readonly property bool hasReleased: isReleasing && release >= 1
     readonly property real releasedArea: isReleasing && totalArea > 0 ? flights.reduce((sum, flight) => sum + flight.area * releaseTravelOf(flight), 0) / totalArea : 0
     readonly property bool isStepped: hasSteps && (isSplashing || isLeaving) && !isHandedOff
@@ -99,6 +110,14 @@ Item {
         : spread < pace.impactShare ? 0
         : Math.max(0, (form.width - 2 * startReach) / Math.max(1, farX - rootX - 2 * startReach))
     readonly property bool hasWall: wallShare > 0 && !isHandedOff && form.height > 0.5
+    readonly property bool canSplit: splitAt > 0 && splitAt < 1 && splitGap > 0
+    readonly property real splitShare: !canSplit || !isActive ? 0
+        : isLeaving ? leaveSplit * (1 - Geometry.smooth(Geometry.clampUnit(exit / pace.splitClose)))
+        : split
+    readonly property real splitCenter: formTop + form.height * splitAt
+    readonly property real splitTop: splitCenter - splitGap * splitShare / 2
+    readonly property real splitBottom: splitCenter + splitGap * splitShare / 2
+    readonly property bool isSplit: hasWall && splitGap * splitShare >= 0.5
     readonly property real flare: !isActive ? 0
         : isLeaving ? leaveFlare * (1 - Geometry.smooth(Geometry.clampUnit(exit / pace.flareRetract)))
         : Geometry.smooth(Geometry.clampUnit((opening - pace.flareStart) / (1 - pace.flareStart)))
@@ -107,6 +126,7 @@ Item {
     property var topTrack: null
     property var bottomTrack: null
     property var bodyOutline: []
+    property var bodyPieces: []
     property var crests: [[], []]
     property real farFront: 0
     readonly property var visitor: isActive && isLeaving && !isSwapped ? ({ x: form.x, y: form.y, width: form.width, height: form.height, isHandedOff: isHandedOff, hasReleased: hasReleased, isReleasing: isReleasing, release: release, arrivals: flights.map(flight => ({ y: flight.y, arrival: arrivalOf(flight) })) }) : null
@@ -143,7 +163,8 @@ Item {
     function enterForm(share) {
         if (share <= 0) {
             const size = look.ball * Math.sqrt(arrived)
-            return { x: seedX, y: seedY, width: size, height: size, left: size / 2, right: size / 2 }
+            const corner = size * (1 - Math.abs(gulp)) / 2
+            return { x: seedX, y: seedY, width: size * (1 + gulp), height: size * (1 - gulp), left: corner, right: corner }
         }
         if (share < pace.impactShare) {
             const charge = share / pace.impactShare
@@ -177,8 +198,8 @@ Item {
     function leaveForm(exit, from) {
         const size = restSize * (isReleasing ? Math.sqrt(1 - releasedArea) : 1)
         const collapse = 1 - Math.pow(1 - Geometry.clampUnit(exit / pace.leaveShrink), 3)
-        const width = from.width + (size - from.width) * collapse
-        const height = from.height + (size - from.height) * collapse
+        const width = (from.width + (size - from.width) * collapse) * (1 - recoil)
+        const height = (from.height + (size - from.height) * collapse) * (1 + recoil)
         const limit = Math.min(width, height) / 2
         const fromLeft = from.x - from.width / 2
         const left = fromLeft + (seedX - size / 2 - fromLeft) * collapse
@@ -210,7 +231,18 @@ Item {
 
     function progressOf(flight) {
         const order = farthest > nearest ? (flight.distance - nearest) / (farthest - nearest) : 0
-        return Geometry.clampUnit((merge - pace.convergeLag * order) / (1 - pace.convergeLag))
+        return Geometry.clampUnit((gatherShare - pace.convergeLag * order) / (1 - pace.convergeLag))
+    }
+
+    function contactOf(flight) {
+        const order = farthest > nearest ? (flight.distance - nearest) / (farthest - nearest) : 0
+        const share = pace.convergeLag * order + (1 - pace.convergeLag) * (1 - pace.absorbShare)
+        return pace.handShare + (1 - pace.handShare - pace.settleShare) * share
+    }
+
+    function gulpOf(flight) {
+        const since = (merge - contactOf(flight)) * pace.converge / 1000
+        return since <= 0 ? 0 : pace.gulp * Math.sqrt(flight.area / totalArea) * Liquid.ring(Motion.liquid.gulp, since)
     }
 
     function absorbedShare(flight) {
@@ -447,13 +479,87 @@ Item {
             topTrack = null
             bottomTrack = null
             bodyOutline = []
+            bodyPieces = []
             crests = [[], []]
             return
         }
         topTrack = wallTrack(-1)
         bottomTrack = wallTrack(1)
         bodyOutline = hasWall ? roundedOutline(edgePoints(-1).concat(edgePoints(1).reverse())) : []
+        if (isSplit) {
+            const cut = cutLines()
+            bodyPieces = Geometry.splitAlong(bodyOutline, cut.upper, cut.lower)
+        } else {
+            bodyPieces = [bodyOutline]
+        }
         crests = [crestPath(-1), crestPath(1)]
+    }
+
+    function cutLines() {
+        const context = traceContext()
+        const left = form.x - form.width / 2
+        const right = Math.max(left + 1, wallXAt(splitCenter))
+        const length = right - left
+        const middle = left + length / 2
+        const half = splitGap * splitShare / 2
+        const closeness = 1 - Geometry.clampUnit(splitShare)
+        const pinch = Geometry.smooth(Geometry.clampUnit(closeness / Motion.liquid.neck.merge))
+        const neckWidth = Geometry.mix(look.splitNeck, 1, closeness) * length / 2
+        const height = crestHeight()
+        const head = cutHead(right, context)
+        const count = Geometry.samplesFor(length, look.troughStep)
+        const upper = []
+        const lower = []
+        for (let sample = 0; sample <= count; sample++) {
+            const x = left + length * sample / count
+            const away = Math.abs(x - middle) / neckWidth
+            const neck = away >= 1 ? 0 : Math.pow(Math.cos(Math.PI * away / 2), 2)
+            const wave = cutWave(x - head, height, context) * freeShare(Qt.point(x, splitCenter), context)
+            const gap = Math.max(0, half * (1 - pinch * neck) - wave)
+            upper.push(Qt.point(x, splitCenter - gap))
+            lower.push(Qt.point(x, splitCenter + gap))
+        }
+        return { upper: upper, lower: lower }
+    }
+
+    function cutHead(right, context) {
+        const track = topTrack
+        if (!track)
+            return -Infinity
+        const head = waveHead(track.total)
+        let passed = 0
+        for (const segment of track.segments) {
+            const end = passed + segment.length
+            const last = basePoint(segment, -1, segment.length, context)
+            if (head <= end && last.x < right)
+                return basePoint(segment, -1, head - passed, context).x
+            if (last.x >= right) {
+                let low = 0
+                let high = segment.length
+                for (let step = 0; step < look.cutSearch; step++) {
+                    const middle = (low + high) / 2
+                    if (basePoint(segment, -1, middle, context).x < right)
+                        low = middle
+                    else
+                        high = middle
+                }
+                const reach = passed + high
+                return head <= reach ? basePoint(segment, -1, head - passed, context).x : right + head - reach
+            }
+            passed = end
+        }
+        return right + head - passed
+    }
+
+    function cutWave(distance, height, context) {
+        if (height <= 0 || !isFinite(distance))
+            return 0
+        const away = Math.abs(distance)
+        if (away < context.crestLength / 2) {
+            const bump = Math.cos(Math.PI * away / context.crestLength)
+            return height * bump * bump
+        }
+        return troughDepth(distance, 0, height / look.crest, context)
     }
 
     function roundedOutline(points) {
@@ -630,6 +736,7 @@ Item {
         impact = 0
         exit = 0
         release = 0
+        split = 0
         isReleasing = false
         isSwapped = false
         enter.restart()
@@ -647,6 +754,7 @@ Item {
         merge = 1
         spread = leaveSpread
         impact = leaveImpact
+        split = leaveSplit
         resuming.restart()
     }
 
@@ -655,6 +763,7 @@ Item {
         leaveImpact = impact
         leaveWallShare = wallShare
         leaveFlare = flare
+        leaveSplit = splitShare
         const shape = form
         heldFrame = frame
         heldForm = shape
@@ -674,7 +783,8 @@ Item {
         exit = 0
         release = 0
         isSwapped = isHandingOver
-        isReleasing = canHandOff && flights.length > 0 && !isSwapped
+        shouldHandOff = canHandOff
+        isReleasing = shouldHandOff && flights.length > 0 && !isSwapped
         hasLanded = false
         if (isReleasing)
             releasing.restart()
@@ -688,6 +798,7 @@ Item {
             merge = 1
             spread = 1
             impact = 1
+            split = 1
         }
         exit = phase === "active" ? 0 : 1
         release = phase === "idle" && isReleasing ? 1 : 0
@@ -721,6 +832,7 @@ Item {
     onImpactChanged: queueTrace()
     onHasTracksChanged: queueTrace()
     onWallChanged: queueTrace()
+    onSplitShareChanged: queueTrace()
     Component.onCompleted: if (isShown) lifecycle.send("show")
 
     anchors.fill: parent
@@ -731,7 +843,7 @@ Item {
         LiquidShape {
             required property var modelData
             readonly property var stream: burst.releaseForm(modelData)
-            visible: burst.isReleasing && burst.release > 0 && stream.height > 0.5
+            visible: burst.isReleasing && burst.release > 0 && burst.release < burst.arrivalOf(modelData) && stream.height > 0.5
             width: stream.width
             height: stream.height
             x: stream.x - width / 2
@@ -745,7 +857,7 @@ Item {
         LiquidShape {
             required property var modelData
             readonly property var stream: burst.streamForm(modelData)
-            visible: burst.isShown && !burst.isLeaving && burst.spread <= 0 && stream.height > 0.5
+            visible: burst.isCarrying && burst.isShown && !burst.isLeaving && burst.spread <= 0 && stream.height > 0.5
             width: stream.width
             height: stream.height
             x: stream.x - width / 2
@@ -755,7 +867,7 @@ Item {
 
     Lobe {
         id: rootLobe
-        visible: burst.isActive && !burst.isHandedOff && burst.form.height > 0.5 && burst.form.x > 0
+        visible: burst.isActive && !burst.isHandedOff && burst.form.height > 0.5 && burst.form.x > 0 && !burst.isSplit
         side: 1
         edge: -burst.edgePad
         tip: burst.rootTip
@@ -775,7 +887,7 @@ Item {
             fillRule: ShapePath.WindingFill
             strokeColor: "transparent"
             strokeWidth: 0
-            PathPolyline { path: burst.bodyOutline }
+            PathMultiline { paths: burst.bodyPieces }
         }
     }
 
@@ -880,6 +992,16 @@ Item {
                     duration: Motion.pace(Motion.burst.impact)
                 }
             }
+            SequentialAnimation {
+                PauseAnimation { duration: Motion.pace(Math.round(Motion.burst.spread * burst.waveShare)) }
+                NumberAnimation {
+                    target: burst
+                    property: "split"
+                    to: 1
+                    duration: Motion.pace(Motion.burst.split)
+                    easing.type: Easing.OutBack
+                }
+            }
         }
         ScriptAction { script: burst.lifecycle.send("entered") }
     }
@@ -914,6 +1036,13 @@ Item {
                 property: "impact"
                 to: 1
                 duration: Motion.pace(Math.round(Motion.burst.impact * (1 - burst.leaveImpact)))
+            }
+            NumberAnimation {
+                target: burst
+                property: "split"
+                to: 1
+                duration: Motion.pace(Math.round(Motion.burst.split * (1 - burst.leaveSplit)))
+                easing.type: Easing.OutCubic
             }
         }
         ScriptAction { script: burst.lifecycle.send("entered") }

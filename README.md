@@ -23,10 +23,11 @@ Clone into `~/.config/vados` and start the shell with `qs -p ~/.config/vados/she
 autostart = ["qs -p ~/.config/vados/shell"]
 
 [keybindings]
-"super+g" = "exec qs -p ~/.config/vados/shell ipc call search toggle"
+"super" = "spawn qs -p ~/.config/vados/shell ipc call search toggle"
 "ctrl+p" = "exec qs -p ~/.config/vados/shell ipc call settings toggle"
-"super+a" = "exec qs -p ~/.config/vados/shell ipc call dashboard toggle"
-"super+d" = "exec qs -p ~/.config/vados/shell ipc call desktop toggle"
+"super+d" = "spawn qs -p ~/.config/vados/shell ipc call dashboard toggle"
+"super+n" = "spawn qs -p ~/.config/vados/shell ipc call notifications toggle"
+"super+a" = "exec qs -p ~/.config/vados/shell ipc call desktop toggle"
 "super+up" = "exec qs -p ~/.config/vados/shell ipc call desktop maximize"
 "super+down" = "exec qs -p ~/.config/vados/shell ipc call desktop minimize"
 "super+left" = "exec qs -p ~/.config/vados/shell ipc call desktop snap left"
@@ -53,11 +54,30 @@ layerrule = ignorezero, vados-settings
 bind = SUPER, A, global, vados:dashboard
 layerrule = blur, vados-dashboard
 layerrule = ignorezero, vados-dashboard
+bind = SUPER, N, global, vados:notifications
 bind = CTRL, right, global, vados:activityNext
 bind = CTRL, left, global, vados:activityPrevious
 bind = , KP_0, global, vados:frames
 bind = , KP_ADD, global, vados:frameShot
 ```
+
+### Memory
+
+Start `qs` with these allocator options. Quickshell uses jemalloc, which by default keeps the memory the shell frees and lets the kernel round it up to huge pages; with them the shell idles about 75 MB lower and gives memory back after an overlay closes.
+
+```toml
+autostart = ["env MALLOC_CONF=thp:never,narenas:4,background_thread:true qs -p ~/.config/vados/shell"]
+```
+
+```
+exec-once = env MALLOC_CONF=thp:never,narenas:4,background_thread:true qs -p ~/.config/vados/shell
+```
+
+The options must be in the environment before `qs` starts; a `//@ pragma Env` line in `shell.qml` is too late. Key bindings that call `qs ... ipc call` do not need them.
+
+On a machine with an NVIDIA GPU whose screens all run on the AMD or Intel GPU, adding `__EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/50_mesa.json` to the same `env` keeps NVIDIA's EGL libraries out of the shell (about 100 MB resident). Leave it out when a screen is driven by the NVIDIA GPU.
+
+Overlays (search, settings, dashboard, notifications menu) are built when they open and destroyed when they have left, per screen, so an overlay nobody uses costs nothing.
 
 ### Anything else
 
@@ -137,12 +157,22 @@ Bars and rings are colour-coded in bands: blue, yellow, orange, red. GPU reading
 
 ## Activity and notifications
 
-With `notifications.enabled` on, every notification that may interrupt (critical always; normal ones unless do-not-disturb is on or a window is fullscreen; low never) grows out of the activity pill as an alert: the app it came from (Discord, Telegram, WhatsApp, Signal, Slack, Element, Thunderbird and Spotify are recognised; anything else shows its own name), the summary and the start of the message. Several arriving together share one alert (`+N`). Click it to open the app, swipe it sideways to put it away; it stays in the notification list either way. The rest of the activity bar (tray, notification list) is coming:
+With `notifications.enabled` on, every notification that may interrupt (critical always; normal ones unless do-not-disturb is on or a window is fullscreen; low never) grows out of the activity pill as an alert: the app it came from (Discord, Telegram, WhatsApp, Signal, Slack, Element, Thunderbird and Spotify are recognised; anything else shows its own name), the summary and the start of the message. Several arriving together share one alert (`+N`). Click it to open the app, swipe it sideways to put it away; it stays in the notifications menu either way.
 
-- `qs -p ~/.config/vados/shell ipc call activity toggle` (or the Hyprland global shortcut `vados:activity`), `... activity current`, `... activity pin notifications`.
-- `... ipc call overlay toggle <search|settings|dashboard>`, `... overlay close` (closes the topmost), `... overlay top`.
+Unread notifications keep the activity pill active with a bell and their count; clicking the bell opens the notifications menu. Scroll on to the dots for the system tray: click an icon to activate it, right-click for its menu.
+
+### Notifications menu
+
+`SUPER + N` (or the bell) bursts a full-height liquid column out of the taskbar, which splits in two. The upper body is the history: every notification the shell received, newest first, kept across restarts (up to `notifications.history`; transient ones are not kept). Each row shows the app, the group or sender and the message. Click a row to open its app, swipe it sideways to remove it. A trash bubble beside the wall clears everything, and a mute bubble turns do-not-disturb on and off. Opening the menu marks everything read.
+
+The lower body sends files with [Blip](https://blip.net) and appears only while Blip is installed. Your devices from `send.devices` show as circles. Pick one, then press SEND: the menu closes, your file chooser opens (the desktop portal), and each chosen file goes to that device (`blip --peer=<peer> --file=<file>`). With no device picked, the files open in Blip's own window. The gear bubble picks the sending app; Blip is the only one so far.
+
+Keys: Tab moves between the list, the bubbles and the send tray; arrows move, Enter or Space presses, Delete removes a row, Esc closes.
+
+- `qs -p ~/.config/vados/shell ipc call activity toggle` (or the Hyprland global shortcut `vados:activity`) expands or folds the pill, `... activity close` folds it, `... activity pin <call|media|notifications|tray>` picks what it shows, `... activity current` names it.
+- `... ipc call overlay toggle <search|settings|dashboard|notifications>`, `... overlay close` (closes the topmost), `... overlay top`.
 - `... ipc call attention quiet true` (do not disturb), `... attention toggle`, `status`, `dismiss` (hides the current pop-up).
-- `... ipc call notifications enable` makes the shell your notification daemon, `... disable` gives it back; `status`, `count` and `clear` report and dismiss.
+- `... ipc call notifications enable` makes the shell your notification daemon, `... disable` gives it back; `toggle` (`SUPER + N`, Hyprland `vados:notifications`) opens or closes the notifications menu and `close` closes it; `status`, `count` and `clear` report and dismiss (`clear` also empties the history).
 
 ## Network
 
@@ -152,6 +182,7 @@ The shell reaches the network only from these files, and only while the feature 
 |---|---|---|
 | `services/Weather.qml` | api.open-meteo.com, geocoding-api.open-meteo.com; ipinfo.io when `weather.location` is empty | while the dashboard is open, at most every 15 minutes; after a failed request it retries after 1 s, doubling up to 1 minute |
 | `services/Traffic.qml` | `ping` to 1.1.1.1 | while the dashboard is open |
+| `services/Transfer.qml` | none itself; it starts `blip`, which sends the chosen files to your device through Blip's servers | only when you press SEND in the notifications menu and pick files |
 
 Nothing else talks to the network. `tools/check-rules.py` fails when another file does.
 
@@ -167,6 +198,7 @@ shell/
 ├── modules/      features; never import each other
 ├── windows/      layer-shell hosts per screen
 ├── keybinds/     shortcuts + IPC, only change state
+├── scripts/      helpers services run (the portal file chooser)
 └── utils/
 shell.json        user config
 ```
@@ -191,11 +223,14 @@ shell.json        user config
 | `lock.wallpaper` | image path of the lock screen background | `""` |
 | `pills.color` | hex colour of every pill and overlay body; `""` is the default dark | `""` |
 | `services.mediaPlayer` | `true`: the media player appears in the activity pill when something plays (settings, Advanced)<br>`false`: it never does | `true` |
-| `profile.picture` | path to your profile picture, shown in the search circle until you type | `""` |
+| `profile.picture` | your profile picture (chosen by clicking the avatar in settings), shown in the search circle until you type | `""` |
 | `weather.location` | city for the dashboard weather, e.g. `"Berlin"`; `""` guesses from your IP | `""` |
 | `motion.reduced` | `true`: transitions are instant and idle bubbles and splashes stop; typed text and drags stay (also in settings, Settings tab)<br>`false`: full motion | `false` |
 | `attention.doNotDisturb` | `true`: only critical notifications may pop up; the rest wait in the activity bar (also in settings, Settings tab)<br>`false`: notifications may pop up unless a window is fullscreen | `false` |
 | `notifications.enabled` | `true`: the shell becomes the notification daemon (replaces mako, dunst, swaync) and shows notifications as alerts out of the activity pill<br>`false`: your existing daemon keeps them | `false` |
+| `notifications.history` | how many notifications the notification menu keeps, 0 to 1000; the oldest go first. The history is saved in `~/.cache/vados/notifications.json` (message text included); clearing the menu empties it | `200` |
+| `send.app` | the app the notification menu sends files with; `"blip"` ([Blip](https://blip.net)) is the only one so far | `"blip"` |
+| `send.devices` | the devices shown in the notification menu, as `"name:peer"`, e.g. `["Phone:vadim-pixel"]`; the peer is the device as Blip knows it (`blip --peer=<peer>`). With none, SEND hands the file to Blip's own window | `[]` |
 | `rendering.quality` | `"full"`: every liquid effect<br>`"lite"`: cheaper rendering for weaker GPUs | `"full"` |
 
 Changes apply live. The file carries a `version` (currently `1`) so later releases can migrate it; a file without one is read as the old layout and gets the version added. A value with the wrong type or outside the values above falls back to its default, and the shell says so in its log (lines starting `vados: config:`), naming the key, what it found and what it expected. Repaired values are written back to the file; unknown keys are reported and ignored. A file that is not valid JSON is left untouched and the shell keeps its current settings until you fix it.

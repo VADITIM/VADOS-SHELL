@@ -18,11 +18,10 @@ Item {
     readonly property real spineX: thickness / 2
     readonly property string face: isAlerting ? "alert" : mode === "hidden" ? "idle" : mode
     readonly property bool isShown: (host.isRevealed || (isAlerting && !host.isAway)) && !host.isEaten && (mode !== "hidden" || isAlerting)
-    readonly property size expandedSize: leadKey === "call"
-        ? Qt.size(Appearance.activity.call.width, Appearance.activity.call.height)
-        : Qt.size(Appearance.activity.media.width, Appearance.activity.media.height)
-    readonly property real targetWidth: face === "alert" ? alertSize.width : face === "expanded" ? expandedSize.width : face === "active" ? Appearance.activity.width : Appearance.activity.bead
-    readonly property real targetHeight: face === "alert" ? alertSize.height : face === "expanded" ? expandedSize.height : face === "active" ? Appearance.activity.length : Appearance.activity.bead
+    readonly property var views: ({ media: mediaView, call: callView, tray: trayView })
+    readonly property size expandedSize: (views[leadKey] ?? mediaView).bodySize
+    readonly property real targetWidth: !isShown ? Appearance.activity.bead : face === "alert" ? alertSize.width : face === "expanded" ? expandedSize.width : face === "active" ? Appearance.activity.width : Appearance.activity.bead
+    readonly property real targetHeight: !isShown ? Appearance.activity.bead : face === "alert" ? alertSize.height : face === "expanded" ? expandedSize.height : face === "active" ? Appearance.activity.length : Appearance.activity.bead
     readonly property real popScale: mutate.pop
     readonly property real bodyWidth: reshape.width
     readonly property real bodyHeight: reshape.height
@@ -63,7 +62,8 @@ Item {
         hasArrived: pill.host.hasArrivedAt(pill.y)
         hasSpread: false
         enterDelay: Motion.reveal.stagger
-        leaveDelay: Motion.activity.faceLeave
+        isHolding: pill.host.isGathering
+        leaveDelay: Motion.pill.sling
         popDuration: Motion.stateDuration
     }
 
@@ -154,8 +154,7 @@ Item {
         width: Appearance.activity.speck
         height: Appearance.activity.speck
         isShown: pill.isFaceShown && pill.face === "idle"
-        enterDuration: Motion.activity.faceEnter
-        leaveDuration: Motion.activity.faceLeave
+        isSlung: true
         leaveWindow: 0
 
         Rectangle {
@@ -181,6 +180,7 @@ Item {
     }
 
     ActivityMedia {
+        id: mediaView
         host: pill.host
         pill: pill
         x: pill.expandedLeft
@@ -190,11 +190,22 @@ Item {
     }
 
     ActivityCall {
+        id: callView
         host: pill.host
         pill: pill
         x: pill.expandedLeft
         y: -height / 2
         expansion: pill.leadKey === "call" ? pill.expansion : 0
         isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey === "call"
+    }
+
+    ActivityTray {
+        id: trayView
+        host: pill.host
+        pill: pill
+        x: pill.expandedLeft
+        y: -height / 2
+        expansion: pill.leadKey === "tray" ? pill.expansion : 0
+        isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey === "tray"
     }
 }

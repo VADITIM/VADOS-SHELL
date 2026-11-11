@@ -16,6 +16,8 @@ PanelWindow {
     property string extensionKey: ""
     property rect extensionOrigin: Qt.rect(0, 0, 0, 0)
     readonly property var peek: Attention.peek && Attention.peek.screen === screenName && !Overlays.isTaskbarAway(screenName) ? Attention.peek : null
+    readonly property bool isFullscreenHere: Compositor.activeWindow?.isFullscreen === true && Compositor.activeWindow.screen === screenName
+    readonly property bool isAlertOverFullscreen: isFullscreenHere && (peek !== null || taskbar.isAlertShown)
 
     anchors {
         left: !window.isRight
@@ -25,7 +27,7 @@ PanelWindow {
     }
     implicitWidth: Appearance.taskbar.windowWidth
     exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.layer: window.isAlertOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "vados-taskbar"
     color: "transparent"
     mask: Region {
@@ -78,6 +80,7 @@ PanelWindow {
         onSettingsRequested: Overlays.toggle("settings", window.screenName)
         onDashboardRequested: Overlays.toggle("dashboard", window.screenName)
         isAway: Overlays.isTaskbarAway(window.screenName)
+        isGathering: Overlays.isGathering(window.screenName)
         visitor: Overlays.visitorOn(window.screenName)
         activityMode: ActivityState.modeOn(window.screenName)
         activityLead: ActivityState.leadKey
@@ -85,7 +88,7 @@ PanelWindow {
         onActivityLeadRequested: direction => ActivityState.rotate(direction)
         isAlerting: window.peek !== null
         alertSize: alerts.bodySize
-        isCovered: Occupancy.isCovered(window.screen?.name ?? "")
+        isCovered: Occupancy.isCovered(window.screenName, Overlays.isHolding(window.screenName))
         isEaten: extension.isHolding
         onExtensionRequested: (key, origin) => {
             window.extensionOrigin = origin

@@ -1,4 +1,5 @@
 //@ pragma UseQApplication
+//@ pragma NativeTextRendering
 import QtQuick
 import Quickshell
 import qs.config
@@ -29,27 +30,52 @@ ShellRoot {
     Variants {
         model: Quickshell.screens
 
-        SearchWindow {
-            required property ShellScreen modelData
-            screen: modelData
+        OverlaySlot {
+            id: searchSlot
+            overlayKey: "search"
+
+            SearchWindow {
+                screen: searchSlot.modelData
+            }
         }
     }
 
     Variants {
         model: Quickshell.screens
 
-        SettingsWindow {
-            required property ShellScreen modelData
-            screen: modelData
+        OverlaySlot {
+            id: settingsSlot
+            overlayKey: "settings"
+
+            SettingsWindow {
+                screen: settingsSlot.modelData
+            }
         }
     }
 
     Variants {
         model: Quickshell.screens
 
-        DashboardWindow {
-            required property ShellScreen modelData
-            screen: modelData
+        OverlaySlot {
+            id: dashboardSlot
+            overlayKey: "dashboard"
+
+            DashboardWindow {
+                screen: dashboardSlot.modelData
+            }
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        OverlaySlot {
+            id: notificationsSlot
+            overlayKey: "notifications"
+
+            NotificationMenuWindow {
+                screen: notificationsSlot.modelData
+            }
         }
     }
 

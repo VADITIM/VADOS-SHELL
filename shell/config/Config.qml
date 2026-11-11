@@ -127,6 +127,27 @@ Singleton {
         file.writeAdapter()
     }
 
+    function setNotificationHistory(count) {
+        if (!accept("notifications.history", count))
+            return
+        adapter.notifications.history = count
+        file.writeAdapter()
+    }
+
+    function setSendApp(key) {
+        if (!accept("send.app", key))
+            return
+        adapter.send.app = key
+        file.writeAdapter()
+    }
+
+    function setSendDevices(entries) {
+        if (!accept("send.devices", entries))
+            return
+        adapter.send.devices = entries
+        file.writeAdapter()
+    }
+
     function setProfileName(value) {
         if (!accept("profile.name", value))
             return
@@ -271,6 +292,11 @@ Singleton {
             }
             property JsonObject notifications: JsonObject {
                 property bool enabled: false
+                property int history: 200
+            }
+            property JsonObject send: JsonObject {
+                property string app: "blip"
+                property var devices: []
             }
             property JsonObject motion: JsonObject {
                 property bool reduced: false

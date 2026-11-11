@@ -15,14 +15,14 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 | Feature | Row (`key`) | Surface | Born from | Impact | State |
 |---|---|---|---|---|---|
 | Taskbar | `taskbar` | bar | the screen edge | ambient | built |
-| Activity pill | `activity` | mutation | the activity pill | glance | built: music, Discord calls |
+| Activity pill | `activity` | mutation | the activity pill | glance | built: music, Discord calls, the bell (opens the notifications menu), tray |
 | Extension (Wi-Fi) | `extension` | mutation | an idle pill | focus | built |
 | Search | `search` | overlay | the taskbar column | focus | built; phase 2 finishes it |
 | Dashboard | `dashboard` | overlay | the taskbar column | focus | built |
 | Settings | `settings` | overlay | the taskbar column | takeover | built; tabs to add (contract 5) |
 | Frame debugger | `framedebug` | debug | none | ambient | built |
-| Alerts | `alerts` | mutation | the activity pill | glance | built: the alert face (2026-11-10); tray and entries left (contract 1) |
-| Notifications menu | `notifications` | overlay | the taskbar column | focus | planned (contract 2) |
+| Alerts | `alerts` | mutation | the activity pill | glance | built: the alert face, the bell and the tray in the pill (2026-11-10); hardware checks left |
+| Notifications menu | `notifications` | overlay | the taskbar column | focus | built (2026-11-10): history and send tray, `SUPER + N`; hardware checks left |
 | Clipboard history | `clipboard` | mutation | the activity pill | focus | planned (contract 3) |
 | Lock screen | `lock` | lock | the power pill | takeover | planned (contract 6); its layout editor is built |
 | Widgets | `widgets` | desktop | none | ambient | planned (contract 7) |
@@ -51,12 +51,13 @@ Exit: normal daily computing without falling back to external shell utilities. T
 Note: `Alerts.md`. An alert is the activity pill growing into a bigger pill, liquid and with physics like everything else, for every notification, recognising the service it came from (Discord, WhatsApp, Telegram and any other).
 
 - **Enter and leave**: the activity pill reshapes into the alert pill and back (`Reshape`, the `pill` character); a peek of several notifications is one pill. Potency follows urgency, decided only by `Attention`: low never peeks, normal is a glance, critical stays until dismissed.
-- **Built on**: `state/Attention.qml` (`peek`, `held`), `services/Notifications.qml`, `state/Activity.qml` (`entries`), `ActivityPill` and `Reshape`, `Gesture` for the swipe that dismisses, `TypedText` for the text. VAD/OS BUBBLE (`C:\Users\vn\source\VADOS-BUBBLE`) has the first version; port it and bring it in line with V/AS.
+- **Built on**: `state/Attention.qml` (`peek`, `held`), `services/Notifications.qml`, `state/ActivityState.qml`, `ActivityPill` and `Reshape`, `Gesture` for the swipe that dismisses, `TypedText` for the text. VAD/OS BUBBLE (`C:\Users\vn\source\VADOS-BUBBLE`) has the first version; port it and bring it in line with V/AS.
 - **To build**: `utils/Alerts.js`, the source catalogue (one row per service: how to recognise it from the notification's app name and desktop entry, its glyph and tint) with a test; `modules/alerts/Alerts.qml` drawn by the taskbar out of the activity pill; the system tray and notification entries inside the pill; fold `state/Activity.qml` into `ActivityState` (`known-issues.md`).
 - **Settings**: `notifications.enabled` turns on by default once alerts draw them (`rules/security.md`: it replaces mako, dunst, swaync, so the README says so).
 - **Done when**: a notification from each catalogued service peeks out of the pill on the focused screen, can be swiped away, opens its app on a tap, and is held under do-not-disturb and fullscreen; nothing is lost while held.
 - **Built (2026-11-10)**: `utils/Alerts.js` (eight sources and `generic`, `tst_alerts`), the `alert` face of `ActivityPill` (`Reshape` to `Appearance.alerts`, ready inside the glance budget, measured in `tst_features`), `modules/alerts/Alerts.qml` over the pill body in `TaskbarWindow` (a swipe dismisses the peek, a tap opens through `Notifications.open`), the preview (`N`, `Shift+N`) and `tst_preview` cases. `architecture.md` § Alerts.
-- **Left**: the system tray and notification entries inside the pill; fold `state/Activity.qml` into `ActivityState`; check on hardware against real Discord, Telegram and WhatsApp clients. **Open**: whether `notifications.enabled` turns on by default (§ Still open 3).
+- **Built (2026-11-10, second half)**: `notifications` and `tray` as activities in `Activities.keys`, with the bell and dots faces, `ActivityNotifications` (newest three, tap to open, swipe to dismiss, clear drop) and `ActivityTray` (click, right-click menu); `state/Activity.qml` folded into `ActivityState` (`toggle`, `fold`, `pin`), `tst_activity` and two `tst_preview` cases. `decisions.md` § The activity pill hosts notifications and the tray.
+- **Left**: check on hardware against real Discord, Telegram and WhatsApp clients and real tray items. **Open**: whether `notifications.enabled` turns on by default (§ Still open 3).
 
 ### 2. Notifications menu (`notifications`)
 
@@ -70,6 +71,8 @@ Note: `Notifications Menu.md`. A double split liquid burst: two pills with a wid
 - **Later** (user): device awareness, transfer progress and file previews in Blip Upload.
 - **Decided**: it opens from the taskbar column like the dashboard, and the history is kept on disk across restarts (§ Decided 1, 2).
 - **Done when**: the menu opens and closes from the keyboard and the pointer, history survives opening and closing, a file dragged from the tray reaches a device, and without Blip the bottom pill does not appear.
+- **Built (2026-11-10)**: from the user's sketch (four keyframes: a circle at the edge, a full-height column with a waist, the waist splitting, the history over the send tray with bubbles budding off the wall). The split in `Burst` (`splitAt`, `splitGap`, `Geometry.splitAlong`, tests in `tst_burst` and `tst_geometry`); `modules/notifications/NotificationMenu.qml` and `NotificationRow.qml`; `windows/NotificationMenuWindow.qml`, its `Variants` entry, IPC `notifications toggle | close` and `vados:notifications` on `SUPER + N`; the history in `Notifications` (`StateFile` `notifications`, `utils/History.js`, `tst_history`); `services/Transfer.qml` with the catalogue `utils/Senders.js` (`tst_senders`) and `scripts/pick-files.py` (portal file chooser); settings `notifications.history`, `send.app`, `send.devices`; the bell in the activity pill opens the menu, and its small list (`ActivityNotifications`) is gone. Changed from the note: SEND picks files through the file chooser instead of four recent files dragged onto a device (the sketch); `Rising` bubbles are not used, as in search. `architecture.md` § Notifications menu, `decisions.md` § The notifications menu.
+- **Left**: on hardware, Blip's `--peer` / `--file` (the device's peer value and whether a running Blip takes them, `quirks.md`), the portal chooser over the shell, and the real look of the split (offscreen grabs do not render the liquid).
 
 ### 3. Clipboard history (`clipboard`)
 

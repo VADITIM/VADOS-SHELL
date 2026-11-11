@@ -85,6 +85,8 @@ Item {
             return "M12 3.5 C9 7.5 6 10.8 6 14 a6 6 0 0 0 12 0 C18 10.8 15 7.5 12 3.5 Z"
         case "close":
             return "M7 7 L17 17 M17 7 L7 17"
+        case "trash":
+            return "M4.5 7 H19.5 M9.5 7 V4.5 H14.5 V7 M6.5 7 L7.5 20 H16.5 L17.5 7 M10.5 10.5 V16.5 M13.5 10.5 V16.5"
         case "bell":
             return "M6 16.5 V11 a6 6 0 0 1 12 0 V16.5 L19.5 18 H4.5 Z M10 20.5 a2 2 0 0 0 4 0"
         case "chat":

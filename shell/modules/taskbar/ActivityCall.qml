@@ -12,6 +12,7 @@ Item {
     property real expansion: 0
 
     readonly property var look: Appearance.activity.call
+    readonly property size bodySize: Qt.size(look.width, look.height)
     readonly property real dropShare: Math.max(0, Math.min(1, (expansion - Motion.activity.dropStart) / (1 - Motion.activity.dropStart)))
     readonly property real detailsLeft: look.height / 2 + look.avatar / 2 + Appearance.activity.detailGap
     readonly property string elapsed: {

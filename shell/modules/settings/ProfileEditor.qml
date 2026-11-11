@@ -14,7 +14,6 @@ Item {
     property real areaHeight: 0
     property bool isEditing: false
     property bool isLinkEditing: false
-    property bool isPicking: false
     property bool isWheelOpen: false
     property bool isHexTyped: false
     property bool isNameTyped: true
@@ -37,6 +36,7 @@ Item {
     onIsWheelOpenChanged: if (isWheelOpen) isNameTyped = false
 
     signal profileRequested(string field, string value)
+    signal pictureRequested()
     signal accentRequested(color value)
 
     function hexOf(source) {
@@ -60,7 +60,6 @@ Item {
         nameInput.focus = false
         secondInput.focus = false
         linkInput.focus = false
-        pathInput.focus = false
         hexInput.focus = false
     }
 
@@ -74,7 +73,7 @@ Item {
 
     MouseArea {
         anchors.fill: parent
-        enabled: editor.isEditing || editor.isLinkEditing || editor.isPicking || hexInput.activeFocus
+        enabled: editor.isEditing || editor.isLinkEditing || hexInput.activeFocus
         onClicked: editor.finishEditing()
     }
 
@@ -128,7 +127,7 @@ Item {
             Squircle {
                 anchors.fill: parent
                 color: Qt.alpha(Appearance.color.ground, editor.style.hoverShade)
-                opacity: avatarArea.containsMouse || editor.isPicking ? 1 : 0
+                opacity: avatarArea.containsMouse ? 1 : 0
 
                 Behavior on opacity {
                     NumberAnimation {
@@ -149,13 +148,7 @@ Item {
             Squircle {
                 anchors.fill: parent
                 strokeWidth: editor.style.ring
-                strokeColor: editor.isPicking ? Appearance.color.accent : Appearance.color.text
-
-                Behavior on strokeColor {
-                    ColorAnimation {
-                        duration: Motion.pace(Motion.stateDuration)
-                    }
-                }
+                strokeColor: Appearance.color.text
             }
 
             Press {
@@ -168,10 +161,7 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    editor.isPicking = true
-                    pathInput.forceActiveFocus()
-                }
+                onClicked: editor.pictureRequested()
             }
         }
     }
@@ -323,59 +313,6 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.IBeamCursor
                 onClicked: editor.beginNames(secondInput)
-            }
-        }
-    }
-
-    Piece {
-        x: namePiece.x
-        y: secondPiece.y + secondPiece.height + editor.style.nameGap
-        width: editor.nameWidth
-        height: pathInput.implicitHeight + editor.style.underline
-
-        Item {
-            anchors.fill: parent
-            opacity: editor.isPicking ? 1 : 0
-            enabled: editor.isPicking
-
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: Motion.pace(Motion.stateDuration)
-                }
-            }
-
-            TextInput {
-                id: pathInput
-                width: parent.width
-                horizontalAlignment: TextInput.AlignHCenter
-                clip: true
-                text: editor.picture
-                color: Appearance.color.text
-                selectionColor: Appearance.color.accent
-                selectedTextColor: Appearance.color.ground
-                font.family: Appearance.font.mono
-                font.pixelSize: editor.look.hexText
-                onTextEdited: editor.profileRequested("picture", text)
-                onActiveFocusChanged: if (!activeFocus) editor.isPicking = false
-                Keys.onReturnPressed: pathInput.focus = false
-                Keys.onEscapePressed: event => editor.leave(pathInput, event)
-
-                Text {
-                    width: pathInput.width
-                    horizontalAlignment: Text.AlignHCenter
-                    visible: pathInput.text.length === 0
-                    text: "/path/to/picture.png"
-                    color: Appearance.color.textFaint
-                    font: pathInput.font
-                }
-            }
-
-            Rectangle {
-                y: parent.height - height
-                width: parent.width
-                height: editor.style.underline
-                radius: height / 2
-                color: Appearance.color.accent
             }
         }
     }

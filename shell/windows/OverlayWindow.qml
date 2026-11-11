@@ -1,6 +1,8 @@
 import QtQuick
 import Quickshell
 import Quickshell.Wayland
+import qs.config
+import qs.services
 import qs.state
 
 PanelWindow {
@@ -10,10 +12,12 @@ PanelWindow {
     property bool isPresent: false
     property string phase: "idle"
     readonly property string screenName: screen?.name ?? ""
-    readonly property bool isOpen: Overlays.isOpen(overlayKey, screenName) && !Overlays.isWaiting(overlayKey, screenName)
+    property bool isComplete: false
+    readonly property bool isOpen: isComplete && Overlays.isOpen(overlayKey, screenName) && !Overlays.isWaiting(overlayKey, screenName)
     readonly property bool isHandingOver: Overlays.isHandingOver(overlayKey, screenName)
     readonly property bool hasCircle: Overlays.hasCircle(overlayKey, screenName)
     readonly property var parts: Overlays.taskbarParts[screenName] ?? []
+    readonly property bool canHandOff: Config.data.taskbar.style !== "bare" && !Occupancy.isCovered(screenName, true)
 
     function requestClose() {
         Overlays.close(overlayKey)
@@ -24,11 +28,17 @@ PanelWindow {
         Overlays.returnTaskbar(screenName)
     }
 
+    function carry(isCarrying) {
+        if (isCarrying)
+            Overlays.carryTaskbar(screenName)
+    }
+
     function placeVisitor(visitor) {
         Overlays.placeVisitor(overlayKey, screenName, visitor)
     }
 
     onPhaseChanged: Overlays.reportPhase(overlayKey, screenName, phase)
+    Component.onCompleted: isComplete = true
 
     FrameTap {
         target: window.contentItem

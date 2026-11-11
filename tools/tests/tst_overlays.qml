@@ -25,6 +25,69 @@ TestCase {
         gathers = 0
     }
 
+    function test_screenIsHeldUntilItsLastOverlayHasLeft() {
+        verify(!Overlays.isHolding("A"))
+        Overlays.open("dashboard", "A")
+        verify(Overlays.isHolding("A"))
+        verify(!Overlays.isHolding("B"))
+        Overlays.reportPhase("dashboard", "A", "active")
+        Overlays.close("dashboard")
+        Overlays.reportPhase("dashboard", "A", "leaving")
+        verify(Overlays.isHolding("A"), "the screen stays held while the overlay leaves")
+        Overlays.reportPhase("dashboard", "A", "idle")
+        verify(!Overlays.isHolding("A"))
+    }
+
+    function test_taskbarDrawsItsOwnPartsUntilTheOverlayCarriesThem() {
+        const first = Object.keys(Overlays.kinds)[0]
+        Overlays.open(first, "A")
+        verify(Overlays.isTaskbarAway("A"))
+        verify(Overlays.isGathering("A"), "the taskbar keeps its liquid while its elements leave")
+        compare(gathers, 1)
+        Overlays.carryTaskbar("A")
+        verify(!Overlays.isGathering("A"))
+        compare(gathers, 2, "the parts are taken again as they are when the overlay takes them")
+        Overlays.carryTaskbar("A")
+        compare(gathers, 2, "a second overlay on the screen does not take the parts again")
+        Overlays.close(first)
+        Overlays.reportPhase(first, "A", "idle")
+        verify(!Overlays.isTaskbarAway("A"))
+    }
+
+    function test_aGatherThatIsNeverCarriedEndsWithTheReturn() {
+        const first = Object.keys(Overlays.kinds)[0]
+        Overlays.open(first, "A")
+        Overlays.close(first)
+        Overlays.returnTaskbar("A")
+        verify(!Overlays.isGathering("A"))
+        verify(!Overlays.isTaskbarAway("A"))
+    }
+
+    function test_surfaceIsWantedFromOpenUntilItsLeaveHasLanded() {
+        verify(!Overlays.isWanted("search", "A"), "an overlay nobody opened has no surface")
+        Overlays.open("search", "A")
+        verify(Overlays.isWanted("search", "A"))
+        verify(!Overlays.isWanted("search", "B"), "only the screen it opened on builds it")
+        verify(!Overlays.isWanted("dashboard", "A"))
+        Overlays.reportPhase("search", "A", "active")
+        Overlays.close("search")
+        Overlays.reportPhase("search", "A", "exiting")
+        verify(Overlays.isWanted("search", "A"), "the surface stays while it leaves")
+        Overlays.reportPhase("search", "A", "idle")
+        verify(!Overlays.isWanted("search", "A"), "an idle, closed overlay is released")
+    }
+
+    function test_waitingOverlayIsWantedBeforeItShows() {
+        Overlays.open("dashboard", "A")
+        Overlays.reportPhase("dashboard", "A", "active")
+        Overlays.open("search", "A")
+        verify(Overlays.isWaiting("search", "A"))
+        verify(Overlays.isWanted("search", "A"), "built while it waits for the circle")
+        verify(Overlays.isWanted("dashboard", "A"), "the displaced overlay stays until it has left")
+        Overlays.reportPhase("dashboard", "A", "idle")
+        verify(!Overlays.isWanted("dashboard", "A"))
+    }
+
     function test_switchKeepsTaskbarParts() {
         Overlays.open("dashboard", "A")
         Overlays.open("search", "A")

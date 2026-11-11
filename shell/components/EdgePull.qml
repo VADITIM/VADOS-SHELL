@@ -8,7 +8,6 @@ Item {
     required property var pace
     property bool isEnabled: true
     property Item shapes: null
-    property real pull: 0
     property real dwell: 0
     property real beadY: height / 2
 
@@ -18,12 +17,11 @@ Item {
         if (!isEnabled) {
             dwellCharge.stop()
             dwellRelease.restart()
-            pullRelease.restart()
         }
     }
 
     LiquidShape {
-        readonly property real reach: Math.max(edgePull.pull, edgePull.dwell * edgePull.pace.beadReach)
+        readonly property real reach: edgePull.dwell * edgePull.pace.beadReach
         parent: edgePull.shapes
         height: edgePull.look.bead + Math.min(edgePull.look.bead, reach * edgePull.look.beadGrowth)
         width: reach + height
@@ -48,26 +46,6 @@ Item {
                 }
             }
         }
-
-        Gesture {
-            anchors.fill: parent
-            enabled: edgePull.isEnabled
-            threshold: edgePull.pace.pullThreshold
-            isVertical: false
-            onPressed: mouse => {
-                edgePull.beadY = mouse.y
-                pullRelease.stop()
-            }
-            onMoved: (travelX, travelY) => {
-                edgePull.pull = Math.min(edgePull.pace.pullLimit, Math.max(0, travelX))
-                edgePull.beadY = pressPoint.y + travelY
-            }
-            onCrossed: (travelX, travelY) => {
-                if (travelX > 0)
-                    edgePull.summoned()
-            }
-            onEnded: pullRelease.restart()
-        }
     }
 
     NumberAnimation {
@@ -89,15 +67,5 @@ Item {
         to: 0
         duration: Motion.pace(Motion.hoverOut)
         easing.type: Easing.InQuad
-    }
-
-    NumberAnimation {
-        paused: Motion.isHeld && running
-        id: pullRelease
-        target: edgePull
-        property: "pull"
-        to: 0
-        duration: Motion.pace(Motion.stateDuration)
-        easing.type: Easing.InBack
     }
 }

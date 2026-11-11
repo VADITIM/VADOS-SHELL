@@ -20,6 +20,7 @@ FocusScope {
     property int diskPage: 0
     readonly property bool isContentShown: burst.isOpened
     readonly property var visitor: burst.visitor
+    readonly property bool isCarrying: burst.isCarrying
 
     readonly property var look: Appearance.dashboard
     readonly property real rootX: Appearance.taskbar.margin

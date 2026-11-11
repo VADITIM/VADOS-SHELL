@@ -12,6 +12,7 @@ ENGINE_TESTS = {
     "shell/utils/Liquid.js": "tst_liquid.qml",
     "shell/state/Overlays.qml": "tst_overlays.qml",
     "shell/state/Attention.qml": "tst_attention.qml",
+    "shell/state/ActivityState.qml": "tst_activity.qml",
     "shell/components/Gesture.qml": "tst_gesture.qml",
     "shell/components/Burst.qml": "tst_burst.qml",
     "shell/services/StateFile.qml": "tst_statefile.qml",
@@ -33,6 +34,7 @@ ENGINE_TESTS = {
     "shell/utils/Features.js": "tst_features.qml",
     "shell/utils/Alerts.js": "tst_alerts.qml",
     "shell/utils/Icons.js": "tst_icons.qml",
+    "shell/utils/Tint.js": "tst_tint.qml",
 }
 
 FEATURE_REGISTRY = "shell/utils/Features.js"
@@ -143,8 +145,10 @@ def check(files):
             "colours come from Appearance.color (rules/frontend.md)", scope="shell/modules/")
     only_in("tokens", r"\"#[0-9a-fA-F]{3,8}\"", set(),
             "colours come from Appearance.color (rules/frontend.md)", scope="shell/components/")
-    only_in("overlays", r"WlrLayershell\.keyboardFocus|WlrLayer\.Overlay", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml"},
+    only_in("overlays", r"WlrLayershell\.keyboardFocus", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml"},
             "overlays are OverlayWindows registered in state/Overlays.qml (rules/interaction.md)")
+    only_in("overlays", r"WlrLayer\.Overlay", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml", "shell/windows/TaskbarWindow.qml"},
+            "overlays are OverlayWindows registered in state/Overlays.qml; the taskbar rises only for an alert over a fullscreen window (rules/interaction.md)")
     only_in("lock", r"WlSessionLock", {"shell/windows/LockWindow.qml"},
             "the session lock lives only in windows/LockWindow.qml (rules/security.md)")
     only_in("lock", r"PamContext", {"shell/services/Lock.qml"},
@@ -290,8 +294,8 @@ def check(files):
         if surface == "overlay":
             if f'overlayKey: "{key}"' not in sources.get(f"shell/windows/{window}.qml", ""):
                 flag("features", f"shell/windows/{window}.qml", 1, f"the window of `{key}` is an OverlayWindow with overlayKey \"{key}\" (rules/features.md)")
-            if not re.search(r"^\s*" + re.escape(window) + r" \{", sources.get("shell/shell.qml", ""), re.M):
-                flag("features", "shell/shell.qml", 1, f"`{key}` is built but shell.qml creates no {window} per screen (rules/features.md)")
+            if not re.search(r"OverlaySlot \{[^{}]*overlayKey: \"" + re.escape(key) + r"\"[^{}]*\b" + re.escape(window) + r" \{", sources.get("shell/shell.qml", "")):
+                flag("features", "shell/shell.qml", 1, f"`{key}` is built but shell.qml has no OverlaySlot with overlayKey \"{key}\" holding its {window} per screen; an overlay window exists only while wanted (rules/features.md)")
             if f'target: "{key}"' not in sources.get("shell/keybinds/Shortcuts.qml", ""):
                 flag("features", "shell/keybinds/Shortcuts.qml", 1, f"`{key}` is built but has no IPC target \"{key}\" (rules/features.md)")
         if surface == "lock" and "shell/services/Lock.qml" not in sources:

@@ -8,7 +8,7 @@ import qs.config
 Singleton {
     id: activities
 
-    readonly property var keys: ["call", "media"]
+    readonly property var keys: ["call", "media", "notifications", "tray"]
     readonly property var callApplications: ["discord", "vesktop", "webcord", "armcord", "webrtc voiceengine"]
 
     readonly property var players: Mpris.players.values
@@ -33,6 +33,10 @@ Singleton {
     property int callSeconds: 0
     property real callSince: 0
 
+    readonly property int notificationCount: Notifications.list.length
+    readonly property int unreadCount: Notifications.unreadCount
+    readonly property var trayItems: Tray.items
+
     readonly property var liveKeys: keys.filter(key => isLive(key))
     readonly property var order: liveKeys.concat(keys.filter(key => !isLive(key)))
     readonly property bool isAnyLive: liveKeys.length > 0
@@ -42,6 +46,8 @@ Singleton {
             return isCalling
         if (key === "media")
             return hasMedia
+        if (key === "notifications")
+            return Notifications.hasUnread
         return false
     }
 

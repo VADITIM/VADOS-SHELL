@@ -179,3 +179,64 @@ function cutAlong(points, share) {
     kept.push(pointAlong(points, lengths, distance))
     return kept
 }
+
+function heightOn(line, x) {
+    if (x <= line[0].x)
+        return line[0].y
+    const last = line[line.length - 1]
+    if (x >= last.x)
+        return last.y
+    let low = 0
+    let high = line.length - 1
+    while (high - low > 1) {
+        const middle = (low + high) >> 1
+        if (line[middle].x <= x)
+            low = middle
+        else
+            high = middle
+    }
+    const from = line[low]
+    const to = line[high]
+    return from.y + (to.y - from.y) * (x - from.x) / Math.max(0.001, to.x - from.x)
+}
+
+function pointsBetween(line, fromX, toX) {
+    const inner = line.filter(point => point.x > Math.min(fromX, toX) && point.x < Math.max(fromX, toX))
+    return fromX <= toX ? inner : inner.reverse()
+}
+
+function clipAlong(points, line, isKeepingAbove) {
+    const sign = isKeepingAbove ? 1 : -1
+    const reach = point => sign * (heightOn(line, point.x) - point.y)
+    const first = points.findIndex(point => reach(point) >= 0)
+    if (first < 0)
+        return []
+    const kept = []
+    let leftX = points[first].x
+    for (let step = 1; step <= points.length; step++) {
+        const previous = points[(first + step - 1) % points.length]
+        const current = points[(first + step) % points.length]
+        const previousReach = reach(previous)
+        const currentReach = reach(current)
+        const isCurrentIn = currentReach >= 0
+        if (isCurrentIn !== previousReach >= 0) {
+            const share = previousReach / (previousReach - currentReach)
+            const crossing = Qt.point(previous.x + (current.x - previous.x) * share, previous.y + (current.y - previous.y) * share)
+            if (isCurrentIn)
+                kept.push(...pointsBetween(line, leftX, crossing.x))
+            else
+                leftX = crossing.x
+            kept.push(crossing)
+        }
+        if (isCurrentIn)
+            kept.push(current)
+    }
+    return kept.length >= 3 ? kept : []
+}
+
+function splitAlong(points, upper, lower) {
+    const isOpen = upper.some((point, index) => lower[index].y > point.y)
+    if (points.length < 3 || !isOpen)
+        return [points]
+    return [clipAlong(points, upper, true), clipAlong(points, lower, false)].filter(piece => piece.length >= 3)
+}

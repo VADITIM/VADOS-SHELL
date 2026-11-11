@@ -2,7 +2,7 @@ Occupancy|pragma Singleton
 import QtQuick
 QtObject {
     property bool covered: false
-    function isCovered(name) { return covered }
+    function isCovered(name, isHolding) { return covered }
 }
 Audio|pragma Singleton
 import QtQuick
@@ -40,9 +40,10 @@ QtObject {
 Tray|pragma Singleton
 import QtQuick
 QtObject {
-    property var items: []
-    function open(item, window, x, y) {}
-    function openMenu(item, window, x, y) {}
+    property var items: [{ id: "network", title: "Network", icon: "" }, { id: "steam", title: "Steam", icon: "" }, { id: "keepassxc", title: "KeePassXC", icon: "" }]
+    property var opened: []
+    function open(item, window, x, y) { opened = opened.concat([item.id]) }
+    function openMenu(item, window, x, y) { opened = opened.concat([item.id + " menu"]) }
 }
 Power|pragma Singleton
 import QtQuick
@@ -126,7 +127,10 @@ QtObject {
 Activities|pragma Singleton
 import QtQuick
 QtObject {
-    readonly property var keys: ["call", "media"]
+    readonly property var keys: ["call", "media", "notifications", "tray"]
+    readonly property int notificationCount: Notifications.list.length
+    readonly property int unreadCount: Notifications.unreadCount
+    readonly property var trayItems: Tray.items
     property bool hasMedia: true
     property bool isPlaying: true
     property string mediaSource: "Spotify"
@@ -146,7 +150,7 @@ QtObject {
     readonly property var liveKeys: keys.filter(key => isLive(key))
     readonly property var order: liveKeys.concat(keys.filter(key => !isLive(key)))
     readonly property bool isAnyLive: liveKeys.length > 0
-    function isLive(key) { return key === "call" ? isCalling : key === "media" ? hasMedia : false }
+    function isLive(key) { return key === "call" ? isCalling : key === "media" ? hasMedia : key === "notifications" ? Notifications.hasUnread : false }
     function togglePlaying() { isPlaying = !isPlaying }
     function next() { track = (track + 1) % tracks.length; position = 0 }
     function previous() { track = (track + tracks.length - 1) % tracks.length; position = 0 }
@@ -164,30 +168,54 @@ Notifications|pragma Singleton
 import QtQuick
 QtObject {
     property bool isServing: false
+    property bool isBlocked: false
+    property string owner: ""
+    property string status: "off"
     property var list: []
     property var latest: null
-    property int unreadCount: 0
-    property bool hasUnread: false
-    property bool isUrgent: false
+    property var unreadIds: []
+    readonly property int unreadCount: list.filter(notification => unreadIds.indexOf(notification.id) >= 0).length
+    readonly property bool hasUnread: unreadCount > 0
+    readonly property bool isUrgent: list.some(notification => isCritical(notification) && unreadIds.indexOf(notification.id) >= 0)
     signal received(var notification)
     function isCritical(notification) { return notification.urgency === 2 }
     function isLow(notification) { return notification.urgency === 0 }
-    function isAlive(notification) { return list.indexOf(notification) >= 0 }
-    function markRead() { unreadCount = 0 }
+    function isAlive(notification) { return list.some(candidate => candidate.id === notification.id) }
+    function markRead() { unreadIds = [] }
     property int posted: 0
     property var opened: []
-    function dismiss(notification) { list = list.filter(candidate => candidate !== notification) }
-    function clear() { list = [] }
-    function open(notification) { opened = opened.concat([notification]) }
+    function dismiss(notification) { list = list.filter(candidate => candidate.id !== notification.id) }
+    function clear() { list = []; unreadIds = []; history = [] }
+    function open(notification) { opened = opened.concat([notification]); unreadIds = unreadIds.filter(identifier => identifier !== notification.id) }
     function invoke(notification, identifier) {}
+    property var history: []
+    property var openedEntries: []
+    function liveOf(entry) { return list.find(candidate => candidate.id === entry.id) ?? null }
+    function forget(entry) { dismiss(entry); history = history.filter(candidate => candidate.key !== entry.key) }
+    function openEntry(entry) { openedEntries = openedEntries.concat([entry]); const live = liveOf(entry); if (live) open(live) }
     function post(appName, desktopEntry, summary, body, urgency) {
         posted++
         const notification = { id: posted, appName: appName, desktopEntry: desktopEntry, summary: summary, body: body, urgency: urgency, expireTimeout: 0, actions: [] }
         list = [notification].concat(list)
         latest = notification
+        unreadIds = unreadIds.concat([notification.id])
+        history = [{ key: posted + ":" + posted, id: posted, appName: appName, desktopEntry: desktopEntry, summary: summary, body: body, urgency: urgency, icon: "", time: Date.now() }].concat(history)
         received(notification)
         return notification
     }
+}
+Transfer|pragma Singleton
+import QtQuick
+QtObject {
+    property var installed: ["blip"]
+    property bool isPicking: false
+    property string appKey: "blip"
+    property string appName: "BLIP"
+    property bool isAvailable: true
+    property var devices: [{ name: "Phone", peer: "pixel" }, { name: "Laptop", peer: "work" }, { name: "Tablet", peer: "tab" }]
+    property var sent: []
+    function nextApp() { return appKey }
+    function send(peer) { sent = sent.concat([peer]) }
 }
 Compositor|pragma Singleton
 import QtQuick
@@ -200,6 +228,7 @@ QtObject {
     readonly property string level: Platform.levelOf(capabilities)
     property var canvasState: null
     property var activeWindow: null
+    property var lastWindow: null
     property string focusedScreen: "play"
     property var sent: []
     signal canvasChanged()
@@ -230,4 +259,11 @@ QtObject {
     property var supervisors: []
     function enroll(supervisor) {}
     function release(supervisor) {}
+}
+FileChooser|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isPicking: false
+    property var asked: []
+    function choose(title, kind, onChosen) { asked = asked.concat([kind]); onChosen([]); return true }
 }

@@ -27,6 +27,15 @@ TestCase {
         verify(Schema.findProblem("pills.color", "") === "")
     }
 
+    function test_countRule() {
+        verify(Schema.findProblem("notifications.history", 200) === "")
+        verify(Schema.findProblem("notifications.history", 0) === "")
+        verify(Schema.findProblem("notifications.history", -1) !== "")
+        verify(Schema.findProblem("notifications.history", 2.5) !== "")
+        verify(Schema.findProblem("notifications.history", "200") !== "")
+        verify(Schema.findProblem("notifications.history", 5000) !== "")
+    }
+
     function test_cleanSettingsAreIdempotent() {
         const settings = Schema.createDefaults()
         settings.taskbar.side = "right"

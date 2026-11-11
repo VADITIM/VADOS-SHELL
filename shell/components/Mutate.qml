@@ -13,7 +13,10 @@ QtObject {
     property bool hasSpread: true
     property bool hasArrivalPop: false
     property int enterDelay: 0
+    property bool isHolding: false
+    property bool isRetired: false
     property int leaveDelay: Motion.pill.leaveWindow + Motion.pill.leaveElement / 4
+    property int leaveSpreadDuration: Motion.pill.leaveSpread
     property int popDuration: Motion.pill.pop
     property var character: Motion.liquid.pill
     property real popTime: 0
@@ -24,7 +27,7 @@ QtObject {
         : popTime >= popDuration ? 1
         : popFrom + (1 - popFrom) * Liquid.rise(character, popTime / 1000)
     readonly property string playing: spreadEnter.running || popEnter.running || innerEnter.running ? label + " enter"
-        : leave.running ? label + " leave"
+        : leave.running || popLeave.running ? label + " leave"
         : ""
     property real spread: 0
     property bool isInnerShown: false
@@ -88,9 +91,14 @@ QtObject {
             target: mutate
             property: "spread"
             to: 0
-            duration: Motion.pace(mutate.hasSpread ? Motion.pill.leaveSpread : 0)
+            duration: Motion.pace(mutate.hasSpread ? mutate.leaveSpreadDuration : 0)
             easing.type: Easing.InOutCubic
         }
+        ScriptAction { script: mutate.retire() }
+    }
+
+    readonly property SequentialAnimation popLeave: SequentialAnimation {
+        paused: Motion.isHeld && running
         ScriptAction { script: mutate.holdPop(true) }
         NumberAnimation {
             target: mutate
@@ -110,15 +118,33 @@ QtObject {
         isPopLeaving = isLeaving
     }
 
-    function arrive() {
+    function retire() {
+        isRetired = true
+        if (!isHolding)
+            popLeave.restart()
+    }
+
+    function stopAll() {
         spreadEnter.stop()
         popEnter.stop()
         innerEnter.stop()
         leave.stop()
+        popLeave.stop()
+        isRetired = false
+    }
+
+    function arrive() {
+        stopAll()
         popFrom = 1
         popTime = popDuration
         popRemaining = 1
         isPopLeaving = false
+        if (hasSpread) {
+            spread = 0
+            isInnerShown = false
+            spreadEnter.restart()
+            return
+        }
         spread = 1
         isInnerShown = !hasArrivalPop
         if (hasArrivalPop)
@@ -126,10 +152,7 @@ QtObject {
     }
 
     function wait() {
-        spreadEnter.stop()
-        popEnter.stop()
-        innerEnter.stop()
-        leave.stop()
+        stopAll()
         popFrom = 0
         popTime = 0
         popRemaining = 1
@@ -149,6 +172,8 @@ QtObject {
         innerEnter.stop()
         if (isShown) {
             leave.stop()
+            popLeave.stop()
+            isRetired = false
             holdPop(false)
             if (hasSpread)
                 spreadEnter.restart()
@@ -158,11 +183,14 @@ QtObject {
         }
         spreadEnter.stop()
         popEnter.stop()
+        popLeave.stop()
+        isRetired = false
         leavePause.duration = Motion.pace(leaveDelay)
         leave.restart()
     }
 
     onIsShownChanged: play()
+    onIsHoldingChanged: if (!isHolding && isRetired && !isShown) popLeave.restart()
     onIsArrivingChanged: if (isArriving && isShown) play()
     onHasArrivedChanged: if (isArriving && isShown && hasArrived) play()
     Component.onCompleted: {
@@ -170,5 +198,8 @@ QtObject {
         if (isShown)
             play()
     }
-    Component.onDestruction: Playing.delist(mutate)
+    Component.onDestruction: {
+        stopAll()
+        Playing.delist(mutate)
+    }
 }

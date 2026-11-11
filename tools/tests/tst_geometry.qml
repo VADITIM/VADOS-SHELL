@@ -74,6 +74,33 @@ TestCase {
         compare(Geometry.cutAlong(clockwise, 0).length, 2)
     }
 
+    function cutLine(height) {
+        return [Qt.point(-20, height), Qt.point(120, height)]
+    }
+
+    function test_splitAlongCutsAShapeInTwo() {
+        const square = [Qt.point(0, 0), Qt.point(100, 0), Qt.point(100, 100), Qt.point(0, 100)]
+        compare(Geometry.splitAlong(square, cutLine(50), cutLine(50)).length, 1, "no gap keeps one shape")
+        const pieces = Geometry.splitAlong(square, cutLine(40), cutLine(60))
+        compare(pieces.length, 2)
+        fuzzyCompare(Math.max(...pieces[0].map(point => point.y)), 40, 0.001, "the upper piece ends at the gap")
+        fuzzyCompare(Math.min(...pieces[1].map(point => point.y)), 60, 0.001, "the lower piece starts after it")
+        compare(Math.min(...pieces[0].map(point => point.y)), 0)
+        compare(Math.max(...pieces[1].map(point => point.y)), 100)
+        compare(Geometry.splitAlong(square, cutLine(-20), cutLine(30)).length, 1, "a gap over the top leaves only the lower piece")
+    }
+
+    function test_splitAlongFollowsACurvedCut() {
+        const square = [Qt.point(0, 0), Qt.point(100, 0), Qt.point(100, 100), Qt.point(0, 100)]
+        const upper = [Qt.point(0, 40), Qt.point(25, 40), Qt.point(50, 48), Qt.point(75, 40), Qt.point(100, 40)]
+        const lower = [Qt.point(0, 60), Qt.point(25, 60), Qt.point(50, 52), Qt.point(75, 60), Qt.point(100, 60)]
+        const pieces = Geometry.splitAlong(square, upper, lower)
+        compare(pieces.length, 2)
+        verify(pieces[0].some(point => point.x === 50 && point.y === 48), "the upper cut bulges with the line")
+        verify(pieces[1].some(point => point.x === 50 && point.y === 52), "the lower cut bulges towards it")
+        fuzzyCompare(Geometry.heightOn(upper, 37.5), 44, 0.001)
+    }
+
     function test_refitFollowsTheFrame() {
         const shape = { x: 110, y: 450, width: 400, height: 900, left: 40, right: 20, tag: "kept" }
         const fitted = Geometry.refit(shape, { x: 10, y: 450, width: 600, height: 900 }, { x: 10, y: 300, width: 300, height: 600 })

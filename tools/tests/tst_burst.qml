@@ -45,6 +45,164 @@ Item {
         parts: [Qt.rect(6, 20, 40, 220), Qt.rect(6, 700, 40, 40), Qt.rect(6, 760, 40, 40)]
     }
 
+    Burst {
+        id: splitting
+        rootX: 0
+        seedX: 30
+        seedY: 450
+        formWidth: 400
+        formHeight: 900
+        leftCorner: 40
+        rightCorner: 40
+        screenHeight: 900
+        hasSteps: false
+        splitAt: 0.65
+        splitGap: 30
+        wall: [Qt.point(0, 0), Qt.point(0, 0.5), Qt.point(-160, 0.65), Qt.point(0, 0.8), Qt.point(0, 1)]
+    }
+
+    TestCase {
+        name: "Split"
+        when: windowShown
+
+        function cleanup() {
+            splitting.isShown = false
+            tryCompare(splitting, "isActive", false, 3000)
+        }
+
+        function test_theBodySplitsInTwoOnceItHasOpened() {
+            splitting.isShown = true
+            tryCompare(splitting, "phase", "active", 3000)
+            verify(splitting.isSplit)
+            tryCompare(splitting.bodyPieces, "length", 2, 1000)
+            fuzzyCompare(splitting.splitBottom - splitting.splitTop, 30, 0.5)
+            fuzzyCompare(splitting.splitCenter, 900 * 0.65, 0.5)
+            const upper = splitting.bodyPieces[0]
+            const lower = splitting.bodyPieces[1]
+            verify(Math.max(...upper.map(point => point.y)) <= splitting.splitTop + 0.5, "the upper body stops at the gap")
+            verify(Math.min(...lower.map(point => point.y)) >= splitting.splitBottom - 0.5, "the lower body starts after it")
+        }
+
+        function test_itIsOneBodyWhileItOpens() {
+            splitting.isShown = true
+            tryVerify(() => splitting.isOpened, 3000)
+            verify(splitting.splitShare < 1, "the split comes after the body has opened")
+            tryCompare(splitting, "phase", "active", 3000)
+        }
+
+        function test_theGapClosesBeforeTheBodyCollapses() {
+            splitting.isShown = true
+            tryCompare(splitting, "phase", "active", 3000)
+            splitting.isShown = false
+            splitting.stopAll()
+            splitting.exit = Motion.burst.splitClose
+            compare(splitting.splitShare, 0)
+            verify(!splitting.isSplit)
+            splitting.lifecycle.send("settle")
+        }
+
+        function gapAt(cut, x) {
+            const index = cut.upper.reduce((best, point, at) => Math.abs(point.x - x) < Math.abs(cut.upper[best].x - x) ? at : best, 0)
+            return cut.lower[index].y - cut.upper[index].y
+        }
+
+        function test_theWaveRunsAlongTheGap() {
+            splitting.isShown = true
+            tryCompare(splitting, "phase", "active", 3000)
+            splitting.stopAll()
+            splitting.split = 1
+            splitting.impact = 0.1
+            let spread = 0.1
+            while (spread < 1 && Math.abs(splitting.waveHead(1) - 0.3) > 0.03) {
+                spread += 0.005
+                splitting.spread = spread
+            }
+            splitting.trace()
+            const cut = splitting.cutLines()
+            const right = cut.upper[cut.upper.length - 1].x
+            const head = splitting.cutHead(right, splitting.traceContext())
+            verify(head > cut.upper[0].x && head < right, "the crest is on the gap")
+            fuzzyCompare(gapAt(cut, head), 0, 0.5)
+            const trough = head + Appearance.burst.crestLength / 2 + Appearance.burst.troughLength / 2
+            if (trough < right)
+                verify(gapAt(cut, trough) > 30 + 4, "the trough widens the gap ahead of the crest")
+            splitting.spread = 1
+            splitting.impact = 1
+            splitting.trace()
+            fuzzyCompare(gapAt(splitting.cutLines(), head), 30, 0.5)
+            splitting.lifecycle.send("settle")
+        }
+
+        function test_theGapCarriesThePillsWave() {
+            splitting.isShown = true
+            tryCompare(splitting, "phase", "active", 3000)
+            splitting.stopAll()
+            splitting.split = 1
+            splitting.impact = 0.1
+            splitting.spread = 0.5
+            splitting.trace()
+            const track = splitting.topTrack
+            const distance = splitting.waveHead(track.total)
+            const context = splitting.traceContext()
+            let passed = 0
+            let outer = 0
+            for (const segment of track.segments) {
+                if (passed + segment.length >= distance) {
+                    outer = splitting.basePoint(segment, -1, distance - passed, context).x
+                    break
+                }
+                passed += segment.length
+            }
+            fuzzyCompare(splitting.cutHead(10000, context), outer, 0.5)
+            splitting.lifecycle.send("settle")
+        }
+
+        function test_theGapOpensAsTheWaveStarts() {
+            splitting.isShown = true
+            while (splitting.split <= 0 && splitting.phase !== "active")
+                wait(5)
+            splitting.trace()
+            const cut = splitting.cutLines()
+            const left = cut.upper[0].x
+            const right = cut.upper[cut.upper.length - 1].x
+            verify(splitting.cutHead(right, splitting.traceContext()) < left + (right - left) / 2, "the wave has not crossed the gap before it opened")
+            tryCompare(splitting, "phase", "active", 3000)
+        }
+
+        function test_closingGapMeetsInTheMiddleFirst() {
+            splitting.isShown = true
+            tryCompare(splitting, "phase", "active", 3000)
+            splitting.stopAll()
+            splitting.split = 0.3
+            const cut = splitting.cutLines()
+            const middle = cut.upper[Math.floor(cut.upper.length / 2)]
+            fuzzyCompare(gapAt(cut, middle.x), 0, 0.5)
+            verify(gapAt(cut, cut.upper[0].x) > 4, "the ends are still apart")
+            verify(gapAt(cut, cut.upper[cut.upper.length - 1].x) > 4)
+            splitting.split = 1
+            fuzzyCompare(gapAt(splitting.cutLines(), middle.x), 30, 0.5)
+            splitting.lifecycle.send("settle")
+        }
+
+        function test_reopeningMidLeaveSplitsAgain() {
+            splitting.isShown = true
+            tryCompare(splitting, "phase", "active", 3000)
+            splitting.isShown = false
+            wait(40)
+            splitting.isShown = true
+            tryCompare(splitting, "phase", "active", 3000)
+            fuzzyCompare(splitting.splitShare, 1, 0.001)
+        }
+
+        function test_noSplitWithoutAWall() {
+            splitting.wall = []
+            splitting.isShown = true
+            tryCompare(splitting, "phase", "active", 3000)
+            verify(!splitting.isSplit, "a body with no wall stays whole")
+            splitting.wall = [Qt.point(0, 0), Qt.point(0, 0.5), Qt.point(-160, 0.65), Qt.point(0, 0.8), Qt.point(0, 1)]
+        }
+    }
+
     TestCase {
         name: "Release"
         when: windowShown
@@ -221,18 +379,19 @@ Item {
             const pill = releasing.flights[0]
             const lag = Motion.burst.convergeLag * (pill.distance - releasing.nearest) / (releasing.farthest - releasing.nearest)
             const shrink = Motion.burst.shrinkShare
+            const mergeAt = share => Motion.burst.handShare + (1 - Motion.burst.handShare - Motion.burst.settleShare) * share
             releasing.merge = 0
             let shape = releasing.streamForm(pill)
             fuzzyCompare(shape.height, pill.height, 0.01)
-            releasing.merge = lag + (1 - Motion.burst.convergeLag) * shrink / 2
+            releasing.merge = mergeAt(lag + (1 - Motion.burst.convergeLag) * shrink / 2)
             shape = releasing.streamForm(pill)
             verify(shape.height < pill.height && shape.height > pill.width, "shrinking")
             fuzzyCompare(shape.y, pill.y, 0.01)
-            releasing.merge = lag + (1 - Motion.burst.convergeLag) * shrink
+            releasing.merge = mergeAt(lag + (1 - Motion.burst.convergeLag) * shrink)
             shape = releasing.streamForm(pill)
             fuzzyCompare(shape.width, shape.height, 0.5)
             fuzzyCompare(shape.y, pill.y, 0.01)
-            releasing.merge = 0.05
+            releasing.merge = mergeAt(0.05)
             const nearest = releasing.flights.reduce((closest, flight) => flight.distance < closest.distance ? flight : closest)
             verify(Math.abs(releasing.streamForm(nearest).y - nearest.y) > 1, "the nearest part has started by frame one")
             fuzzyCompare(releasing.streamForm(pill).height, pill.height, 0.01)
@@ -241,6 +400,64 @@ Item {
             fuzzyCompare(shape.width, 0, 0.01)
             fuzzyCompare(shape.x, releasing.seedX, 0.01)
             releasing.merge = 0
+        }
+
+        function test_theTaskbarKeepsItsPartsUntilTheBurstCarriesThem() {
+            releasing.isShown = true
+            releasing.stopAll()
+            releasing.merge = Motion.burst.handShare / 2
+            verify(!releasing.isCarrying, "the taskbar still draws its parts while their elements leave")
+            for (const flight of releasing.flights) {
+                const shape = releasing.streamForm(flight)
+                fuzzyCompare(shape.y, flight.y, 0.01)
+                fuzzyCompare(shape.height, flight.height, 0.01)
+            }
+            compare(releasing.form.width, 0)
+            releasing.merge = Motion.burst.handShare
+            verify(releasing.isCarrying)
+            releasing.merge = 0
+        }
+
+        function test_theMergedCircleBouncesWithEveryPartAndRestsBeforeItMoves() {
+            releasing.isShown = true
+            releasing.stopAll()
+            let strongest = 0
+            let bounces = 0
+            let wasBouncing = false
+            for (let step = 0; step <= 400; step++) {
+                releasing.merge = step / 400
+                const lean = Math.abs(releasing.form.width - releasing.form.height) / Math.max(1, releasing.look.ball)
+                strongest = Math.max(strongest, lean)
+                const isBouncing = lean > 0.02
+                if (isBouncing && !wasBouncing)
+                    bounces++
+                wasBouncing = isBouncing
+                if (releasing.merge < releasing.contactOf(releasing.flights.reduce((first, flight) => releasing.contactOf(flight) < releasing.contactOf(first) ? flight : first)))
+                    fuzzyCompare(releasing.form.width, releasing.form.height, 0.01)
+            }
+            verify(strongest > 0.05, "the circle visibly reacts, strongest " + strongest)
+            verify(bounces >= 2, "it reacts to more than one arrival, bounces " + bounces)
+            releasing.merge = 1
+            fuzzyCompare(releasing.form.width, releasing.look.ball, 0.01)
+            fuzzyCompare(releasing.form.height, releasing.look.ball, 0.01)
+            releasing.merge = 0
+        }
+
+        function test_theCircleRecoilsAsThePartsShootOut() {
+            releasing.isShown = true
+            tryCompare(releasing, "phase", "active", 3000)
+            releasing.isShown = false
+            releasing.stopAll()
+            releasing.exit = Motion.burst.leaveShrink
+            releasing.release = 0
+            fuzzyCompare(releasing.form.width, releasing.form.height, 0.01)
+            let strongest = 0
+            for (let step = 1; step <= 100; step++) {
+                releasing.release = Motion.burst.releaseTravel * step / 100
+                strongest = Math.max(strongest, Math.abs(releasing.form.height - releasing.form.width))
+            }
+            verify(strongest > 2, "the circle stretches as its parts leave, strongest " + strongest)
+            releasing.lifecycle.send("settle")
         }
 
         function test_reopeningMidReleaseEndsValid() {
@@ -252,6 +469,44 @@ Item {
             tryCompare(releasing, "phase", "active", 4000)
             verify(!releasing.isReleasing)
             compare(releasing.release, 0)
+        }
+
+        function test_coveredTaskbarGetsNothingBackAndTheCircleShrinksAway() {
+            releasing.isShown = true
+            tryCompare(releasing, "phase", "active", 3000)
+            releasing.canHandOff = false
+            releasing.isShown = false
+            verify(!releasing.isReleasing, "no part streams back to a taskbar a window covers")
+            let landedAt = -1
+            releaseLandings.target = null
+            releasing.landed.connect(() => landedAt = releasing.exit)
+            tryVerify(() => {
+                verify(!releasing.isHandedOff, "the taskbar never takes the circle while it stays covered")
+                verify(releasing.visitor === null || !releasing.visitor.isHandedOff)
+                return releasing.phase === "idle"
+            }, 3000)
+            verify(landedAt >= 0 && landedAt < 1, "the taskbar is given back while the circle still shrinks into the edge")
+            releaseLandings.target = releasing
+            releasing.canHandOff = true
+        }
+
+        function test_theHandOffIsDecidedWhenTheLeaveStarts() {
+            burst.canHandOff = true
+            burst.isShown = true
+            tryCompare(burst, "phase", "active", 3000)
+            burst.isShown = false
+            burst.canHandOff = false
+            tryVerify(() => burst.isHandedOff, 3000, "a window covering the taskbar mid-leave does not take the circle back from it")
+            tryCompare(burst, "phase", "idle", 3000)
+            burst.isShown = true
+            tryCompare(burst, "phase", "active", 3000)
+            burst.isShown = false
+            burst.canHandOff = true
+            tryVerify(() => {
+                verify(!burst.isHandedOff, "uncovering mid-leave does not hand the circle over either")
+                return burst.phase === "idle"
+            }, 3000)
+            burst.canHandOff = false
         }
     }
 

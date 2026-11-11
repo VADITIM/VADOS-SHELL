@@ -32,7 +32,10 @@ Item {
 
     property bool isMirrored: false
     property bool isAway: false
-    property bool isVeiled: false
+    property bool isGathering: false
+    property bool hasSlung: false
+    readonly property bool isVeiled: isAway && hasSlung && !isGathering
+    property bool wasRevealed: false
     property bool isEaten: false
     property var visitor: null
     readonly property bool isArriving: visitor !== null && visitor.isReleasing === true && visitor.release > 0
@@ -469,18 +472,20 @@ Item {
 
     opacity: isVeiled ? 0 : 1
     onIsAwayChanged: {
-        if (isAway)
+        if (isAway) {
+            wasRevealed = !isCovered || isSummoned
+            hasSlung = false
             veilDelay.restart()
-        else {
+        } else {
             veilDelay.stop()
-            isVeiled = false
+            hasSlung = false
         }
     }
 
     Timer {
         id: veilDelay
         interval: Motion.pill.awayHold
-        onTriggered: shell.isVeiled = shell.isAway
+        onTriggered: shell.hasSlung = shell.isAway
     }
 
     transform: Upright {
@@ -534,7 +539,7 @@ Item {
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
         melt: Appearance.taskbar.melt
-        opacity: shell.isBare || shell.isAway ? 0 : 1
+        opacity: shell.isBare || (shell.isAway && !shell.isGathering) ? 0 : 1
 
         Lobe {
             readonly property var visitor: shell.visitor
@@ -737,7 +742,7 @@ Item {
         x: Appearance.taskbar.margin + 2
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Appearance.taskbar.margin
-        isShown: (shell.isRevealed || shell.isAway) && !shell.isEaten
+        isShown: (shell.isRevealed || (shell.isAway && shell.wasRevealed)) && !shell.isEaten
         transform: Upright {
             isMirrored: shell.isMirrored
             axis: clock.width / 2

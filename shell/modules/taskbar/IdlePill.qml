@@ -96,7 +96,8 @@ Item {
         hasSpread: false
         hasArrivalPop: true
         enterDelay: idle.host.isArriving ? (idle.order - 1) * Motion.reveal.arrivalStagger : idle.order * Motion.reveal.stagger
-        leaveDelay: idle.stretch > 0.01 ? Motion.pill.fold + Motion.pill.sizeFollow : Motion.pill.leaveElement
+        isHolding: idle.host.isGathering
+        leaveDelay: idle.stretch > 0.01 ? Motion.pill.fold + Motion.pill.sizeFollow : Motion.pill.sling
         popDuration: Motion.stateDuration
         character: Motion.liquid.circle
     }
@@ -131,9 +132,8 @@ Item {
         width: Appearance.taskbar.glyph
         height: Appearance.taskbar.glyph
         isShown: idle.isGlyphShown
-        enterDuration: Motion.stateDuration
-        leaveDuration: Motion.pill.leaveElement
-        leaveWindow: 0
+        isSlung: true
+        leaveWindow: Motion.pill.leaveWindow / 2
 
         Press {
             target: glyphTurn

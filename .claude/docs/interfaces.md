@@ -35,9 +35,9 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 
 | Service | Interface | Used by |
 |---|---|---|
-| `Compositor` | `capabilities`, `level`, `activeWindow`, `focusedScreen`, `canvasState`, `viewports()`, `isListed(value, id)`, `send(arguments)`, `action(spec)`, signal `canvasChanged` | `Confinement`, `Occupancy`, `Attention`, `Shortcuts` |
+| `Compositor` | `capabilities`, `level`, `activeWindow`, `lastWindow` (the window that had focus last and is still open; driftwm checks it is still open, other backends keep the last active one), `focusedScreen`, `canvasState`, `viewports()`, `isListed(value, id)`, `send(arguments)`, `action(spec)`, signal `canvasChanged` | `Confinement`, `Occupancy`, `Attention`, `Shortcuts` |
 | `Confinement` | `canConfine`, `isConfined`, `canMinimize`, `canSnap`, `parked`, `isParked(id)`, `activate(toplevel)`, `minimize()`, `maximize()`, `fullscreen()`, `snap(direction)` | `Toplevels`, `SettingsWindow`, `Shortcuts` |
-| `Occupancy` | `isCovered(screenName)` | `TaskbarWindow` |
+| `Occupancy` | `isCovered(screenName, isHolding)`: the active window, or with `isHolding` and no window focused, `Compositor.lastWindow` | `TaskbarWindow`, `OverlayWindow` |
 | `Toplevels` | `groups`, `iconFor(appId)`, `activate(group)`, `close(group)` | taskbar module |
 | `Apps` | `search(query)`, `recent()`, `byId(appId)`, `launch(appId)` | search module |
 | `Audio` | `isReady`, `volume`, `isMuted`, `setVolume(value)`, `toggleMute()` | taskbar module |
@@ -45,10 +45,12 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 | `DateTime` | `time`, `date` | taskbar |
 | `Hardware`, `Traffic`, `Weather` | readings, plus `isActive` (polls only while a window sets it) | dashboard module; `DashboardWindow` sets `isActive` |
 | `Network` | `isEnabled`, `isWired`, `isConnected`, `ssid`, `strength`, `networks`, `isWatching`, `toggle()`, `connectTo(name)` | taskbar, extension |
-| `Notifications` | `isServing`, `list`, `latest`, `unreadCount`, `hasUnread`, `isUrgent`, `isCritical/isLow/isAlive(n)`, `markRead()`, `dismiss(n)`, `clear()`, `open(n)` (default action, else the desktop entry), `invoke(n, id)`, signal `received` | `Activity`, `Attention`, `Shortcuts`, `TaskbarWindow` |
+| `Notifications` | `isServing`, `list`, `latest`, `unreadCount`, `hasUnread`, `isUrgent`, `isCritical/isLow/isAlive(n)`, `history`, `historyLimit`, `forget(entry)`, `openEntry(entry)`, `markRead()`, `dismiss(n)`, `clear()` (history too), `open(n)` (default action, else the desktop entry), `invoke(n, id)`, signal `received` | `Activities`, `ActivityState`, `Attention`, `Shortcuts`, `TaskbarWindow`, taskbar module |
 | `Power` | `lock()`, `suspend()`, `restart()`, `shutdown()` | taskbar |
 | `Removable` | `devices`, `eject(device)` | taskbar |
-| `Tray` | `items`, `open(...)`, `openMenu(...)` | `Activity` |
+| `FileChooser` | `isPicking`, `choose(title, kind, onChosen)` (false while one is open) | `Transfer`, `SettingsWindow` (profile picture) |
+| `Transfer` | `installed`, `appKey`, `appName`, `isAvailable`, `isPicking` (`FileChooser`), `devices`, `nextApp()`, `send(peer)` | notifications module, `NotificationMenuWindow` |
+| `Tray` | `items`, `open(item, window, x, y)`, `openMenu(item, window, x, y)` | `Activities`, taskbar module (`ActivityTray`) |
 | `StateFile` (type) | `name`, `version`, `defaults`, `values`, `isLoaded`, `update(next)`, `flush()` | services that keep runtime state |
 | `Supervisor` (type) | `name`, `isActive`, `process`, `status`, `failures`, `restarts`, `lastFailure`, `fail(reason)`, `succeed()`, signal `restarted` | `Compositor`, `Network`, `Removable`, `Traffic`, `Weather` |
 | `Supervision` | `supervisors`, `enroll(supervisor)`, `release(supervisor)` | `Supervisor`, `Shortcuts` (IPC `diagnostics`) |
@@ -57,8 +59,8 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 
 | Singleton | Interface | Used by |
 |---|---|---|
-| `Overlays` | `kinds` (from `Features.overlayKinds()`), `top`, `taskbarParts`, `isOpen(key, screen)`, `ownsKeyboard(key, screen)`, `isTaskbarAway(screen)`, `visitorOn(screen)`, `open/close/toggle(key, screen)`, `closeTop()`, `reportPhase(key, screen, phase)`, `returnTaskbar(screen)`, `placeTaskbarParts`, `placeVisitor`, `keepScreens(names)`, signal `taskbarGathering(screen)` | windows, `Shortcuts`, `shell.qml` |
-| `Activity` | `current`, `entries`, `hasActivity`, `isOpenOn(screen)`, `open/close/toggle(screen)`, `pin(kind)` | `Shortcuts` |
+| `Overlays` | `kinds` (from `Features.overlayKinds()`), `top`, `taskbarParts`, `isOpen(key, screen)`, `isWanted(key, screen)` (open or not idle yet: its window must exist), `isHolding(screen)` (an overlay is open or still moving there), `ownsKeyboard(key, screen)`, `isTaskbarAway(screen)`, `visitorOn(screen)`, `open/close/toggle(key, screen)`, `closeTop()`, `reportPhase(key, screen, phase)`, `returnTaskbar(screen)`, `placeTaskbarParts`, `placeVisitor`, `keepScreens(names)`, signal `taskbarGathering(screen)` | windows, `Shortcuts`, `shell.qml` |
+| `ActivityState` | `modes`, `mode`, `screenName`, `lead`, `leadKey`, `isAnyLive`, `isReading`, `modeOn(screen)`, `set(screen, mode)`, `step(screen, direction)`, `rotate(direction)`, `toggle(screen)`, `fold()`, `pin(key)` (expanding with the bell as lead opens the `notifications` overlay) | `TaskbarWindow`, `Shortcuts`, preview |
 | `FrameDebug` | `isActive`, `isStepping`, `isSnapping`, `isViewingPast`, `counter`, `shownLabel`, `frame`, `history`, `cursor`, `memory`, `screenName`, `shotsOn(screen)`, `toggle(screen)`, `begin(screen)`, `step()`, `back()`, `snap(screen)`, `finishSnap()`, `close()`, `refresh()`, `expect()`, `store(token, shot)`, `skip()`, signals `captureRequested(token, scale)`, `snapshotReady(shots)` | `FrameWindow`, `FrameTap`, `Shortcuts` |
 | `Attention` | `isQuiet`, `isFullscreen`, `peek`, `held`, `mayPeek(n)`, `dismissPeek()`, `setQuiet(isOn)` | `Shortcuts`, `TaskbarWindow` |
 
@@ -66,7 +68,7 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 
 Reusable, feature-agnostic primitives. They read only component-level tokens; feature sizes and timing arrive as properties (`look`, `pace`). Abilities (`architecture.md` § Abilities) are attached to a host that only sets state.
 
-- Engine: `Lifecycle` (`send(event)`, `phase`, signals `moving`, `moved`, `interrupted`), `Gesture` (signals `moved`, `crossed`, `thrown`, `tapped`, `ended`), `Burst` (overlay enter/leave; `isShown`, `parts`, `phase`, `isActive`, `isOpened`, signal `landed`), `Gather`, `Mutate` (`isArriving`, `hasArrived`), `Turn` (`isFlipping`), `LabelReveal` (`isShown`, `sweepWidth`, `label`), `Squircle` (`color`, `strokeColor`, `strokeWidth`), `TypedText` (`leaveBudget`), `Outline` (`isShown`, `radius`, `traceDuration`, `leaveDuration`, `label`), `Press`, `Rising`.
+- Engine: `Lifecycle` (`send(event)`, `phase`, signals `moving`, `moved`, `interrupted`), `Gesture` (signals `moved`, `crossed`, `thrown`, `tapped`, `ended`), `Burst` (overlay enter/leave; `isShown`, `parts`, `phase`, `isActive`, `isOpened`, signal `landed`), `Gather`, `Mutate` (`isArriving`, `hasArrived`), `Turn` (`isFlipping`, `flipAngle`, `spinAngle`), `LabelReveal` (`isShown`, `sweepWidth`, `label`), `Squircle` (`color`, `strokeColor`, `strokeWidth`), `TypedText` (`leaveBudget`), `Outline` (`isShown`, `radius`, `traceDuration`, `leaveDuration`, `label`), `Press`, `Rising`.
 - Rendering: `LiquidLayer` (`isShown`, `shapes`), `LiquidShape`, `LiquidBridge`, `EdgeFuse`, `Lobe`, `Masked`, `Surface`.
 - Controls and text: `GlyphButton` (signal `clicked`), `Glyph` (`name`, `level`, `isCharging`; the icon from `utils/Icons.js` `pick`), `ColorWheel` (requires `look`; `diameter`, `wheelShare` for the wheel's scale-rotate pop, `sliderShare` for the value slider's left-to-right slide; signal `picked`), `EdgePull` (requires `look`, `pace`; signal `summoned`), `TypedText`, `ArcText`, `Upright`.
 
@@ -87,11 +89,11 @@ Search and dashboard read `Appearance.taskbar.margin`: they grow out of the task
 
 ## windows
 
-`TaskbarWindow` (per screen, `WlrLayer.Top`), `FrameWindow` (per screen; the frame debugger, outside `Overlays`) and the `OverlayWindow`s (`SearchWindow`, `SettingsWindow`, `DashboardWindow`; `overlayKey`, `isOpen`, `parts`, `phase`, `requestClose()`, `land()`, `placeVisitor()`). Windows are the only place that bridges `Config` setters to module signals and reports overlay phases to `Overlays`. Created only by `shell.qml` through `Variants`.
+`TaskbarWindow` (per screen, `WlrLayer.Top`), `FrameWindow` (per screen; the frame debugger, outside `Overlays`) and the `OverlayWindow`s (`SearchWindow`, `SettingsWindow`, `DashboardWindow`, `NotificationMenuWindow`; `overlayKey`, `isOpen`, `parts`, `canHandOff`, `phase`, `requestClose()`, `land()`, `placeVisitor()`). Windows are the only place that bridges `Config` setters to module signals and reports overlay phases to `Overlays`. Created only by `shell.qml` through `Variants`: the taskbar and frame windows directly, each overlay window inside an `OverlaySlot` (`overlayKey`, the window as its default `surface` component, `isWanted`, `isLoaded`), which builds it when `Overlays.isWanted(key, screen)` and destroys it when it is closed, idle and no longer `isPresent`. An `OverlayWindow` is therefore always built closed: `isOpen` stays false until the window is complete (`isComplete`), so its module sees the same closed-to-open change as before.
 
 ## keybinds and IPC
 
-`keybinds/Shortcuts.qml`: global shortcuts `vados:frames`, `vados:frameShot`, `vados:search`, `vados:settings`, `vados:dashboard`, `vados:activity` (Hyprland protocol), and `qs ipc call` targets `frames` (`toggle`, `step`, `back`, `shot`, `close`, `status`), `dashboard`, `search`, `settings`, `desktop`, `overlay`, `activity`, `attention`, `diagnostics`, `notifications`. Each handler flips `state` (`Overlays`, `Activity`, `Attention`), calls a `Config` setter, or calls a service (`Confinement`, `Notifications`). No feature logic.
+`keybinds/Shortcuts.qml`: global shortcuts `vados:frames`, `vados:frameShot`, `vados:search`, `vados:settings`, `vados:dashboard`, `vados:activity`, `vados:notifications` (opens the notifications menu; Hyprland protocol), and `qs ipc call` targets `frames` (`toggle`, `step`, `back`, `shot`, `close`, `status`), `dashboard`, `search`, `settings`, `desktop`, `overlay`, `activity`, `attention`, `diagnostics`, `notifications`. Each handler flips `state` (`Overlays`, `ActivityState`, `Attention`), calls a `Config` setter, or calls a service (`Confinement`, `Notifications`). No feature logic.
 
 ## Compositor adapter
 

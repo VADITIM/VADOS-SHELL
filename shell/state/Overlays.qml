@@ -10,6 +10,7 @@ Singleton {
     property var screens: ({})
     property var stack: []
     property var awayScreens: []
+    property var gathering: []
     property var taskbarParts: ({})
     property var visitors: ({})
     property var phases: ({})
@@ -32,6 +33,14 @@ Singleton {
 
     function isAnyOn(screenName) {
         return stack.some(key => screens[key] === screenName)
+    }
+
+    function isHolding(screenName) {
+        return isAnyOn(screenName) || Object.keys(phases[screenName] ?? {}).length > 0
+    }
+
+    function isWanted(key, screenName) {
+        return isOpen(key, screenName) || phaseOf(key, screenName) !== "idle"
     }
 
     function ownsKeyboard(key, screenName) {
@@ -102,6 +111,7 @@ Singleton {
                 close(key)
         }
         awayScreens = awayScreens.filter(screenName => screenNames.indexOf(screenName) >= 0)
+        gathering = gathering.filter(screenName => screenNames.indexOf(screenName) >= 0)
         taskbarParts = keepOnly(taskbarParts, screenNames)
         visitors = keepOnly(visitors, screenNames)
         phases = keepOnly(phases, screenNames)
@@ -119,6 +129,10 @@ Singleton {
 
     function isTaskbarAway(screenName) {
         return awayScreens.indexOf(screenName) >= 0
+    }
+
+    function isGathering(screenName) {
+        return gathering.indexOf(screenName) >= 0
     }
 
     function open(key, screenName) {
@@ -165,13 +179,23 @@ Singleton {
     function gatherTaskbar(screenName) {
         if (isTaskbarAway(screenName))
             return
+        gathering = gathering.concat([screenName])
         taskbarGathering(screenName)
         awayScreens = awayScreens.concat([screenName])
     }
 
+    function carryTaskbar(screenName) {
+        if (!isGathering(screenName))
+            return
+        taskbarGathering(screenName)
+        gathering = gathering.filter(held => held !== screenName)
+    }
+
     function returnTaskbar(screenName) {
-        if (!isAnyOn(screenName))
-            awayScreens = awayScreens.filter(away => away !== screenName)
+        if (isAnyOn(screenName))
+            return
+        gathering = gathering.filter(held => held !== screenName)
+        awayScreens = awayScreens.filter(away => away !== screenName)
     }
 
     function placeTaskbarParts(screenName, parts) {

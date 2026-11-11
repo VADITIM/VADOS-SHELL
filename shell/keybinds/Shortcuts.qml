@@ -11,7 +11,7 @@ import "../utils/Log.js" as Log
 Scope {
     id: shortcuts
 
-    readonly property bool isServingNotifications: Notifications.isServing
+    readonly property string notificationStatus: Notifications.status
     readonly property bool isQuiet: Attention.isQuiet
 
     GlobalShortcut {
@@ -38,8 +38,15 @@ Scope {
     GlobalShortcut {
         appid: "vados"
         name: "activity"
-        description: "Open or close the activity bar"
-        onPressed: Activity.toggle(Compositor.focusedScreen)
+        description: "Expand or fold the activity pill"
+        onPressed: ActivityState.toggle(Compositor.focusedScreen)
+    }
+
+    GlobalShortcut {
+        appid: "vados"
+        name: "notifications"
+        description: "Open or close the notifications menu"
+        onPressed: Overlays.toggle("notifications", Compositor.focusedScreen)
     }
 
     GlobalShortcut {
@@ -118,19 +125,19 @@ Scope {
         }
 
         function toggle(): void {
-            Activity.toggle(Compositor.focusedScreen)
+            ActivityState.toggle(Compositor.focusedScreen)
         }
 
         function close(): void {
-            Activity.close()
+            ActivityState.fold()
         }
 
-        function pin(kind: string): void {
-            Activity.pin(kind)
+        function pin(key: string): void {
+            ActivityState.pin(key)
         }
 
         function current(): string {
-            return Activity.current ? Activity.current.kind : ""
+            return ActivityState.leadKey
         }
     }
 
@@ -259,7 +266,15 @@ Scope {
         }
 
         function status(): string {
-            return shortcuts.isServingNotifications ? "serving" : "off"
+            return shortcuts.notificationStatus
+        }
+
+        function toggle(): void {
+            Overlays.toggle("notifications", Compositor.focusedScreen)
+        }
+
+        function close(): void {
+            Overlays.close("notifications")
         }
 
         function count(): int {

@@ -20,6 +20,9 @@ const settings = {
     "services.mediaPlayer": { type: "boolean", fallback: true },
     "weather.location": { type: "string", fallback: "" },
     "notifications.enabled": { type: "boolean", fallback: false },
+    "notifications.history": { type: "count", fallback: 200 },
+    "send.app": { type: "string", fallback: "blip", choices: ["blip"] },
+    "send.devices": { type: "names", fallback: [] },
     "motion.reduced": { type: "boolean", fallback: false },
     "attention.doNotDisturb": { type: "boolean", fallback: false },
     "lock.layout": { type: "names", fallback: ["clock:5:1", "profile:6:4", "login:5:8"] },
@@ -31,6 +34,7 @@ const migrations = [
     raw => raw
 ]
 
+const countLimit = 1000
 const colourPattern = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
 function describe(value) {
@@ -64,6 +68,8 @@ function findProblem(key, value) {
         return `is ${describe(value)}, expected a number from 0 to 1`
     if (rule.type === "tint" && !(value === "" || (typeof value === "string" && colourPattern.test(value))))
         return `is ${describe(value)}, expected "" or a hex colour like "#121212"`
+    if (rule.type === "count" && !(Number.isInteger(value) && value >= 0 && value <= countLimit))
+        return `is ${describe(value)}, expected a whole number from 0 to ${countLimit}`
     if (rule.type === "names" && !(Array.isArray(value) && value.every(entry => typeof entry === "string")))
         return `is ${describe(value)}, expected a list of names in quotes`
     if (rule.choices && rule.choices.indexOf(value) < 0)

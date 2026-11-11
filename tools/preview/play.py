@@ -22,7 +22,8 @@ QtObject {
         property QtObject desktop: QtObject { property string mode: "canvas" }
         property QtObject search: QtObject { property var favorites: ["firefox.desktop", "kitty.desktop"] }
         property QtObject weather: QtObject { property string location: "" }
-        property QtObject notifications: QtObject { property bool enabled: false }
+        property QtObject notifications: QtObject { property bool enabled: false; property int history: 200 }
+        property QtObject send: QtObject { property string app: "blip"; property var devices: [] }
         property QtObject attention: QtObject { property bool doNotDisturb: false }
         property QtObject motion: QtObject { property bool reduced: false }
         property QtObject rendering: QtObject { property string quality: "full" }
@@ -50,6 +51,9 @@ QtObject {
     function setWindowMode(mode) { data.desktop.mode = mode }
     function setWeatherLocation(location) { data.weather.location = location }
     function setNotificationsEnabled(isEnabled) { data.notifications.enabled = isEnabled }
+    function setNotificationHistory(count) { data.notifications.history = count }
+    function setSendApp(key) { data.send.app = key }
+    function setSendDevices(entries) { data.send.devices = entries }
     function setDoNotDisturb(isQuiet) { data.attention.doNotDisturb = isQuiet }
     function setReducedMotion(isReduced) { data.motion.reduced = isReduced }
     function setRenderQuality(quality) { data.rendering.quality = quality }
@@ -123,7 +127,7 @@ def build():
     write_module("qs.config", tokens + [("Config.qml", CONFIG_MOCK)])
     write_module("qs.components", qml_files(os.path.join(SHELL, "components")))
     write_module("qs.state", qml_files(os.path.join(SHELL, "state")))
-    for module in ("taskbar", "alerts", "search", "settings", "dashboard", "framedebug"):
+    for module in ("taskbar", "alerts", "search", "settings", "dashboard", "notifications", "framedebug"):
         write_module("qs.modules." + module, qml_files(os.path.join(SHELL, "modules", module)))
     write_module("qs.services", mock_services())
     write_module("qs.windows", [(os.path.join(SHELL, "windows", "FrameTap.qml"), None)])

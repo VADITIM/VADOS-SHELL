@@ -12,13 +12,21 @@ Singleton {
     property string lead: ""
     readonly property bool isAnyLive: Activities.isAnyLive
     readonly property string leadKey: Activities.order.includes(lead) ? lead : Activities.order[0] ?? "media"
+    readonly property bool isReading: Overlays.stack.indexOf("notifications") >= 0
 
     onIsAnyLiveChanged: {
+        if (mode === "expanded")
+            return
         lead = ""
         if (isAnyLive && mode === "idle")
             mode = "active"
-        else if (!isAnyLive && (mode === "active" || mode === "expanded"))
+        else if (!isAnyLive && mode === "active")
             mode = "idle"
+    }
+
+    onIsReadingChanged: {
+        if (isReading)
+            Notifications.markRead()
     }
 
     function modeOn(name) {
@@ -28,8 +36,14 @@ Singleton {
     function set(name, wanted) {
         if (modes.indexOf(wanted) < 0)
             return
-        if (wanted === "expanded")
+        if (wanted === "expanded" && leadKey === "notifications") {
+            Overlays.open("notifications", name)
+            return
+        }
+        if (wanted === "expanded") {
             screenName = name
+            lead = leadKey
+        }
         mode = wanted
     }
 
@@ -39,10 +53,39 @@ Singleton {
     }
 
     function rotate(direction) {
-        const order = Activities.order
+        const order = mode === "expanded" ? Activities.order.filter(key => key !== "notifications") : Activities.order
         if (order.length < 2)
             return
         const at = Math.max(0, order.indexOf(leadKey))
         lead = order[(at + direction + order.length) % order.length]
+    }
+
+    function fold() {
+        if (mode === "expanded")
+            mode = isAnyLive ? "active" : "idle"
+    }
+
+    function toggle(name) {
+        if (modeOn(name) === "expanded")
+            fold()
+        else
+            set(name, "expanded")
+    }
+
+    function pin(key) {
+        if (!Activities.keys.includes(key))
+            return
+        if (key === "notifications")
+            fold()
+        lead = key
+    }
+
+    Connections {
+        target: Notifications
+
+        function onUnreadCountChanged() {
+            if (state.isReading && Notifications.unreadCount > 0)
+                Qt.callLater(Notifications.markRead)
+        }
     }
 }

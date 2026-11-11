@@ -45,13 +45,13 @@ Singleton {
         readonly property string mono: "Space Mono"
         readonly property var monoFallbacks: ["Space Mono", "Consolas", "DejaVu Sans Mono", "Courier New"]
         readonly property string fixedMono: monoFallbacks.find(name => Qt.fontFamilies().indexOf(name) >= 0) ?? mono
-        readonly property int body: 12
-        readonly property int label: 10
+        readonly property int body: 13
+        readonly property int label: 11
         readonly property real labelSpacing: 2.6
-        readonly property int clock: 20
-        readonly property int reading: 16
-        readonly property int degrees: 34
-        readonly property int chip: 9
+        readonly property int clock: 22
+        readonly property int reading: 17
+        readonly property int degrees: 36
+        readonly property int chip: 10
     }
 
     function bandColor(value, limits) {
@@ -73,32 +73,32 @@ Singleton {
     }
 
     readonly property QtObject taskbar: QtObject {
-        readonly property int margin: 11
-        readonly property int thickness: 47
-        readonly property int item: 40
+        readonly property int margin: 12
+        readonly property int thickness: 52
+        readonly property int item: 44
         readonly property int indicatorInset: 6
         readonly property int itemGap: 4
         readonly property int padding: 4
-        readonly property int pillGap: 11
-        readonly property int idleSize: 40
-        readonly property int idleGap: 9
+        readonly property int pillGap: 12
+        readonly property int idleSize: 44
+        readonly property int idleGap: 10
         readonly property int hoverSlack: 8
         readonly property int hoverSwell: 4
-        readonly property int icon: 23
-        readonly property int glyph: 18
+        readonly property int icon: 26
+        readonly property int glyph: 20
         readonly property int windowWidth: 340
         readonly property int backdropWidth: 140
         readonly property int edgeStrip: 3
-        readonly property int bead: 16
+        readonly property int bead: 18
         readonly property real beadGrowth: 0.3
-        readonly property int visitReach: 32
-        readonly property int visitSwell: 9
-        readonly property int reach: 68
-        readonly property int tipHeight: 29
-        readonly property int tipGap: 7
+        readonly property int visitReach: 36
+        readonly property int visitSwell: 10
+        readonly property int reach: 76
+        readonly property int tipHeight: 32
+        readonly property int tipGap: 8
         readonly property int tipTextLimit: 220
-        readonly property int melt: 11
-        readonly property int foldDot: 22
+        readonly property int melt: 12
+        readonly property int foldDot: 24
         readonly property int foldSpeck: 3
         readonly property int foldSpeckGap: 3
     }
@@ -106,10 +106,10 @@ Singleton {
     readonly property QtObject activity: QtObject {
         readonly property int bead: 24
         readonly property int speck: 6
-        readonly property int width: 40
+        readonly property int width: 44
         readonly property int length: 92
         readonly property int padding: 12
-        readonly property int glyph: 18
+        readonly property int glyph: 20
         readonly property int barCount: 3
         readonly property int bar: 3
         readonly property int barGap: 3
@@ -120,6 +120,7 @@ Singleton {
         readonly property int lineGap: 2
         readonly property int control: 28
         readonly property int controlGap: 4
+        readonly property int countLimit: 9
         readonly property QtObject media: QtObject {
             readonly property int width: 300
             readonly property int height: 112
@@ -137,6 +138,14 @@ Singleton {
             readonly property int drop: 34
             readonly property int dropGap: 3
             readonly property int dropSpacing: 8
+        }
+        readonly property QtObject tray: QtObject {
+            readonly property int height: 64
+            readonly property int minimum: 200
+            readonly property int badge: 44
+            readonly property int cell: 34
+            readonly property int icon: 20
+            readonly property int columns: 8
         }
     }
 
@@ -289,6 +298,8 @@ Singleton {
         readonly property int troughLength: 200
         readonly property int troughStep: 8
         readonly property int curveStep: 8
+        readonly property int cutSearch: 16
+        readonly property real splitNeck: 0.18
         readonly property int edgeRound: 220
         readonly property int edgeRoundFade: 120
         readonly property int edgeSnap: 100
@@ -392,6 +403,45 @@ Singleton {
             readonly property int vacantY: 250
             readonly property int vacantHeight: 254
         }
+    }
+
+    readonly property QtObject notifications: QtObject {
+        readonly property real widthShare: 0.25
+        readonly property int corner: 64
+        readonly property int rootCorner: 40
+        readonly property int melt: 14
+        readonly property real dim: 0.55
+        readonly property real splitAt: 0.64
+        readonly property int splitGap: 26
+        readonly property var wall: [[0.9, 0], [1, 0.07], [0.97, 0.22], [1, 0.4], [0.96, 0.54], [0.78, 0.615], [0.5, 0.64], [0.72, 0.68], [0.82, 0.76], [0.84, 0.9], [0.95, 1]]
+        readonly property var wholeWall: [[0.9, 0], [1, 0.07], [0.97, 0.3], [1, 0.6], [0.96, 0.85], [0.95, 1]]
+        readonly property real wallOnly: 0.96
+        readonly property real wholeListEnd: 0.94
+        readonly property int staggerRows: 10
+        readonly property int inset: 24
+        readonly property int top: 30
+        readonly property real listEnd: 0.58
+        readonly property int row: 68
+        readonly property int icon: 46
+        readonly property int iconGap: 14
+        readonly property int lineGap: 5
+        readonly property int swipe: 120
+        readonly property int bubble: 46
+        readonly property int bubbleGlyph: 20
+        readonly property int bubbleReach: 14
+        readonly property var bubbleShares: [0.08, 0.2]
+        readonly property real gearShare: 0.82
+        readonly property int appGap: 10
+        readonly property real devicesShare: 0.3
+        readonly property real sendShare: 0.64
+        readonly property int device: 52
+        readonly property int deviceGap: 16
+        readonly property int deviceName: 9
+        readonly property int sendWidth: 150
+        readonly property int sendHeight: 40
+        readonly property int ring: 2
+        readonly property real groupFade: 0.6
+        readonly property var tint: ({ sample: 24, buckets: 12, alpha: 0.5, saturation: 0.25, darkest: 0.12, brightest: 0.92, lightness: 0.6 })
     }
 
     readonly property QtObject search: QtObject {

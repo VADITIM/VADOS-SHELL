@@ -41,6 +41,7 @@ FocusScope {
     readonly property string phase: burst.phase
     readonly property bool isContentShown: burst.isOpened
     readonly property var visitor: burst.visitor
+    readonly property bool isCarrying: burst.isCarrying
     property real dim: isOpen ? 1 : 0
 
     readonly property var look: Appearance.settings
@@ -88,6 +89,7 @@ FocusScope {
     signal reducedMotionRequested(bool isReduced)
     signal quietRequested(bool isQuiet)
     signal profileRequested(string field, string value)
+    signal pictureRequested()
     signal pillRequested(string field, var value)
     signal mediaPlayerRequested(bool isOn)
     signal notificationsRequested(bool isOn)
@@ -419,6 +421,7 @@ FocusScope {
                     github: settings.profileGithub
                     accent: settings.accent
                     onProfileRequested: (field, value) => settings.profileRequested(field, value)
+                    onPictureRequested: settings.pictureRequested()
                     onAccentRequested: value => settings.accentRequested(value)
                 }
             }

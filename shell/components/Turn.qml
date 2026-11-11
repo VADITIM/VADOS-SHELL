@@ -13,7 +13,10 @@ Item {
     property int enterEasing: Easing.OutQuad
     property real presence: 0
     property bool isFlipping: true
-    readonly property real shape: isFlipping ? presence : 1
+    property real flipAngle: -90
+    property real spinAngle: 0
+    property bool isSlung: false
+    readonly property real shape: isFlipping || isSlung ? presence : 1
 
     signal departed()
 
@@ -25,7 +28,12 @@ Item {
             origin.x: turn.width / 2
             origin.y: turn.height / 2
             axis { x: 0; y: 1; z: 0 }
-            angle: -90 * (1 - turn.shape)
+            angle: turn.isSlung ? 0 : turn.flipAngle * (1 - turn.shape)
+        },
+        Rotation {
+            origin.x: turn.width / 2
+            origin.y: turn.height / 2
+            angle: (turn.isSlung ? Motion.pill.slingSpin : turn.spinAngle) * (1 - turn.shape)
         },
         Scale {
             origin.x: turn.width / 2
@@ -61,6 +69,10 @@ Item {
 
     onIsShownChanged: play()
     Component.onCompleted: if (isShown) play()
+    Component.onDestruction: {
+        arrival.stop()
+        departure.stop()
+    }
 
     SequentialAnimation {
         paused: Motion.isHeld && running
@@ -70,8 +82,9 @@ Item {
             target: turn
             property: "presence"
             to: 1
-            duration: Motion.pace(turn.enterDuration)
-            easing.type: turn.enterEasing
+            duration: Motion.pace(turn.isSlung ? Motion.pill.slingIn : turn.enterDuration)
+            easing.type: turn.isSlung ? Easing.OutBack : turn.enterEasing
+            easing.overshoot: Motion.pill.slingBack
         }
     }
 
@@ -83,8 +96,9 @@ Item {
             target: turn
             property: "presence"
             to: 0
-            duration: Motion.pace(turn.leaveDuration)
-            easing.type: Easing.InQuad
+            duration: Motion.pace(turn.isSlung ? Motion.pill.sling : turn.leaveDuration)
+            easing.type: turn.isSlung ? Easing.InBack : Easing.InQuad
+            easing.overshoot: Motion.pill.slingBack
         }
         ScriptAction { script: turn.departed() }
     }

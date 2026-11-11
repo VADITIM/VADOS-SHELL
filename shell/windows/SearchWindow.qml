@@ -18,10 +18,11 @@ OverlayWindow {
         profilePicture: Config.data.profile.picture
         parts: window.parts
         isMirrored: Config.data.taskbar.side === "right"
-        canHandOff: Config.data.taskbar.style !== "bare"
+        canHandOff: window.canHandOff
         isHandingOver: window.isHandingOver
         hasCircle: window.hasCircle
         onVisitorChanged: window.placeVisitor(visitor)
+        onIsCarryingChanged: window.carry(isCarrying)
         onCloseRequested: window.requestClose()
         onLanded: window.land()
         onFavoriteToggled: appId => Config.toggleFavorite(appId)

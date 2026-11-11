@@ -150,10 +150,11 @@ A click on the taskbar clock (or `SUPER + A`, or `ipc call dashboard toggle`) st
 - CPU and GPU: temperature as the ring around the chip, load as the percentage inside it (the chip turns the load's colour). The GPU's curved line at its top left is VRAM.
 - RAM: a chip ring tracking used memory, with used/total GB under it.
 - Disk: in the notch at the bottom, fill bar and used/total GB. Tap the disk icon to page through disks.
-- Battery (laptops only): a vertical battery in a notch on the far side, filled and coloured in six steps by charge (red under 10%, then orange, yellow, lime, green, blue above 80%), a bolt while charging.
+- Battery (laptops only): a vertical battery in a notch on the far side, filled and coloured by charge (red under 10%, orange under 20%, yellow under 40%, lime under 60%, green above), green with a bolt while charging.
+- Task manager: once the dashboard has opened, a pill grows out of its far side, runs to the far screen edge and fuses with it as a tall column. Two tabs: **Processes** (every running program, grouped by name, with CPU, memory, disk and network; the column headers show the totals) and **App history** (CPU time, peak memory and disk I/O per program, kept across restarts in `~/.cache/vados/apphistory.json`). Click a column header to sort by it, again to flip the order. Right-click a row for **Kill** (SIGTERM to every process of the row), **Open** (focuses its window, or starts it) and **Find path** (shows the program in your file manager). Keyboard: up and down select, left, right or Tab switch tabs, Menu or Shift+F10 opens the row menu, Enter opens, Delete kills. Disk needs read access to `/proc/<pid>/io`, so it shows `--` for other users' processes; per-program network is not measured yet (`--`). It needs `python3`; Find path uses `gdbus` (`org.freedesktop.FileManager1`) and falls back to `xdg-open` on the folder. Hidden when the screen is too narrow for it.
 - Weather now and for the next six days, from [Open-Meteo](https://open-meteo.com). Set a city with `qs -p ~/.config/vados/shell ipc call dashboard location "Berlin"`; empty guesses the location from your IP (ipinfo.io).
 
-Bars and rings are colour-coded in bands: blue, yellow, orange, red. GPU readings need `nvidia-smi` (NVIDIA) or the amdgpu driver (AMD). Esc or a click outside closes it.
+Bars and rings are colour-coded in bands: your accent colour while the reading is normal, then yellow, orange, red. GPU readings need `nvidia-smi` (NVIDIA) or the amdgpu driver (AMD). Esc or a click outside closes it.
 
 ## Activity and notifications
 

@@ -27,6 +27,14 @@ OverlayWindow {
     }
 
     Binding {
+        target: Processes
+        property: "isActive"
+        value: true
+        when: window.isOpen
+        restoreMode: Binding.RestoreValue
+    }
+
+    Binding {
         target: Weather
         property: "isActive"
         value: true

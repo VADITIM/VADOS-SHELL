@@ -35,6 +35,7 @@ ENGINE_TESTS = {
     "shell/utils/Alerts.js": "tst_alerts.qml",
     "shell/utils/Icons.js": "tst_icons.qml",
     "shell/utils/Tint.js": "tst_tint.qml",
+    "shell/utils/Processes.js": "tst_processes.qml",
 }
 
 FEATURE_REGISTRY = "shell/utils/Features.js"

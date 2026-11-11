@@ -7,7 +7,7 @@ Item {
 
     property real level: 0
     property bool isShown: false
-    property color fill: Appearance.color.levelCool
+    property color fill: Appearance.color.accent
     property real drawn: isShown ? Math.max(0, Math.min(1, level)) : 0
     readonly property var look: Appearance.dashboard.gauge
     readonly property real reach: width / 2 + look.arcGap

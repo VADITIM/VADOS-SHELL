@@ -12,8 +12,7 @@ Item {
     property real drawn: isPresent ? Math.max(0, Math.min(1, level)) : 0
     readonly property var look: Appearance.dashboard.battery
     readonly property bool isPresent: turn.presence > 0.5
-    readonly property var shades: [Appearance.color.levelCritical, Appearance.color.levelHot, Appearance.color.levelWarm, Appearance.color.levelFair, Appearance.color.levelFull, Appearance.color.levelCool]
-    readonly property color levelColor: shades[look.bands.filter(limit => level >= limit).length]
+    readonly property color levelColor: Appearance.chargeColor(level, isCharging)
 
     width: look.width
     height: look.capHeight + look.height + look.gap + percent.height

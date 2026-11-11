@@ -4,6 +4,9 @@ Newest version first. The version and its number are set by the user on each pus
 
 ## Unreleased
 
+- Dashboard task manager: a pill grows out of the dashboard's far side, runs to the far screen edge and fuses with it as a tall column. Processes tab (grouped by program: CPU, memory, disk, network, totals in the headers) and App history tab (CPU time, peak memory, disk I/O, kept across restarts). Click a header to sort, right-click a row to Kill, Open or Find its path; fully usable from the keyboard.
+- Dashboard: readings that were light blue now use your accent colour; the battery is red, orange, yellow, lime and green by charge (no more blue when full) and green while charging.
+
 - Taskbar gather and return retimed: elements sling out (wind up, spin, shoot), pills retract to circles under their own icons, the overlay carries the circles only once that is done, the merged circle bounces with every arrival and rests before it bursts; on return the circle recoils, parts extend out of their circle in the taskbar and elements sling back in. Focus ready budget is 700 ms.
 
 - Memory: search, settings, the dashboard and the notifications menu are built when they open and destroyed once they have left, per screen, instead of all of them on every screen at start. On three 1080p screens the shell idles at 459 MB resident instead of 585 MB (165 MB of its own instead of 286 MB); an overlay's first frame comes 26 to 61 ms after the trigger (was 20 to 39 ms). The dashboard's disk page starts at the first disk on every open.

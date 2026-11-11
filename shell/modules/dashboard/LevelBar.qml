@@ -6,7 +6,7 @@ Rectangle {
 
     property real level: 0
     property bool isShown: false
-    property color fill: Appearance.color.levelCool
+    property color fill: Appearance.color.accent
     property real drawn: isShown ? Math.max(0, Math.min(1, level)) : 0
 
     radius: width / 2

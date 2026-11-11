@@ -7,7 +7,7 @@ Item {
 
     property real value: 0
     property bool isShown: false
-    property color color: Appearance.color.levelCool
+    property color color: Appearance.color.accent
     property real drawn: isShown ? Math.max(0, Math.min(1, value)) : 0
     readonly property var look: Appearance.dashboard.gauge
     readonly property real center: width / 2

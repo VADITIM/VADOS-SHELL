@@ -31,7 +31,6 @@ Singleton {
         readonly property color accent: Config.data.appearance.accent || defaultAccent
         readonly property color defaultAccent: "#ffffff"
         readonly property color danger: "#ff6b6b"
-        readonly property color levelCool: "#9fd8f2"
         readonly property color levelWarm: "#ffd429"
         readonly property color levelHot: "#ff9020"
         readonly property color levelCritical: "#e5342b"
@@ -56,12 +55,19 @@ Singleton {
 
     function bandColor(value, limits) {
         if (value < limits[0])
-            return color.levelCool
+            return color.accent
         if (value < limits[1])
             return color.levelWarm
         if (value < limits[2])
             return color.levelHot
         return color.levelCritical
+    }
+
+    function chargeColor(level, isCharging) {
+        if (isCharging)
+            return color.levelFull
+        const shades = [color.levelCritical, color.levelHot, color.levelWarm, color.levelFair, color.levelFull]
+        return shades[dashboard.battery.bands.filter(limit => level >= limit).length]
     }
 
     readonly property QtObject liquid: QtObject {
@@ -390,7 +396,36 @@ Singleton {
             readonly property int bolt: 26
             readonly property int gap: 12
             readonly property int pull: 6
-            readonly property var bands: [0.1, 0.25, 0.4, 0.6, 0.8]
+            readonly property var bands: [0.1, 0.2, 0.4, 0.6]
+        }
+        readonly property QtObject task: QtObject {
+            readonly property int width: 480
+            readonly property int minWidth: 400
+            readonly property int height: 860
+            readonly property int edgeGap: 40
+            readonly property int bodyGap: 120
+            readonly property int corner: 56
+            readonly property int fillet: 36
+            readonly property int neck: 60
+            readonly property int neckTop: 120
+            readonly property int overlap: 24
+            readonly property int padding: 22
+            readonly property int tab: 34
+            readonly property int tabPadding: 16
+            readonly property int tabGap: 6
+            readonly property int headerGap: 16
+            readonly property int header: 46
+            readonly property int cell: 72
+            readonly property int cellPadding: 8
+            readonly property int row: 30
+            readonly property int fade: 24
+            readonly property int sortMark: 5
+            readonly property real heat: 0.3
+            readonly property real selection: 0.18
+            readonly property int menuWidth: 168
+            readonly property int menuItem: 32
+            readonly property int menuPadding: 6
+            readonly property int menuCorner: 18
         }
         readonly property QtObject weather: QtObject {
             readonly property int icon: 112

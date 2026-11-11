@@ -4,7 +4,7 @@ GROUP_TYPES = {"SequentialAnimation", "ParallelAnimation", "Transition", "Behavi
 HELD_LINE = "paused: Motion.isHeld && running"
 
 OPENER = re.compile(
-    r"^(?P<indent>\s*)(?:(?:readonly\s+)?property\s+\S+\s+\w+:\s*)?(?P<type>[A-Z]\w*)(?:\s+on\s+[\w.]+)?\s*\{(?P<rest>.*)$"
+    r"^(?P<indent>\s*)(?:(?:readonly\s+)?property\s+\S+\s+\w+:\s*|[a-z][\w.]*:\s*)?(?P<type>[A-Z]\w*)(?:\s+on\s+[\w.]+)?\s*\{(?P<rest>.*)$"
 )
 
 

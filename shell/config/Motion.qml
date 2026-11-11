@@ -181,6 +181,19 @@ Singleton {
         readonly property int trafficSamples: 60
         readonly property int pingSamples: 10
         readonly property int weatherPoll: 900000
+        readonly property int historySave: 30000
+        readonly property real taskAt: 0.55
+        readonly property int taskGrow: 640
+        readonly property int taskShrink: 180
+        readonly property int taskLag: 140
+        readonly property real taskOvershoot: 1.1
+        readonly property real taskArrive: 0.6
+        readonly property int taskStagger: 14
+        readonly property int taskStaggerRows: 16
+        readonly property int taskMove: 220
+        readonly property int taskTab: 260
+        readonly property int menu: 160
+        readonly property int menuOut: 110
         readonly property int dim: 200
         readonly property int dimOut: 200
         readonly property real reveal: 0.3

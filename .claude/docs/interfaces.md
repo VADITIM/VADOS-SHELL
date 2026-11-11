@@ -44,6 +44,7 @@ Singletons with no UI. Public members other layers use (the rest is internal):
 | `Battery` | `isPresent`, `level`, `isCharging`, `secondsLeft` | taskbar, dashboard |
 | `DateTime` | `time`, `date` | taskbar |
 | `Hardware`, `Traffic`, `Weather` | readings, plus `isActive` (polls only while a window sets it) | dashboard module; `DashboardWindow` sets `isActive` |
+| `Processes` | `groups`, `historyRows`, `diskRate`, `isActive`; `kill(row)`, `open(row)` (uses `Toplevels`), `find(row)` | dashboard `TaskManager`; `DashboardWindow` sets `isActive` |
 | `Network` | `isEnabled`, `isWired`, `isConnected`, `ssid`, `strength`, `networks`, `isWatching`, `toggle()`, `connectTo(name)` | taskbar, extension |
 | `Notifications` | `isServing`, `list`, `latest`, `unreadCount`, `hasUnread`, `isUrgent`, `isCritical/isLow/isAlive(n)`, `history`, `historyLimit`, `forget(entry)`, `openEntry(entry)`, `markRead()`, `dismiss(n)`, `clear()` (history too), `open(n)` (default action, else the desktop entry), `invoke(n, id)`, signal `received` | `Activities`, `ActivityState`, `Attention`, `Shortcuts`, `TaskbarWindow`, taskbar module |
 | `Power` | `lock()`, `suspend()`, `restart()`, `shutdown()` | taskbar |

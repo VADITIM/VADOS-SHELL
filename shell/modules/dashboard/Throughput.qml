@@ -70,7 +70,7 @@ Item {
 
             Repeater {
                 model: [
-                    { arrow: "↓", bytes: throughput.download, tint: Appearance.color.levelCool },
+                    { arrow: "↓", bytes: throughput.download, tint: Appearance.color.accent },
                     { arrow: "↑", bytes: throughput.upload, tint: Appearance.color.levelWarm }
                 ]
 
@@ -143,15 +143,15 @@ Item {
                 fillGradient: LinearGradient {
                     y1: throughput.graphTop
                     y2: throughput.graphTop + throughput.graphHeight
-                    GradientStop { position: 0; color: Qt.alpha(Appearance.color.levelCool, throughput.look.fillAlpha) }
-                    GradientStop { position: 1; color: Qt.alpha(Appearance.color.levelCool, 0) }
+                    GradientStop { position: 0; color: Qt.alpha(Appearance.color.accent, throughput.look.fillAlpha) }
+                    GradientStop { position: 1; color: Qt.alpha(Appearance.color.accent, 0) }
                 }
 
                 PathPolyline { path: throughput.areaPoints(throughput.downloads) }
             }
 
             ShapePath {
-                strokeColor: Appearance.color.levelCool
+                strokeColor: Appearance.color.accent
                 strokeWidth: throughput.look.line
                 fillColor: "transparent"
                 joinStyle: ShapePath.RoundJoin
@@ -178,7 +178,7 @@ Item {
             width: throughput.look.dot
             height: throughput.look.dot
             radius: width / 2
-            color: Appearance.color.levelCool
+            color: Appearance.color.accent
         }
     }
 }

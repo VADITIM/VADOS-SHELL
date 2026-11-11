@@ -29,6 +29,16 @@ FocusScope {
     readonly property real memoryShare: Hardware.memoryTotal > 0 ? Hardware.memoryUsed / Hardware.memoryTotal : 0
     readonly property var disk: Hardware.disks.length > 0 ? Hardware.disks[Math.min(diskPage, Hardware.disks.length - 1)] : null
 
+    readonly property var task: look.task
+    readonly property real taskBodyFar: rootX + look.width
+    readonly property real taskWidth: Math.min(task.width, width - taskBodyFar - task.bodyGap)
+    readonly property real taskHeight: Math.min(task.height, height - task.edgeGap * 2)
+    readonly property real taskTop: Math.round((height - taskHeight) / 2)
+    readonly property real taskLeft: isMirrored ? 0 : width - taskWidth
+    readonly property real neckCenter: Battery.isPresent ? bodyTop + task.neckTop + task.neck / 2 : centerY
+    readonly property bool hasTaskRoom: taskWidth >= task.minWidth
+    readonly property bool isTaskWanted: isOpen && hasTaskRoom && !burst.isLeaving && burst.spread >= Motion.dashboard.taskAt
+
     signal closeRequested()
     signal landed()
 
@@ -95,6 +105,25 @@ FocusScope {
         enabled: dashboard.isOpen
     }
 
+    MouseArea {
+        x: dashboard.taskLeft
+        y: dashboard.taskTop
+        width: dashboard.taskWidth
+        height: dashboard.taskHeight
+        enabled: dashboard.isTaskWanted
+    }
+
+    Reshape {
+        id: taskGrowth
+        targetWidth: dashboard.isTaskWanted ? dashboard.width + dashboard.task.corner - dashboard.taskBodyFar + dashboard.task.overlap : 0
+        targetHeight: dashboard.isTaskWanted ? dashboard.taskHeight : 0
+        growDuration: Motion.pace(Motion.dashboard.taskGrow)
+        shrinkDuration: Motion.pace(Motion.dashboard.taskShrink)
+        lag: Motion.pace(Motion.dashboard.taskLag)
+        overshoot: Motion.dashboard.taskOvershoot
+        arriveShare: Motion.dashboard.taskArrive
+    }
+
     LiquidLayer {
         id: liquid
         anchors.fill: parent
@@ -131,6 +160,22 @@ FocusScope {
                 hasCircle: dashboard.hasCircle
                 hasSideStep: Battery.isPresent
                 onLanded: dashboard.landed()
+            }
+
+            TaskShape {
+                id: taskShape
+                anchors.fill: parent
+                neckStart: Math.min(dashboard.taskBodyFar, burst.formRight) - dashboard.task.overlap
+                neckCenter: dashboard.neckCenter
+                neckHeight: dashboard.task.neck
+                reach: taskGrowth.width
+                grownHeight: taskGrowth.height
+                edgeX: liquid.width
+                columnWidth: dashboard.taskWidth
+                columnTop: dashboard.taskTop
+                columnHeight: dashboard.taskHeight
+                corner: dashboard.task.corner
+                fillet: dashboard.task.fillet
             }
 
             Rising {
@@ -337,6 +382,29 @@ FocusScope {
                 isShown: dashboard.isContentShown && sideClip.step.rise > Appearance.burst.stepSide / 2
                 enterDelay: Motion.pill.elementStagger
             }
+        }
+    }
+
+    Item {
+        id: taskClip
+
+        readonly property real top: Math.max(dashboard.taskTop, taskShape.bodyTop)
+        readonly property real bottom: Math.min(dashboard.taskTop + dashboard.taskHeight, taskShape.bodyTop + taskShape.bodyHeight)
+
+        visible: taskShape.isGrown
+        x: dashboard.isMirrored ? dashboard.taskWidth - width : dashboard.taskLeft
+        y: top
+        width: Math.max(0, Math.min(dashboard.taskWidth, taskShape.bodyWidth))
+        height: Math.max(0, bottom - top)
+        clip: true
+
+        TaskManager {
+            x: dashboard.taskLeft - taskClip.x
+            y: dashboard.taskTop - taskClip.y
+            width: dashboard.taskWidth
+            height: dashboard.taskHeight
+            focus: true
+            isShown: dashboard.isTaskWanted && taskGrowth.isArrived
         }
     }
 }

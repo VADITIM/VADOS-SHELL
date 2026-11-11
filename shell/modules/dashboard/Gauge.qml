@@ -8,7 +8,7 @@ Item {
     property string name: ""
     property string chipName: "cpu"
     property real ringShare: 0
-    property color ringColor: Appearance.color.levelCool
+    property color ringColor: Appearance.color.accent
     property color glyphColor: Appearance.color.text
     property string centerText: ""
     property string caption: ""
@@ -72,7 +72,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: gauge.gigabytes(gauge.barTotal)
-                color: Appearance.color.levelCool
+                color: Appearance.color.accent
                 font.family: Appearance.font.mono
                 font.pixelSize: gauge.look.fraction
             }

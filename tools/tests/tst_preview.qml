@@ -304,4 +304,66 @@ TestCase {
         compare(Tray.opened[Tray.opened.length - 1], Tray.items[0].id + " menu", "a right click opens its menu")
         foldActivity(view)
     }
+
+    function openClipboard() {
+        const taskbar = sceneChild("clipboardRect")
+        const history = sceneChild("ordered")
+        verify(taskbar !== null && history !== null)
+        ActivityState.toggleClipboard(window.screenName)
+        tryVerify(() => taskbar.isClipboardShown, 3000, "the clipboard grows out of the activity pill")
+        tryVerify(() => taskbar.clipboardRect.width >= Appearance.clipboard.width - 1, 3000)
+        wait(Motion.clipboard.faceEnter + Motion.clipboard.stagger * 3)
+        return { taskbar: taskbar, history: history }
+    }
+
+    function closeClipboard(taskbar) {
+        ActivityState.closeClipboard()
+        tryVerify(() => !taskbar.isClipboardShown, 3000)
+        tryVerify(() => taskbar.clipboardRect.width < Appearance.clipboard.width / 2, 3000, "the clipboard folds back into the activity pill")
+    }
+
+    function rowPoint(opened, slot) {
+        const body = opened.taskbar.clipboardRect
+        const look = Appearance.clipboard
+        const top = body.y + look.padding + look.header + look.headerGap
+        return Qt.point(body.x + body.width / 2, top + slot * (look.row + look.rowGap) + look.row / 2)
+    }
+
+    function test_aClickOnAClipboardRowCopiesItAndFolds() {
+        failOnWarning(/.*/)
+        const opened = openClipboard()
+        const wanted = opened.history.ordered[1]
+        const count = Clipboard.entries.length
+        const point = rowPoint(opened, 1)
+        mouseClick(opened.history, point.x, point.y)
+        compare(Clipboard.picked[Clipboard.picked.length - 1], wanted.key, "a click copies that entry")
+        compare(Clipboard.entries.length, count, "copying again adds no entry")
+        compare(Clipboard.entries[0].key, wanted.key, "it moves to the top")
+        tryVerify(() => !ActivityState.isClipboardOn(window.screenName), 1000, "picking folds the clipboard")
+        closeClipboard(opened.taskbar)
+    }
+
+    function test_swipingAClipboardRowRemovesIt() {
+        failOnWarning(/.*/)
+        const opened = openClipboard()
+        const wanted = opened.history.ordered[0]
+        const picked = Clipboard.picked.length
+        const point = rowPoint(opened, 0)
+        mouseDrag(opened.history, point.x, point.y, Motion.clipboard.swipe * 2, 0)
+        compare(Clipboard.picked.length, picked, "a swipe is not a click")
+        verify(!Clipboard.entries.some(entry => entry.key === wanted.key), "the swiped entry is gone")
+        closeClipboard(opened.taskbar)
+    }
+
+    function test_clipboardTogglingFasterThanItsMotionEndsAtRest() {
+        failOnWarning(/.*/)
+        const taskbar = sceneChild("clipboardRect")
+        for (let round = 0; round < 6; round++) {
+            ActivityState.toggleClipboard(window.screenName)
+            wait(round * 35)
+        }
+        ActivityState.closeClipboard()
+        tryVerify(() => !taskbar.isClipboardShown, 3000)
+        tryVerify(() => taskbar.clipboardRect.width < Appearance.clipboard.width / 2, 3000)
+    }
 }

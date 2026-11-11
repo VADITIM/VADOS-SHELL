@@ -1,7 +1,8 @@
 # Known issues
 
-- **Ready budgets cover three engines (2026-11-10).** `tst_features` measures `Burst`, `Mutate` and the alert's `Reshape`; the activity pill's expanded views and the Wi-Fi `Extension` are not measured against `Motion.budget.ready`, and the measurement is offscreen script time plus the animation clock, not a real compositor frame.
-- **Planned surfaces have a row and a contract but no code** (`clipboard`, `notifications`, `lock`, `widgets`, `canvas`); two points in `roadmap.md` § Still open wait for the user (the app manager's move action, keyboard focus for the V/AI widget).
+- **The clipboard history, the 1.3 times expanded pill and the new leave are untested in Qt (2026-11-11).** This machine has no PySide6: `tst_clipboard`, `tst_gulp`, the new `tst_activity`, `tst_features` and `tst_preview` cases were written but not run; `utils/Clipboard.js` was checked with Node and `check-rules.py` passes. Nothing ran against a real `wl-paste` either (`quirks.md` § Clipboard history).
+- **Ready budgets cover four engines (2026-11-10, clipboard 2026-11-11).** `tst_features` measures `Burst`, `Mutate`, the alert's and the clipboard's `Reshape`; the activity pill's expanded views and the Wi-Fi `Extension` are not measured against `Motion.budget.ready`, and the measurement is offscreen script time plus the animation clock, not a real compositor frame.
+- **Planned surfaces have a row and a contract but no code** (`lock`, `widgets`, `canvas`); two points in `roadmap.md` § Still open wait for the user (the app manager's move action, keyboard focus for the V/AI widget).
 - **Catalogues are review-only.** Nothing checks that a `Lock.js` module, a settings tab or an activity key has its file; the `[features]` check stops at the surface.
 
 - **The capability contract is unverified on real compositors** (2026-11-07). `Platform.js` claims what the code paths implement; none was run against driftwm, Hyprland or a plain Wayland compositor here. Unchecked: whether `GlobalShortcut` warns or stays silent where the Hyprland protocol is missing, and whether driftwm offers that protocol.

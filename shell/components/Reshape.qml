@@ -9,9 +9,13 @@ QtObject {
     property int growDuration: 0
     property int shrinkDuration: 0
     property int shrinkDelay: 0
+    property int shrinkLag: 0
+    property int shrinkEasing: Easing.OutCubic
+    property real windUp: 0
     property int lag: 0
     property real overshoot: 0
     property real arriveShare: 1
+    property real shrinkArriveShare: arriveShare
     property real width: 0
     property real height: 0
     property bool isArrived: true
@@ -57,17 +61,17 @@ QtObject {
         const isWidthLead = changeOf(width, targetWidth) >= changeOf(height, targetHeight)
         const duration = isGrowing ? growDuration : shrinkDuration
         const start = isGrowing ? 0 : shrinkDelay
-        const trail = isGrowing ? lag : 0
+        const trail = isGrowing ? lag : shrinkLag
         widthPause.duration = start + (isWidthLead ? 0 : trail)
         heightPause.duration = start + (isWidthLead ? trail : 0)
         for (const motionOf of [widthMotion, heightMotion]) {
             motionOf.duration = duration
-            motionOf.easing.type = isGrowing ? Easing.OutBack : Easing.OutCubic
-            motionOf.easing.overshoot = overshoot
+            motionOf.easing.type = isGrowing ? Easing.OutBack : shrinkEasing
+            motionOf.easing.overshoot = isGrowing ? overshoot : windUp
         }
         widthMotion.to = targetWidth
         heightMotion.to = targetHeight
-        arrivePause.duration = start + trail + duration * arriveShare
+        arrivePause.duration = start + trail + duration * (isGrowing ? arriveShare : shrinkArriveShare)
         isArrived = false
         motion.start()
     }

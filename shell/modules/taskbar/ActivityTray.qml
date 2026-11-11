@@ -14,7 +14,7 @@ Item {
     readonly property var look: Appearance.activity.tray
     readonly property var items: Activities.trayItems.slice(0, look.columns)
     readonly property bool hasAny: items.length > 0
-    readonly property real iconsLeft: look.height / 2 + look.badge / 2 + Appearance.activity.detailGap
+    readonly property real iconsLeft: look.height / 2 + look.badge / 2 + Appearance.activity.expanded.detailGap
     readonly property real fullWidth: iconsLeft + items.length * look.cell + look.height / 2 - (look.cell - look.icon) / 2
     readonly property size bodySize: Qt.size(Math.max(look.minimum, fullWidth), look.height)
 
@@ -37,6 +37,7 @@ Item {
         isShown: view.isShown
         enterDuration: Motion.activity.faceEnter
         leaveDuration: Motion.activity.faceLeave
+        leaveDelay: Motion.activity.leaveStagger * 3
         leaveWindow: 0
 
         Rectangle {
@@ -47,7 +48,7 @@ Item {
 
             Glyph {
                 anchors.centerIn: parent
-                width: Appearance.activity.glyph
+                width: Appearance.activity.expanded.glyph
                 height: width
                 name: "dots"
                 color: view.hasAny ? Appearance.color.accent : Appearance.color.textMuted
@@ -76,7 +77,7 @@ Item {
             leaveBudget: Motion.activity.faceLeave
             color: Appearance.color.textMuted
             font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.label
+            font.pixelSize: Appearance.activity.expanded.label
             font.letterSpacing: Appearance.font.labelSpacing
             font.bold: true
         }
@@ -98,6 +99,7 @@ Item {
             enterDelay: (index + 1) * Motion.activity.stagger
             enterDuration: Motion.activity.faceEnter
             leaveDuration: Motion.activity.faceLeave
+            leaveDelay: Math.round((view.items.length - 1 - index) / Math.max(1, view.items.length - 1) * 2 * Motion.activity.leaveStagger)
             leaveWindow: 0
 
             Press {
@@ -135,7 +137,7 @@ Item {
                         text: (cell.modelData.title ?? cell.modelData.id ?? "?").charAt(0).toUpperCase()
                         color: cellArea.containsMouse ? Appearance.color.ground : Appearance.color.text
                         font.family: Appearance.font.mono
-                        font.pixelSize: Appearance.font.label
+                        font.pixelSize: Appearance.activity.expanded.label
                         font.bold: true
                     }
                 }

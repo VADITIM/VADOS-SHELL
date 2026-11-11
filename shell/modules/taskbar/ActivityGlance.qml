@@ -14,7 +14,6 @@ Item {
     readonly property bool isMedia: key === "media"
     readonly property bool isCounted: key === "notifications" || key === "tray"
     readonly property bool isLive: Activities.liveKeys.includes(key)
-    readonly property var glyphs: ({ call: "headset", media: "music", notifications: "bell", tray: "dots" })
     readonly property int count: key === "notifications" ? Activities.unreadCount : key === "tray" ? Activities.trayItems.length : 0
 
     width: Appearance.activity.glyph
@@ -37,7 +36,7 @@ Item {
         Glyph {
             width: Appearance.activity.glyph
             height: width
-            name: glance.glyphs[glance.key] ?? "music"
+            name: Appearance.activity.glyphs[glance.key] ?? "music"
             color: glance.isLive ? Appearance.color.textBody : Appearance.color.textMuted
             transform: Upright {
                 isMirrored: glance.isMirrored

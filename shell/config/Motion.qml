@@ -54,13 +54,17 @@ Singleton {
     readonly property QtObject activity: QtObject {
         readonly property int spread: 200
         readonly property int expand: 380
-        readonly property int shrink: 170
-        readonly property int shrinkDelay: 60
+        readonly property int shrink: 260
+        readonly property int shrinkDelay: 50
+        readonly property int shrinkLag: 70
+        readonly property real windUp: 1.2
+        readonly property int gulp: 420
         readonly property int lag: 60
         readonly property real overshoot: 1.7
         readonly property real arriveShare: 0.55
         readonly property int faceEnter: 140
         readonly property int faceLeave: 90
+        readonly property int leaveStagger: 25
         readonly property int stagger: 40
         readonly property int satelliteEnter: 240
         readonly property real dropStart: 0.6
@@ -83,6 +87,26 @@ Singleton {
         readonly property int settle: 160
         readonly property real swipe: 64
         readonly property real fling: 900
+    }
+
+    readonly property QtObject clipboard: QtObject {
+        readonly property int grow: 420
+        readonly property int lag: 70
+        readonly property real overshoot: 1.3
+        readonly property real arriveShare: 0.5
+        readonly property int shrink: 260
+        readonly property int shrinkDelay: 40
+        readonly property int shrinkLag: 70
+        readonly property int faceEnter: 160
+        readonly property int faceLeave: 110
+        readonly property int stagger: 35
+        readonly property int leaveStagger: 12
+        readonly property int scroll: 160
+        readonly property int settle: 160
+        readonly property int bump: 180
+        readonly property real swipe: 64
+        readonly property real fling: 900
+        readonly property int linger: 900
     }
 
     readonly property QtObject extension: QtObject {

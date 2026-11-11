@@ -16,6 +16,7 @@ Item {
     property real burstOpenedAt: 0
     property real pillOpenedAt: 0
     property real alertOpenedAt: 0
+    property real clipboardOpenedAt: 0
 
     Burst {
         id: burst
@@ -48,6 +49,23 @@ Item {
         overshoot: Motion.alerts.overshoot
         arriveShare: Motion.alerts.arriveShare
         onIsArrivedChanged: if (isArrived && isGrowing) scene.alertOpenedAt = Clock.now()
+    }
+
+    Reshape {
+        id: clipboardBody
+        targetWidth: Appearance.activity.bead
+        targetHeight: Appearance.activity.bead
+        growDuration: Motion.clipboard.grow
+        shrinkDuration: Motion.clipboard.shrink
+        shrinkDelay: Motion.clipboard.shrinkDelay
+        shrinkLag: Motion.clipboard.shrinkLag
+        shrinkEasing: Easing.InBack
+        windUp: Motion.activity.windUp
+        shrinkArriveShare: 1
+        lag: Motion.clipboard.lag
+        overshoot: Motion.clipboard.overshoot
+        arriveShare: Motion.clipboard.arriveShare
+        onIsArrivedChanged: if (isArrived && isGrowing) scene.clipboardOpenedAt = Clock.now()
     }
 
     TestCase {
@@ -175,6 +193,25 @@ Item {
             }
             console.info("vados: alert ready after " + Math.round(best) + " ms")
             verify(best <= Motion.budget.ready.glance, Math.round(best) + " ms is over the " + Motion.budget.ready.glance + " ms glance budget")
+        }
+
+        function test_clipboardIsReadyInsideTheFocusBudget() {
+            let best = Infinity
+            for (let round = 0; round < rounds; round++) {
+                const start = Clock.now()
+                clipboardBody.targetWidth = Appearance.clipboard.width
+                clipboardBody.targetHeight = Appearance.clipboard.height
+                tryVerify(() => !clipboardBody.isArrived, 1000)
+                tryVerify(() => clipboardBody.isArrived, 3000)
+                best = Math.min(best, scene.clipboardOpenedAt - start)
+                tryVerify(() => !clipboardBody.motion.running, 3000)
+                clipboardBody.targetWidth = Appearance.activity.bead
+                clipboardBody.targetHeight = Appearance.activity.bead
+                tryVerify(() => !clipboardBody.isArrived, 1000)
+                tryVerify(() => clipboardBody.isArrived && !clipboardBody.motion.running, 3000)
+            }
+            console.info("vados: clipboard ready after " + Math.round(best) + " ms")
+            verify(best <= Motion.budget.ready.focus, Math.round(best) + " ms is over the " + Motion.budget.ready.focus + " ms focus budget")
         }
     }
 }

@@ -13,29 +13,48 @@ Item {
     property bool isAlerting: false
     property size alertSize: Qt.size(0, 0)
     property bool isAlertBody: false
+    property bool isClipboardOpen: false
+    property size clipboardSize: Qt.size(0, 0)
+    property bool isClipboardBody: false
 
     readonly property real thickness: Appearance.taskbar.thickness
     readonly property real spineX: thickness / 2
-    readonly property string face: isAlerting ? "alert" : mode === "hidden" ? "idle" : mode
-    readonly property bool isShown: (host.isRevealed || (isAlerting && !host.isAway)) && !host.isEaten && (mode !== "hidden" || isAlerting)
+    readonly property string face: isAlerting ? "alert" : isClipboardOpen ? "clipboard" : mode === "hidden" ? "idle" : mode
+    readonly property bool isSummoned: isAlerting || isClipboardOpen
+    readonly property bool isShown: (host.isRevealed || (isSummoned && !host.isAway)) && !host.isEaten && (mode !== "hidden" || isSummoned)
     readonly property var views: ({ media: mediaView, call: callView, tray: trayView })
     readonly property size expandedSize: (views[leadKey] ?? mediaView).bodySize
-    readonly property real targetWidth: !isShown ? Appearance.activity.bead : face === "alert" ? alertSize.width : face === "expanded" ? expandedSize.width : face === "active" ? Appearance.activity.width : Appearance.activity.bead
-    readonly property real targetHeight: !isShown ? Appearance.activity.bead : face === "alert" ? alertSize.height : face === "expanded" ? expandedSize.height : face === "active" ? Appearance.activity.length : Appearance.activity.bead
+    readonly property size faceSize: face === "alert" ? alertSize
+        : face === "clipboard" ? clipboardSize
+        : face === "expanded" ? expandedSize
+        : face === "active" ? Qt.size(Appearance.activity.width, Appearance.activity.length)
+        : Qt.size(Appearance.activity.bead, Appearance.activity.bead)
+    readonly property real targetWidth: isShown ? faceSize.width : Appearance.activity.bead
+    readonly property real targetHeight: isShown ? faceSize.height : Appearance.activity.bead
+    readonly property bool isSpreadBody: isAlertBody || isClipboardBody
     readonly property real popScale: mutate.pop
     readonly property real bodyWidth: reshape.width
     readonly property real bodyHeight: reshape.height
     readonly property real bodyLeft: spineX - Math.min(bodyWidth, Appearance.activity.width) / 2
     readonly property real expandedLeft: spineX - Appearance.activity.width / 2
-    readonly property real expansion: isAlertBody ? 0 : Math.max(0, (bodyWidth - Appearance.activity.width) / Math.max(1, expandedSize.width - Appearance.activity.width))
+    readonly property real expansion: isSpreadBody ? 0 : Math.max(0, (bodyWidth - Appearance.activity.width) / Math.max(1, expandedSize.width - Appearance.activity.width))
+    readonly property real carry: Appearance.activity.carry * (1 - Math.min(1, expansion))
     readonly property bool isFaceShown: mutate.isInnerShown && reshape.isArrived
     readonly property bool isAlertShown: isFaceShown && face === "alert"
-    readonly property rect alertRect: Qt.rect(x + expandedLeft, y - bodyHeight / 2, bodyWidth, bodyHeight)
+    readonly property bool isClipboardShown: isFaceShown && face === "clipboard"
+    readonly property rect spreadRect: Qt.rect(x + expandedLeft, y - bodyHeight / 2, bodyWidth, bodyHeight)
     readonly property var satellites: liveKeys.filter(key => key !== leadKey)
     readonly property real satellitePitch: Appearance.activity.satellite + Appearance.activity.satelliteGap
     readonly property bool areSatellitesShown: face === "active" && isShown
     readonly property real extent: Appearance.activity.length / 2 + satellites.length * satellitePitch
-    readonly property real reachRight: x + bodyLeft + Math.max(bodyWidth, Appearance.activity.media.head * Math.min(1, expansion)) * popScale + Appearance.taskbar.idleGap
+    readonly property bool hasBump: liveKeys.includes(leadKey)
+    readonly property real bumpSize: Appearance.clipboard.bump * bumpPop.pop * popScale
+    readonly property real bumpRestX: expandedLeft + bodyWidth - Appearance.clipboard.bumpOverlap + Appearance.clipboard.bump / 2
+    readonly property real bumpCenterX: bumpRestX + bumpReach
+    readonly property real bumpCenterY: -bodyHeight / 2 + Appearance.clipboard.padding + Appearance.clipboard.header / 2
+    property real bumpReach: bumpArea.containsMouse ? Appearance.clipboard.bumpReach : 0
+    readonly property bool isBumpHovered: bumpArea.containsMouse
+    readonly property real reachRight: x + bodyLeft + Math.max(bodyWidth, Appearance.activity.media.head * Math.min(1, expansion), bumpSize > 0.5 ? bumpCenterX - bodyLeft + bumpSize / 2 : 0) * popScale + Appearance.taskbar.idleGap
 
     signal modeRequested(string mode)
     signal leadRequested(int direction)
@@ -46,6 +65,15 @@ Item {
     onFaceChanged: {
         if (face === "alert")
             isAlertBody = true
+        if (face === "clipboard")
+            isClipboardBody = true
+    }
+
+    Behavior on bumpReach {
+        NumberAnimation {
+            duration: Motion.pace(Motion.clipboard.bump)
+            easing.type: Easing.OutBack
+        }
     }
 
     function bodyRect() {
@@ -71,16 +99,32 @@ Item {
         id: reshape
         targetWidth: pill.targetWidth
         targetHeight: pill.targetHeight
-        growDuration: Motion.pace(pill.face === "alert" ? Motion.alerts.grow : pill.face === "expanded" ? Motion.activity.expand : Motion.activity.spread)
-        shrinkDuration: Motion.pace(pill.isAlertBody ? Motion.alerts.shrink : Motion.activity.shrink)
-        shrinkDelay: Motion.pace(pill.isAlertBody ? Motion.alerts.shrinkDelay : Motion.activity.shrinkDelay)
-        lag: Motion.pace(pill.face === "alert" ? Motion.alerts.lag : Motion.activity.lag)
-        overshoot: pill.face === "alert" ? Motion.alerts.overshoot : Motion.activity.overshoot
-        arriveShare: pill.face === "alert" ? Motion.alerts.arriveShare : Motion.activity.arriveShare
+        growDuration: Motion.pace(pill.face === "alert" ? Motion.alerts.grow : pill.face === "clipboard" ? Motion.clipboard.grow : pill.face === "expanded" ? Motion.activity.expand : Motion.activity.spread)
+        shrinkDuration: Motion.pace(pill.isAlertBody ? Motion.alerts.shrink : pill.isClipboardBody ? Motion.clipboard.shrink : Motion.activity.shrink)
+        shrinkDelay: Motion.pace(pill.isAlertBody ? Motion.alerts.shrinkDelay : pill.isClipboardBody ? Motion.clipboard.shrinkDelay : Motion.activity.shrinkDelay)
+        shrinkLag: Motion.pace(pill.isClipboardBody ? Motion.clipboard.shrinkLag : Motion.activity.shrinkLag)
+        shrinkEasing: Easing.InBack
+        windUp: Motion.activity.windUp
+        shrinkArriveShare: 1
+        lag: Motion.pace(pill.face === "alert" ? Motion.alerts.lag : pill.face === "clipboard" ? Motion.clipboard.lag : Motion.activity.lag)
+        overshoot: pill.face === "alert" ? Motion.alerts.overshoot : pill.face === "clipboard" ? Motion.clipboard.overshoot : Motion.activity.overshoot
+        arriveShare: pill.face === "alert" ? Motion.alerts.arriveShare : pill.face === "clipboard" ? Motion.clipboard.arriveShare : Motion.activity.arriveShare
         onIsArrivedChanged: {
-            if (isArrived && pill.face !== "alert")
+            if (!isArrived)
+                return
+            if (pill.face !== "alert")
                 pill.isAlertBody = false
+            if (pill.face !== "clipboard")
+                pill.isClipboardBody = false
         }
+    }
+
+    Gulp {
+        id: gulp
+        label: "activity pill gulp"
+        isLanded: !reshape.motion.running && !reshape.isGrowing
+        amplitude: Appearance.activity.gulp
+        span: Motion.activity.gulp
     }
 
     EdgeFuse {
@@ -93,14 +137,17 @@ Item {
     }
 
     LiquidShape {
+        readonly property real swellWidth: gulp.swell
+        readonly property real swellHeight: gulp.swell * Appearance.activity.gulpStretch
         parent: pill.host.liquidShapes
-        width: pill.bodyWidth
-        height: pill.bodyHeight
-        x: pill.x + pill.bodyLeft
+        width: pill.bodyWidth + swellWidth
+        height: pill.bodyHeight + swellHeight
+        radius: pill.isClipboardBody ? Math.min(Math.min(width, height) / 2, Appearance.clipboard.radius) : Math.min(width, height) / 2
+        x: pill.x + pill.bodyLeft - swellWidth / 2
         y: pill.y - height / 2
         transform: Scale {
-            origin.x: pill.bodyWidth / 2
-            origin.y: pill.bodyHeight / 2
+            origin.x: (pill.bodyWidth + gulp.swell) / 2
+            origin.y: (pill.bodyHeight + gulp.swell * Appearance.activity.gulpStretch) / 2
             xScale: pill.popScale
             yScale: pill.popScale
         }
@@ -132,19 +179,82 @@ Item {
         }
     }
 
+    LiquidShape {
+        parent: pill.host.liquidShapes
+        visible: pill.bumpSize > 0.5
+        width: pill.bumpSize
+        height: pill.bumpSize
+        x: pill.x + pill.bumpCenterX - width / 2
+        y: pill.y + pill.bumpCenterY - height / 2
+    }
+
+    Mutate {
+        id: bumpPop
+        label: "clipboard bump"
+        isShown: pill.isClipboardShown && pill.hasBump
+        hasSpread: false
+        leaveDelay: 0
+        popDuration: Motion.clipboard.bump
+    }
+
     MouseArea {
         id: area
         x: pill.bodyLeft
         y: -pill.bodyHeight / 2
         width: pill.bodyWidth
         height: pill.bodyHeight
-        enabled: pill.isShown && pill.face !== "alert"
+        enabled: pill.isShown && !pill.isSummoned
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         onClicked: pill.modeRequested(pill.face === "idle" ? "active" : pill.face === "active" ? "expanded" : "active")
         onWheel: wheel => {
             if (wheel.angleDelta.y !== 0)
                 pill.leadRequested(wheel.angleDelta.y > 0 ? -1 : 1)
+        }
+    }
+
+    MouseArea {
+        id: bumpArea
+        x: pill.bumpRestX - Appearance.clipboard.bump / 2
+        y: pill.bumpCenterY - height / 2
+        width: Appearance.clipboard.bump + Appearance.clipboard.bumpReach
+        height: Appearance.clipboard.bump
+        enabled: pill.isClipboardShown && pill.hasBump
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: pill.modeRequested("expanded")
+        onWheel: wheel => {
+            if (wheel.angleDelta.y !== 0)
+                pill.leadRequested(wheel.angleDelta.y > 0 ? -1 : 1)
+        }
+    }
+
+    Turn {
+        id: bumpFace
+        x: pill.bumpCenterX - width / 2
+        y: pill.bumpCenterY - height / 2
+        width: Appearance.clipboard.bumpGlyph
+        height: Appearance.clipboard.bumpGlyph
+        isShown: pill.isClipboardShown && pill.hasBump
+        enterDelay: Motion.clipboard.stagger
+        isSlung: true
+        leaveWindow: 0
+
+        Press {
+            target: bumpFace
+            isPressed: bumpArea.pressed
+            depth: Motion.press.glyph
+        }
+
+        Glyph {
+            width: Appearance.clipboard.bumpGlyph
+            height: width
+            name: Appearance.activity.glyphs[pill.leadKey] ?? "music"
+            color: bumpArea.containsMouse ? Appearance.color.accent : Appearance.color.textBody
+            transform: Upright {
+                isMirrored: pill.host.isMirrored
+                axis: Appearance.clipboard.bumpGlyph / 2
+            }
         }
     }
 
@@ -183,7 +293,7 @@ Item {
         id: mediaView
         host: pill.host
         pill: pill
-        x: pill.expandedLeft
+        x: pill.expandedLeft - pill.carry
         y: -height / 2
         expansion: pill.leadKey === "media" ? pill.expansion : 0
         isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey === "media"
@@ -193,7 +303,7 @@ Item {
         id: callView
         host: pill.host
         pill: pill
-        x: pill.expandedLeft
+        x: pill.expandedLeft - pill.carry
         y: -height / 2
         expansion: pill.leadKey === "call" ? pill.expansion : 0
         isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey === "call"
@@ -203,7 +313,7 @@ Item {
         id: trayView
         host: pill.host
         pill: pill
-        x: pill.expandedLeft
+        x: pill.expandedLeft - pill.carry
         y: -height / 2
         expansion: pill.leadKey === "tray" ? pill.expansion : 0
         isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey === "tray"

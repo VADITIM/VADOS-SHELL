@@ -8,6 +8,7 @@ Item {
     property int enterDelay: 0
     property int enterWindow: 0
     property int enterDuration: Motion.pill.element
+    property int leaveDelay: 0
     property int leaveWindow: Motion.pill.leaveWindow
     property int leaveDuration: Motion.pill.leaveElement
     property int enterEasing: Easing.OutQuad
@@ -57,7 +58,7 @@ Item {
             departed()
             return
         }
-        departurePause.duration = Motion.pace(Math.random() * leaveWindow)
+        departurePause.duration = Motion.pace(leaveDelay + Math.random() * leaveWindow)
         departure.restart()
     }
 

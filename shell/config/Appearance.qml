@@ -92,7 +92,7 @@ Singleton {
         readonly property int hoverSwell: 4
         readonly property int icon: 26
         readonly property int glyph: 20
-        readonly property int windowWidth: 340
+        readonly property int windowWidth: 480
         readonly property int backdropWidth: 140
         readonly property int edgeStrip: 3
         readonly property int bead: 18
@@ -127,32 +127,74 @@ Singleton {
         readonly property int control: 28
         readonly property int controlGap: 4
         readonly property int countLimit: 9
+        readonly property int carry: 26
+        readonly property int gulp: 9
+        readonly property real gulpStretch: 0.5
+        readonly property var glyphs: ({ call: "headset", media: "music", notifications: "bell", tray: "dots" })
+        readonly property QtObject expanded: QtObject {
+            readonly property real factor: 1.3
+            readonly property int detailGap: Math.round(14 * factor)
+            readonly property int lineGap: Math.round(2 * factor)
+            readonly property int control: Math.round(28 * factor)
+            readonly property int controlGap: Math.round(4 * factor)
+            readonly property int controlGlyph: Math.round(18 * factor)
+            readonly property int glyph: Math.round(20 * factor)
+            readonly property int label: Math.round(11 * factor)
+            readonly property int body: Math.round(13 * factor)
+            readonly property int fade: 28
+        }
         readonly property QtObject media: QtObject {
-            readonly property int width: 300
-            readonly property int height: 112
-            readonly property int head: 128
-            readonly property int art: 88
-            readonly property int ring: 104
-            readonly property real ringStroke: 2.5
-            readonly property int padding: 14
+            readonly property int width: Math.round(300 * activity.expanded.factor)
+            readonly property int height: Math.round(112 * activity.expanded.factor)
+            readonly property int head: Math.round(128 * activity.expanded.factor)
+            readonly property int art: Math.round(88 * activity.expanded.factor)
+            readonly property int ring: Math.round(104 * activity.expanded.factor)
+            readonly property real ringStroke: 2.5 * activity.expanded.factor
+            readonly property int padding: Math.round(14 * activity.expanded.factor)
         }
         readonly property QtObject call: QtObject {
-            readonly property int width: 236
-            readonly property int height: 76
-            readonly property int avatar: 56
-            readonly property int padding: 12
-            readonly property int drop: 34
-            readonly property int dropGap: 3
-            readonly property int dropSpacing: 8
+            readonly property int width: Math.round(236 * activity.expanded.factor)
+            readonly property int height: Math.round(76 * activity.expanded.factor)
+            readonly property int avatar: Math.round(56 * activity.expanded.factor)
+            readonly property int padding: Math.round(12 * activity.expanded.factor)
+            readonly property int drop: Math.round(34 * activity.expanded.factor)
+            readonly property int dropGap: Math.round(3 * activity.expanded.factor)
+            readonly property int dropSpacing: Math.round(8 * activity.expanded.factor)
         }
         readonly property QtObject tray: QtObject {
-            readonly property int height: 64
-            readonly property int minimum: 200
-            readonly property int badge: 44
-            readonly property int cell: 34
-            readonly property int icon: 20
+            readonly property int height: Math.round(64 * activity.expanded.factor)
+            readonly property int minimum: Math.round(200 * activity.expanded.factor)
+            readonly property int badge: Math.round(44 * activity.expanded.factor)
+            readonly property int cell: Math.round(34 * activity.expanded.factor)
+            readonly property int icon: Math.round(20 * activity.expanded.factor)
             readonly property int columns: 8
         }
+    }
+
+    readonly property QtObject clipboard: QtObject {
+        readonly property int width: 364
+        readonly property int padding: 14
+        readonly property int radius: 30
+        readonly property int header: 36
+        readonly property int headerGap: 6
+        readonly property int row: 40
+        readonly property int rowGap: 2
+        readonly property int rows: 6
+        readonly property int height: padding * 2 + header + headerGap + rows * row + (rows - 1) * rowGap
+        readonly property int badge: 36
+        readonly property int glyph: 20
+        readonly property int thumbnail: 28
+        readonly property int iconGap: 12
+        readonly property int rowPadding: 10
+        readonly property int action: 30
+        readonly property int actionGlyph: 16
+        readonly property int fade: 28
+        readonly property int text: 15
+        readonly property int label: 12
+        readonly property int bump: 52
+        readonly property int bumpOverlap: 16
+        readonly property int bumpReach: 12
+        readonly property int bumpGlyph: 22
     }
 
     readonly property QtObject alerts: QtObject {

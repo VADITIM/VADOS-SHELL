@@ -148,6 +148,27 @@ Singleton {
         file.writeAdapter()
     }
 
+    function setClipboardEnabled(isEnabled) {
+        if (!accept("clipboard.enabled", isEnabled))
+            return
+        adapter.clipboard.enabled = isEnabled
+        file.writeAdapter()
+    }
+
+    function setClipboardSize(count) {
+        if (!accept("clipboard.size", count))
+            return
+        adapter.clipboard.size = count
+        file.writeAdapter()
+    }
+
+    function setClipboardImages(isKeeping) {
+        if (!accept("clipboard.images", isKeeping))
+            return
+        adapter.clipboard.images = isKeeping
+        file.writeAdapter()
+    }
+
     function setProfileName(value) {
         if (!accept("profile.name", value))
             return
@@ -297,6 +318,11 @@ Singleton {
             property JsonObject send: JsonObject {
                 property string app: "blip"
                 property var devices: []
+            }
+            property JsonObject clipboard: JsonObject {
+                property bool enabled: true
+                property int size: 150
+                property bool images: true
             }
             property JsonObject motion: JsonObject {
                 property bool reduced: false

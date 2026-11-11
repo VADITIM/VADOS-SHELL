@@ -42,6 +42,7 @@ Update these docs in the same task as the change, without being asked (V/AS `gui
 | Bug or debt not fixed now | `docs/known-issues.md` |
 | A surface added, built or dropped | its row in `shell/utils/Features.js`, its contract in `docs/roadmap.md` (`docs/rules/features.md`) |
 | Planned work agreed or shipped | `docs/roadmap.md` (also mirrored to the Obsidian vault "VADOS Gallery" at `C:/Users/vn/Documents/Obsidian/VADOS Gallery`, folder `SHELL`, note `Shell.md`, a copy of `roadmap.md`; the feature notes it is built from sit beside it) |
+| A new program, package, Qt or Quickshell module, or system interface a feature needs | `dependencies.md` (repo root) |
 | A rule the user states | `docs/rules/<domain>.md` |
 
 `docs/direction.md` is the product direction (user, 2026-11-07): one coherent interaction engine as independently testable subsystems, built in phases (engine integrity first). Measure progress by the foundations, not the feature count.

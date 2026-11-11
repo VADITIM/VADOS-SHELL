@@ -13,7 +13,7 @@ It targets [driftwm](https://github.com/malbiruk/driftwm) first and stays usable
 
 ## Install
 
-Clone into `~/.config/vados` and start the shell with `qs -p ~/.config/vados/shell`.
+Clone into `~/.config/vados` and start the shell with `qs -p ~/.config/vados/shell`. What to install, and what each feature needs, is in [dependencies.md](dependencies.md).
 
 ### driftwm (primary)
 
@@ -27,6 +27,7 @@ autostart = ["qs -p ~/.config/vados/shell"]
 "ctrl+p" = "exec qs -p ~/.config/vados/shell ipc call settings toggle"
 "super+d" = "spawn qs -p ~/.config/vados/shell ipc call dashboard toggle"
 "super+n" = "spawn qs -p ~/.config/vados/shell ipc call notifications toggle"
+"super+v" = "spawn qs -p ~/.config/vados/shell ipc call clipboard toggle"
 "super+a" = "exec qs -p ~/.config/vados/shell ipc call desktop toggle"
 "super+up" = "exec qs -p ~/.config/vados/shell ipc call desktop maximize"
 "super+down" = "exec qs -p ~/.config/vados/shell ipc call desktop minimize"
@@ -55,6 +56,7 @@ bind = SUPER, A, global, vados:dashboard
 layerrule = blur, vados-dashboard
 layerrule = ignorezero, vados-dashboard
 bind = SUPER, N, global, vados:notifications
+bind = SUPER, V, global, vados:clipboard
 bind = CTRL, right, global, vados:activityNext
 bind = CTRL, left, global, vados:activityPrevious
 bind = , KP_0, global, vados:frames
@@ -170,9 +172,14 @@ The lower body sends files with [Blip](https://blip.net) and appears only while 
 
 Keys: Tab moves between the list, the bubbles and the send tray; arrows move, Enter or Space presses, Delete removes a row, Esc closes.
 
+### Clipboard history
+
+On by default (`clipboard.enabled`), `SUPER + V` grows the activity pill into a bigger pill beside the taskbar with your last six copies, pinned ones first. Text, links, files and images each look different; a copy that looks like a key, token or password is shown as dots and is never written to disk, and a copy a password manager marks as secret (KeePassXC and others that set `x-kde-passwordManagerHint`) is never kept at all. Click an entry to copy it again (it moves to the top, no duplicate), scroll to see older ones, click the pin to keep it through the cap and through clearing, and swipe it sideways to remove it. The trash at the top clears everything that is not pinned. If something is running in the activity pill, it rides at the far right of the clipboard pill as a bump: click it to expand that activity instead. The pill folds once you pick an entry, press `SUPER + V` again, or leave it with the pointer. It is pointer only: search over the whole history waits for a keyboard owner.
+
 - `qs -p ~/.config/vados/shell ipc call activity toggle` (or the Hyprland global shortcut `vados:activity`) expands or folds the pill, `... activity close` folds it, `... activity pin <call|media|notifications|tray>` picks what it shows, `... activity current` names it.
 - `... ipc call overlay toggle <search|settings|dashboard|notifications>`, `... overlay close` (closes the topmost), `... overlay top`.
 - `... ipc call attention quiet true` (do not disturb), `... attention toggle`, `status`, `dismiss` (hides the current pop-up).
+- `... ipc call clipboard toggle` (`SUPER + V`, Hyprland `vados:clipboard`) opens or closes the clipboard history, `... clipboard close` closes it, `... clipboard clear` empties it (pinned entries stay), `... clipboard count` reports how many entries are kept.
 - `... ipc call notifications enable` makes the shell your notification daemon, `... disable` gives it back; `toggle` (`SUPER + N`, Hyprland `vados:notifications`) opens or closes the notifications menu and `close` closes it; `status`, `count` and `clear` report and dismiss (`clear` also empties the history).
 
 ## Network
@@ -199,7 +206,7 @@ shell/
 ├── modules/      features; never import each other
 ├── windows/      layer-shell hosts per screen
 ├── keybinds/     shortcuts + IPC, only change state
-├── scripts/      helpers services run (the portal file chooser)
+├── scripts/      helpers services run (the portal file chooser, the clipboard reader)
 └── utils/
 shell.json        user config
 ```
@@ -232,6 +239,9 @@ shell.json        user config
 | `notifications.history` | how many notifications the notification menu keeps, 0 to 1000; the oldest go first. The history is saved in `~/.cache/vados/notifications.json` (message text included); clearing the menu empties it | `200` |
 | `send.app` | the app the notification menu sends files with; `"blip"` ([Blip](https://blip.net)) is the only one so far | `"blip"` |
 | `send.devices` | the devices shown in the notification menu, as `"name:peer"`, e.g. `["Phone:vadim-pixel"]`; the peer is the device as Blip knows it (`blip --peer=<peer>`). With none, SEND hands the file to Blip's own window | `[]` |
+| `clipboard.enabled` | `true`: the shell keeps a clipboard history and `SUPER + V` opens it out of the activity pill (needs `wl-clipboard` and `python3`; it reads everything you copy)<br>`false`: nothing is watched or kept | `true` |
+| `clipboard.size` | how many clipboard entries are kept, 0 to 1000; the oldest unpinned go first. Saved in `~/.cache/vados/clipboard.json` (text included, detected secrets never) | `150` |
+| `clipboard.images` | `true`: copied images are kept too, as files in `~/.cache/vados/clipboard/`<br>`false`: copied images are not kept, and turning it off deletes the kept ones | `true` |
 | `rendering.quality` | `"full"`: every liquid effect<br>`"lite"`: cheaper rendering for weaker GPUs | `"full"` |
 
 Changes apply live. The file carries a `version` (currently `1`) so later releases can migrate it; a file without one is read as the old layout and gets the version added. A value with the wrong type or outside the values above falls back to its default, and the shell says so in its log (lines starting `vados: config:`), naming the key, what it found and what it expected. Repaired values are written back to the file; unknown keys are reported and ignored. A file that is not valid JSON is left untouched and the shell keeps its current settings until you fix it.

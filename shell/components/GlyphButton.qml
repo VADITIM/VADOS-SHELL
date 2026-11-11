@@ -6,6 +6,7 @@ Item {
 
     property string glyphName
     property string label
+    property real glyphSize: 18
     property color color: Appearance.color.textBody
     property bool isArmed: false
     property bool isSelected: false
@@ -43,8 +44,8 @@ Item {
 
         Glyph {
             anchors.centerIn: parent
-            width: 18
-            height: 18
+            width: button.glyphSize
+            height: button.glyphSize
             visible: button.label.length === 0
             name: button.glyphName
             color: button.inkColor

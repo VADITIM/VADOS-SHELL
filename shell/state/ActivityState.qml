@@ -13,6 +13,8 @@ Singleton {
     readonly property bool isAnyLive: Activities.isAnyLive
     readonly property string leadKey: Activities.order.includes(lead) ? lead : Activities.order[0] ?? "media"
     readonly property bool isReading: Overlays.stack.indexOf("notifications") >= 0
+    property string clipboardScreen: ""
+    readonly property bool canClipboard: Clipboard.isEnabled
 
     onIsAnyLiveChanged: {
         if (mode === "expanded")
@@ -33,9 +35,31 @@ Singleton {
         return mode === "expanded" && screenName !== name ? "active" : mode
     }
 
+    function isClipboardOn(name) {
+        return canClipboard && name.length > 0 && clipboardScreen === name
+    }
+
+    function toggleClipboard(name) {
+        if (isClipboardOn(name)) {
+            closeClipboard()
+            return
+        }
+        if (!canClipboard)
+            return
+        if (modeOn(name) === "expanded")
+            fold()
+        clipboardScreen = name
+    }
+
+    function closeClipboard() {
+        clipboardScreen = ""
+    }
+
     function set(name, wanted) {
         if (modes.indexOf(wanted) < 0)
             return
+        if (wanted === "expanded")
+            closeClipboard()
         if (wanted === "expanded" && leadKey === "notifications") {
             Overlays.open("notifications", name)
             return
@@ -48,6 +72,10 @@ Singleton {
     }
 
     function step(name, direction) {
+        if (isClipboardOn(name)) {
+            closeClipboard()
+            return
+        }
         const at = modes.indexOf(modeOn(name))
         set(name, modes[Math.max(0, Math.min(modes.length - 1, at + direction))])
     }

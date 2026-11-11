@@ -7,6 +7,7 @@ import qs.services
 import qs.modules.taskbar
 import qs.modules.extension
 import qs.modules.alerts
+import qs.modules.clipboard
 
 PanelWindow {
     id: window
@@ -17,7 +18,8 @@ PanelWindow {
     property rect extensionOrigin: Qt.rect(0, 0, 0, 0)
     readonly property var peek: Attention.peek && Attention.peek.screen === screenName && !Overlays.isTaskbarAway(screenName) ? Attention.peek : null
     readonly property bool isFullscreenHere: Compositor.activeWindow?.isFullscreen === true && Compositor.activeWindow.screen === screenName
-    readonly property bool isAlertOverFullscreen: isFullscreenHere && (peek !== null || taskbar.isAlertShown)
+    readonly property bool isClipboardOpen: ActivityState.isClipboardOn(screenName)
+    readonly property bool isRaisedOverFullscreen: isFullscreenHere && (peek !== null || taskbar.isAlertShown || isClipboardOpen)
 
     anchors {
         left: !window.isRight
@@ -27,7 +29,7 @@ PanelWindow {
     }
     implicitWidth: Appearance.taskbar.windowWidth
     exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: window.isAlertOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
+    WlrLayershell.layer: window.isRaisedOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "vados-taskbar"
     color: "transparent"
     mask: Region {
@@ -88,6 +90,9 @@ PanelWindow {
         onActivityLeadRequested: direction => ActivityState.rotate(direction)
         isAlerting: window.peek !== null
         alertSize: alerts.bodySize
+        isClipboardOpen: window.isClipboardOpen
+        clipboardSize: clipboard.bodySize
+        onClipboardCloseRequested: ActivityState.closeClipboard()
         isCovered: Occupancy.isCovered(window.screenName, Overlays.isHolding(window.screenName))
         isEaten: extension.isHolding
         onExtensionRequested: (key, origin) => {
@@ -112,6 +117,24 @@ PanelWindow {
             Notifications.open(notification)
             Attention.dismissPeek()
         }
+    }
+
+    ClipboardHistory {
+        id: clipboard
+        anchors.fill: parent
+        isMirrored: window.isRight
+        entries: Clipboard.entries
+        body: taskbar.clipboardRect
+        isBodyShown: taskbar.isClipboardShown
+        isBumpHovered: taskbar.isClipboardBumpHovered
+        onPickRequested: entry => {
+            Clipboard.pick(entry)
+            ActivityState.closeClipboard()
+        }
+        onPinRequested: entry => Clipboard.togglePin(entry)
+        onRemoveRequested: entry => Clipboard.remove(entry)
+        onClearRequested: Clipboard.clear()
+        onCloseRequested: ActivityState.closeClipboard()
     }
 
     Extension {

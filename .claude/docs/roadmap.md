@@ -23,7 +23,7 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 | Frame debugger | `framedebug` | debug | none | ambient | built |
 | Alerts | `alerts` | mutation | the activity pill | glance | built: the alert face, the bell and the tray in the pill (2026-11-10); hardware checks left |
 | Notifications menu | `notifications` | overlay | the taskbar column | focus | built (2026-11-10): history and send tray, `SUPER + N`; hardware checks left |
-| Clipboard history | `clipboard` | mutation | the activity pill | focus | planned (contract 3) |
+| Clipboard history | `clipboard` | mutation | the activity pill | focus | built (2026-11-11): six rows, pins, kinds, secrets, the bump, `SUPER + V`; checks on a real session left |
 | Lock screen | `lock` | lock | the power pill | takeover | planned (contract 6); its layout editor is built |
 | Widgets | `widgets` | desktop | none | ambient | planned (contract 7) |
 | Canvas tooling | `canvas` | bar | the screen edge | ambient | planned (§ Next 6); needs `freeCanvas` |
@@ -85,6 +85,8 @@ Note: `Clipboard History.md`. The activity pill mutates into a wider, taller pil
 - **Security** (`rules/security.md`): entries offered with `x-kde-passwordManagerHint: secret` and entries from password managers are never stored; detected secrets (keys, tokens) are shown masked and never written to `~/.cache/vados`; images are stored only if the user turns that on.
 - **Decided**: pointer only (click, wheel, drag); `SUPER + V` only opens and closes it. Search over the 150 entries waits for a keyboard owner and is not in the first version (§ Decided 3).
 - **Done when**: copying in any app adds a row, picking a row pastes it elsewhere without a duplicate, 151 entries leave 150 with pinned ones kept, a password-manager copy never appears, and history survives a shell restart.
+- **Built (2026-11-11)**: `utils/Clipboard.js` (`tst_clipboard`), `services/Clipboard.qml` with `scripts/clipboard.py` under a `Supervisor` and the `StateFile` `clipboard`, the `clipboard` face of `ActivityPill` (ready at about 280 ms, measured in `tst_features`) with the bump, `modules/clipboard/ClipboardHistory.qml` and `ClipboardRow.qml`, `ActivityState` `toggleClipboard` / `closeClipboard`, IPC `clipboard toggle | close | clear | count`, `vados:clipboard` and `SUPER + V`; settings `clipboard.enabled`, `clipboard.size`, `clipboard.images`, both on by default (user, 2026-11-11). Added on the way (user): the expanded activity pill is 1.3 times larger with larger fonts, and its leave winds up, is sucked in and lands with a gulp (`Gulp`). Not built: search (waits for a keyboard owner). `architecture.md` § Clipboard history, `decisions.md` § Clipboard history.
+- **Left**: run the Qt tests (no PySide6 on the build machine) and check on a real session: `wl-paste --watch`, KeePassXC's hint, picking pastes elsewhere, images (`quirks.md` § Clipboard history).
 
 ### 4. System controls: audio routing and power profiles
 

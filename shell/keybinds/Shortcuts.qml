@@ -51,6 +51,13 @@ Scope {
 
     GlobalShortcut {
         appid: "vados"
+        name: "clipboard"
+        description: "Open or close the clipboard history"
+        onPressed: ActivityState.toggleClipboard(Compositor.focusedScreen)
+    }
+
+    GlobalShortcut {
+        appid: "vados"
         name: "activityNext"
         description: "Step the activity pill up: hidden, idle, active, expanded"
         onPressed: ActivityState.step(Compositor.focusedScreen, 1)
@@ -251,6 +258,26 @@ Scope {
 
         function report(): string {
             return Diagnostics.report(Compositor, Overlays, Supervision.supervisors, Log.recent())
+        }
+    }
+
+    IpcHandler {
+        target: "clipboard"
+
+        function toggle(): void {
+            ActivityState.toggleClipboard(Compositor.focusedScreen)
+        }
+
+        function close(): void {
+            ActivityState.closeClipboard()
+        }
+
+        function clear(): void {
+            Clipboard.clear()
+        }
+
+        function count(): int {
+            return Clipboard.entries.length
         }
     }
 

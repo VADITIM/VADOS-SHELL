@@ -15,7 +15,7 @@ Item {
     readonly property var look: Appearance.activity.media
     readonly property size bodySize: Qt.size(look.width, look.height)
     readonly property real headSize: look.head * Math.min(1.1, expansion) * pill.popScale
-    readonly property real detailsLeft: look.height / 2 + look.ring / 2 + Appearance.activity.detailGap
+    readonly property real detailsLeft: look.height / 2 + look.ring / 2 + Appearance.activity.expanded.detailGap
 
     width: look.width
     height: look.height
@@ -38,6 +38,7 @@ Item {
         isShown: view.isShown
         enterDuration: Motion.activity.faceEnter
         leaveDuration: Motion.activity.faceLeave
+        leaveDelay: Motion.activity.leaveStagger * 3
         leaveWindow: 0
 
         Shape {
@@ -97,7 +98,7 @@ Item {
 
                 Glyph {
                     anchors.centerIn: parent
-                    width: Appearance.activity.glyph * 1.6
+                    width: Appearance.activity.expanded.glyph * 1.6
                     height: width
                     name: "music"
                     color: Appearance.color.textMuted
@@ -137,52 +138,62 @@ Item {
             axis: details.width / 2
         }
 
-        TypedText {
-            id: sourceLabel
-            width: Math.min(implicitWidth, details.width)
-            elide: Text.ElideRight
-            target: Activities.mediaSource.toUpperCase()
-            isShown: view.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
-            color: Appearance.color.textMuted
-            font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.label
-            font.letterSpacing: Appearance.font.labelSpacing
-            font.bold: true
-        }
+        Masked {
+            id: lines
+            width: details.width
+            height: details.height - Appearance.activity.expanded.control
+            visible: view.expansion > 0
+            mask: Rectangle {
+                anchors.fill: parent
+                gradient: Gradient {
+                    orientation: Gradient.Horizontal
+                    GradientStop { position: 0; color: "white" }
+                    GradientStop { position: Math.max(0, 1 - Appearance.activity.expanded.fade / Math.max(1, lines.width)); color: "white" }
+                    GradientStop { position: 1; color: "transparent" }
+                }
+            }
 
-        TypedText {
-            id: title
-            y: sourceLabel.height + Appearance.activity.lineGap
-            width: Math.min(implicitWidth, details.width)
-            elide: Text.ElideRight
-            target: Activities.title.length > 0 ? Activities.title : "NOTHING PLAYING"
-            isShown: view.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
-            color: Appearance.color.text
-            font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.body
-            font.bold: true
-        }
+            TypedText {
+                id: sourceLabel
+                target: Activities.mediaSource.toUpperCase()
+                isShown: view.isShown
+                characterInterval: Motion.type.quick
+                untypeInterval: Motion.type.quickUntype
+                color: Appearance.color.textMuted
+                font.family: Appearance.font.mono
+                font.pixelSize: Appearance.activity.expanded.label
+                font.letterSpacing: Appearance.font.labelSpacing
+                font.bold: true
+            }
 
-        TypedText {
-            y: title.y + title.height + Appearance.activity.lineGap
-            width: Math.min(implicitWidth, details.width)
-            elide: Text.ElideRight
-            target: Activities.artist
-            isShown: view.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
-            color: Appearance.color.textMuted
-            font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.body
+            TypedText {
+                id: title
+                y: sourceLabel.height + Appearance.activity.expanded.lineGap
+                target: Activities.title.length > 0 ? Activities.title : "NOTHING PLAYING"
+                isShown: view.isShown
+                characterInterval: Motion.type.quick
+                untypeInterval: Motion.type.quickUntype
+                color: Appearance.color.text
+                font.family: Appearance.font.mono
+                font.pixelSize: Appearance.activity.expanded.body
+                font.bold: true
+            }
+
+            TypedText {
+                y: title.y + title.height + Appearance.activity.expanded.lineGap
+                target: Activities.artist
+                isShown: view.isShown
+                characterInterval: Motion.type.quick
+                untypeInterval: Motion.type.quickUntype
+                color: Appearance.color.textMuted
+                font.family: Appearance.font.mono
+                font.pixelSize: Appearance.activity.expanded.body
+            }
         }
 
         Row {
-            y: details.height - Appearance.activity.control
-            spacing: Appearance.activity.controlGap
+            y: details.height - Appearance.activity.expanded.control
+            spacing: Appearance.activity.expanded.controlGap
 
             Repeater {
                 model: ["previous", "toggle", "next"]
@@ -191,16 +202,18 @@ Item {
                     id: control
                     required property string modelData
                     required property int index
-                    width: Appearance.activity.control
-                    height: Appearance.activity.control
+                    width: Appearance.activity.expanded.control
+                    height: Appearance.activity.expanded.control
                     isShown: view.isShown
                     enterDelay: (index + 1) * Motion.activity.stagger
                     enterDuration: Motion.activity.faceEnter
                     leaveDuration: Motion.activity.faceLeave
+                    leaveDelay: (2 - index) * Motion.activity.leaveStagger
                     leaveWindow: 0
 
                     GlyphButton {
                         anchors.fill: parent
+                        glyphSize: Appearance.activity.expanded.controlGlyph
                         glyphName: control.modelData === "toggle" ? (Activities.isPlaying ? "pause" : "play") : control.modelData
                         isSelected: control.modelData === "toggle" && Activities.isPlaying
                         onClicked: {

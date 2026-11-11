@@ -13,7 +13,7 @@ const features = [
     { key: "settings", folder: "settings", root: "Settings", surface: "overlay", origin: "column", impact: "takeover", needs: [], isBuilt: true, layer: 1 },
     { key: "framedebug", folder: "framedebug", root: "FrameHud", surface: "debug", origin: "none", impact: "ambient", needs: [], isBuilt: true },
     { key: "alerts", folder: "alerts", root: "Alerts", surface: "mutation", origin: "activity", impact: "glance", needs: [], isBuilt: true },
-    { key: "clipboard", folder: "clipboard", root: "ClipboardHistory", surface: "mutation", origin: "activity", impact: "focus", needs: [], isBuilt: false },
+    { key: "clipboard", folder: "clipboard", root: "ClipboardHistory", surface: "mutation", origin: "activity", impact: "focus", needs: [], isBuilt: true },
     { key: "notifications", folder: "notifications", root: "NotificationMenu", surface: "overlay", origin: "column", impact: "focus", needs: [], isBuilt: true, layer: 1 },
     { key: "lock", folder: "lock", root: "LockScreen", surface: "lock", origin: "power", impact: "takeover", needs: [], isBuilt: false },
     { key: "widgets", folder: "widgets", root: "WidgetLayer", surface: "desktop", origin: "none", impact: "ambient", needs: [], isBuilt: false },

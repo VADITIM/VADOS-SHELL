@@ -5,6 +5,7 @@ import qs.state
 import qs.services
 import qs.modules.taskbar
 import qs.modules.alerts
+import qs.modules.clipboard
 import qs.modules.search
 import qs.modules.settings
 import qs.modules.dashboard
@@ -124,6 +125,9 @@ Window {
             onActivityLeadRequested: direction => ActivityState.rotate(direction)
             isAlerting: root.peek !== null
             alertSize: alerts.bodySize
+            isClipboardOpen: ActivityState.isClipboardOn(root.screenName)
+            clipboardSize: clipboard.bodySize
+            onClipboardCloseRequested: ActivityState.closeClipboard()
         }
 
         Alerts {
@@ -140,6 +144,26 @@ Window {
                 Notifications.open(notification)
                 Attention.dismissPeek()
             }
+        }
+
+        ClipboardHistory {
+            id: clipboard
+            x: taskbar.x
+            width: taskbar.width
+            height: taskbar.height
+            isMirrored: root.isRight
+            entries: Clipboard.entries
+            body: taskbar.clipboardRect
+            isBodyShown: taskbar.isClipboardShown
+            isBumpHovered: taskbar.isClipboardBumpHovered
+            onPickRequested: entry => {
+                Clipboard.pick(entry)
+                ActivityState.closeClipboard()
+            }
+            onPinRequested: entry => Clipboard.togglePin(entry)
+            onRemoveRequested: entry => Clipboard.remove(entry)
+            onClearRequested: Clipboard.clear()
+            onCloseRequested: ActivityState.closeClipboard()
         }
 
         Search {
@@ -332,6 +356,13 @@ Window {
         sequence: "Ctrl+Up"
         context: Qt.ApplicationShortcut
         onActivated: ActivityState.rotate(1)
+    }
+
+    Shortcut {
+        sequence: "V"
+        enabled: !Overlays.isOpen("search", root.screenName)
+        context: Qt.ApplicationShortcut
+        onActivated: ActivityState.toggleClipboard(root.screenName)
     }
 
     Shortcut {

@@ -15,6 +15,8 @@ TestCase {
     }
 
     function cleanup() {
+        ActivityState.closeClipboard()
+        Clipboard.isEnabled = true
         Overlays.close("notifications")
         Notifications.clear()
         Activities.isCalling = true
@@ -106,5 +108,46 @@ TestCase {
         Activities.isCalling = true
         compare(ActivityState.mode, "expanded")
         compare(ActivityState.leadKey, "tray")
+    }
+
+    function test_clipboardOpensOnItsOwnScreen() {
+        quiet()
+        ActivityState.toggleClipboard("screen")
+        verify(ActivityState.isClipboardOn("screen"))
+        verify(!ActivityState.isClipboardOn("other"), "it opens only where it was asked")
+        ActivityState.toggleClipboard("screen")
+        verify(!ActivityState.isClipboardOn("screen"), "the same key closes it")
+    }
+
+    function test_clipboardAndExpandedTakeTurns() {
+        quiet()
+        Activities.hasMedia = true
+        ActivityState.toggle("screen")
+        compare(ActivityState.mode, "expanded")
+        ActivityState.toggleClipboard("screen")
+        verify(ActivityState.isClipboardOn("screen"))
+        compare(ActivityState.mode, "active", "opening the clipboard folds the expanded activity")
+        ActivityState.set("screen", "expanded")
+        verify(!ActivityState.isClipboardOn("screen"), "expanding an activity (the bump) closes the clipboard")
+        compare(ActivityState.mode, "expanded")
+    }
+
+    function test_steppingClosesTheClipboardFirst() {
+        quiet()
+        ActivityState.toggleClipboard("screen")
+        ActivityState.step("screen", 1)
+        verify(!ActivityState.isClipboardOn("screen"))
+        compare(ActivityState.mode, "idle", "the step only closed the clipboard")
+    }
+
+    function test_clipboardNeedsTheSetting() {
+        quiet()
+        Clipboard.isEnabled = false
+        ActivityState.toggleClipboard("screen")
+        verify(!ActivityState.isClipboardOn("screen"), "with clipboard.enabled off nothing opens")
+        Clipboard.isEnabled = true
+        ActivityState.toggleClipboard("screen")
+        Clipboard.isEnabled = false
+        verify(!ActivityState.isClipboardOn("screen"), "turning it off closes it")
     }
 }

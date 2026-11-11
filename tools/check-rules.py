@@ -36,6 +36,8 @@ ENGINE_TESTS = {
     "shell/utils/Icons.js": "tst_icons.qml",
     "shell/utils/Tint.js": "tst_tint.qml",
     "shell/utils/Processes.js": "tst_processes.qml",
+    "shell/utils/Clipboard.js": "tst_clipboard.qml",
+    "shell/components/Gulp.qml": "tst_gulp.qml",
 }
 
 FEATURE_REGISTRY = "shell/utils/Features.js"

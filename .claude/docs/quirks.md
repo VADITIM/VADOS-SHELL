@@ -118,6 +118,15 @@ The top and bottom risers (`stepForm`) have square left corners and a height of 
 - **driftwm reports no focused window while a layer surface holds the keyboard.** With an overlay open, `driftwm msg state` lists every window with `is_focused: false`; focus comes back to the window that had it about 20 ms after the overlay releases the keyboard. Hyprland's `activewindow` likely does the same for an exclusive layer (unverified); there `Compositor.lastWindow` is simply the last active window, without checking it is still open.
 - **The frame debugger does not pause `Timer`s** (`veilDelay`, `linger`), so frames stepped with `KP_0` show the taskbar's veil early; and the nested `driftwm --backend winit` captures about one frame a second with `grim`, too slow to judge timing. Real-time checks were made on the live session with `grim -o <output> -s 0.3`.
 
+## Clipboard history (2026-11-11)
+
+- **Unverified on a real session**: that `wl-paste --watch` gives the child the clipboard on stdin and inherits its stdout (the reader drains stdin and prints to stdout); that `CLIPBOARD_STATE` is set (wl-clipboard 2.2 and later; older versions leave it unset and the reader asks for the types instead); that KeePassXC offers `x-kde-passwordManagerHint` with the value `secret`; that `wl-copy` reading stdin from a Quickshell `Process` (`stdinEnabled`, `write`, then `stdinEnabled: false`) gets the end of input and forks to serve the selection.
+- **Copying from the shell comes back as a new copy.** `wl-copy` owns the selection and the watcher sees it; `Clipboard.add` moves the existing entry up instead of adding one.
+- **An image copy that also offers text is kept as text** (a browser offers both for an image with alt text or a URL).
+- **The secret check is a guess.** Known token prefixes (GitHub, AWS, Slack, OpenAI-style `sk-`, Google, GitLab, JWTs, private keys) are certain; a single word of 12 or more characters with lower and upper case, digits and symbols, or 24 or more with three of those and digits, counts as a secret too. A long camel-case identifier with digits can be masked by mistake.
+- **`Supervisor.stop()` restarts a running process** (it marks the stop as asked and starts again while active); `Clipboard` uses that to pick up a changed `clipboard.images`.
+- **`Appearance` groups reference their parent by the root property name** (`activity.expanded.factor` inside `media`): unqualified names resolve against the root object of the singleton.
+
 ## Memory (2026-11-11)
 
 - **Resident memory is not what the shell uses.** With `transparent_hugepage/enabled = always` the kernel maps library text as huge pages, so every touched 2 MB of LLVM, Mesa, the NVIDIA EGL libraries and Qt counts as resident in every process that maps it. An empty `ShellRoot {}` shows 311 MB resident and 99 MB proportional (`Pss` in `/proc/<pid>/smaps_rollup`). Compare `Anonymous`, not `Rss`, when judging a change.

@@ -4,6 +4,11 @@ Newest version first. The version and its number are set by the user on each pus
 
 ## Unreleased
 
+- Clipboard history (`SUPER + V`, Hyprland `vados:clipboard`, `ipc call clipboard toggle | close | clear | count`; on by default, `clipboard.enabled` turns it off; needs `wl-clipboard`): the activity pill grows into a bigger pill beside the taskbar with your last six copies, pinned first. Text, links, files and images each look different; click to copy again (no duplicate), scroll or drag for older ones, pin to keep, swipe to remove, trash clears what is not pinned. Password-manager copies are never kept; copies that look like keys, tokens or passwords show as dots and never reach the disk; copied images are kept too (`clipboard.images`, on by default; turning it off deletes them). Whatever runs in the activity pill rides along as a bump at its far end: click it to expand that activity. Up to `clipboard.size` (150) entries, kept across restarts.
+- `dependencies.md`: every program and package the shell needs, required or per feature, and what is lost without each.
+- Activity pill: the expanded views (music, call, tray) are 1.3 times larger, with larger text; long titles fade out instead of ending in dots.
+- Activity pill: the leave is alive. The far elements go first while the content is carried back towards the taskbar, the body swells a little, is sucked in and lands with a gulp that wobbles out.
+
 - Dashboard task manager: a pill grows out of the dashboard's far side, runs to the far screen edge and fuses with it as a tall column. Processes tab (grouped by program: CPU, memory, disk, network, totals in the headers) and App history tab (CPU time, peak memory, disk I/O, kept across restarts). Click a header to sort, right-click a row to Kill, Open or Find its path; fully usable from the keyboard.
 - Dashboard: readings that were light blue now use your accent colour; the battery is red, orange, yellow, lime and green by charge (no more blue when full) and green while charging.
 

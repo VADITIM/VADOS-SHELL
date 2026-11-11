@@ -43,6 +43,8 @@ Item {
     property string activityLead: "media"
     property bool isAlerting: false
     property size alertSize: Qt.size(0, 0)
+    property bool isClipboardOpen: false
+    property size clipboardSize: Qt.size(0, 0)
 
     signal compactRequested(bool isCompact)
     signal settingsRequested()
@@ -50,6 +52,7 @@ Item {
     signal extensionRequested(string key, rect origin)
     signal activityModeRequested(string mode)
     signal activityLeadRequested(int direction)
+    signal clipboardCloseRequested()
 
     readonly property bool isRevealed: (!isCovered || isSummoned) && !isAway
     readonly property bool isHeld: rootHover.hovered || carried.isActive || taskPointer.pressed
@@ -58,8 +61,11 @@ Item {
     readonly property real pitch: Appearance.taskbar.item + Appearance.taskbar.itemGap
     readonly property bool isCarrying: carried.isActive
     readonly property real inputWidth: inputZone.width
-    readonly property rect alertRect: activityPill.alertRect
+    readonly property rect alertRect: activityPill.spreadRect
     readonly property bool isAlertShown: activityPill.isAlertShown
+    readonly property rect clipboardRect: activityPill.spreadRect
+    readonly property bool isClipboardShown: activityPill.isClipboardShown
+    readonly property bool isClipboardBumpHovered: activityPill.isBumpHovered
     readonly property real activityCenter: {
         let stackBottom = Appearance.taskbar.margin
         for (const pill of allPills()) {
@@ -230,6 +236,8 @@ Item {
     function collapseActivity() {
         if (activityMode === "expanded")
             activityModeRequested("active")
+        if (isClipboardOpen)
+            clipboardCloseRequested()
     }
 
     function summon() {
@@ -680,6 +688,8 @@ Item {
         liveKeys: Activities.liveKeys
         isAlerting: shell.isAlerting
         alertSize: shell.alertSize
+        isClipboardOpen: shell.isClipboardOpen
+        clipboardSize: shell.clipboardSize
         x: shell.inset
         y: shell.activityCenter
         onModeRequested: mode => shell.activityModeRequested(mode)

@@ -5,6 +5,18 @@ import "../../shell/utils/Geometry.js" as Geometry
 TestCase {
     name: "Geometry"
 
+    function test_arcLeavesTowardItsControlAndLandsOnTarget() {
+        const from = Qt.point(100, 0)
+        const control = Qt.point(100, 200)
+        const to = Qt.point(0, 200)
+        compare(Geometry.arcAt(from, control, to, 0), from)
+        compare(Geometry.arcAt(from, control, to, 1), to)
+        const early = Geometry.arcAt(from, control, to, 0.01)
+        verify(Math.abs(early.x - 100) < 0.05 && early.y > 0, "it leaves along the line to the control")
+        const middle = Geometry.arcAt(from, control, to, 0.5)
+        verify(middle.x > 50 && middle.y > 100, "it bows toward the control, not along the straight line")
+    }
+
     function test_clampAndSmooth() {
         compare(Geometry.clampUnit(-2), 0)
         compare(Geometry.clampUnit(3), 1)
@@ -88,6 +100,13 @@ TestCase {
         compare(Math.min(...pieces[0].map(point => point.y)), 0)
         compare(Math.max(...pieces[1].map(point => point.y)), 100)
         compare(Geometry.splitAlong(square, cutLine(-20), cutLine(30)).length, 1, "a gap over the top leaves only the lower piece")
+    }
+
+    function test_farthestCrossingFindsTheOutlineAtAHeight() {
+        const notch = [Qt.point(0, 0), Qt.point(100, 0), Qt.point(40, 50), Qt.point(100, 100), Qt.point(0, 100)]
+        fuzzyCompare(Geometry.farthestCrossing(notch, 50), 40, 0.001, "the notch tip, not the wall above it")
+        fuzzyCompare(Geometry.farthestCrossing(notch, 25), 70, 0.001)
+        compare(Geometry.farthestCrossing(notch, 150), -Infinity, "no crossing below the shape")
     }
 
     function test_splitAlongFollowsACurvedCut() {

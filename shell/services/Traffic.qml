@@ -12,6 +12,7 @@ Singleton {
     property real upload: 0
     property var downloads: []
     property var uploads: []
+    property int samples: 0
     property real ping: 0
     property real jitter: 0
     property bool hasPing: false
@@ -44,6 +45,7 @@ Singleton {
             upload = Math.max(0, (sent - previous.sent) / seconds)
             downloads = remember(downloads, download)
             uploads = remember(uploads, upload)
+            samples++
         }
         previous = { time: now, received: received, sent: sent }
     }

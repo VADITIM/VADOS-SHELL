@@ -7,6 +7,7 @@ Shape {
     id: squircle
 
     property color color: "transparent"
+    property color shade: color
     property color strokeColor: "transparent"
     property real strokeWidth: 0
     readonly property var outline: {
@@ -18,7 +19,22 @@ Shape {
     preferredRendererType: Shape.CurveRenderer
 
     ShapePath {
-        fillColor: squircle.color
+        fillGradient: LinearGradient {
+            x1: 0
+            y1: 0
+            x2: squircle.width
+            y2: squircle.height
+
+            GradientStop {
+                position: 0
+                color: squircle.color
+            }
+
+            GradientStop {
+                position: 1
+                color: squircle.shade
+            }
+        }
         strokeColor: squircle.strokeWidth > 0 ? squircle.strokeColor : "transparent"
         strokeWidth: squircle.strokeWidth > 0 ? squircle.strokeWidth : -1
         startX: squircle.outline[0].x + squircle.strokeWidth / 2

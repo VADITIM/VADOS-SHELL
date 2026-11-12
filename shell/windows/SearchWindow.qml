@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.state
 import qs.modules.search
 
 OverlayWindow {
@@ -14,6 +15,7 @@ OverlayWindow {
         anchors.fill: parent
         isOpen: window.isOpen
         favoriteIds: Config.data.search.favorites
+        hiddenIds: Config.data.search.hidden
         profileName: Config.data.profile.name
         profilePicture: Config.data.profile.picture
         parts: window.parts
@@ -27,5 +29,7 @@ OverlayWindow {
         onCloseRequested: window.requestClose()
         onLanded: window.land()
         onFavoriteToggled: appId => Config.toggleFavorite(appId)
+        onHiddenToggled: appId => Config.toggleHidden(appId)
+        onProfileRequested: Overlays.open("settings", window.screenName, "user")
     }
 }

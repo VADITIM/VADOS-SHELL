@@ -8,6 +8,7 @@ Item {
     property var app: null
     property bool isSelected: false
     property bool isFavorite: false
+    property bool isHidden: false
     property bool isShown: false
     property int enterDelay: 0
     property real room: width
@@ -17,7 +18,7 @@ Item {
     readonly property var look: Appearance.search
 
     signal activated()
-    signal pinToggled()
+    signal menuRequested(point at)
     signal pointed()
 
     height: look.row
@@ -63,6 +64,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             app: row.app
             size: row.look.rowIcon
+            opacity: row.isHidden ? row.look.hiddenFade : 1
         }
 
         Text {
@@ -72,8 +74,8 @@ Item {
             elide: Text.ElideRight
             opacity: Math.max(0, row.fade * 2 - 1)
             text: row.app?.name ?? ""
-            color: row.isSelected ? Appearance.color.accent : Appearance.color.textBody
-            font.family: Appearance.font.mono
+            color: row.isSelected ? Appearance.color.accent : row.isHidden ? Appearance.color.textFaint : Appearance.color.textBody
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.font.body
 
             Behavior on color {
@@ -104,6 +106,6 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onPositionChanged: row.pointed()
-        onClicked: mouse => mouse.button === Qt.RightButton ? row.pinToggled() : row.activated()
+        onClicked: mouse => mouse.button === Qt.RightButton ? row.menuRequested(mapToItem(null, mouse.x, mouse.y)) : row.activated()
     }
 }

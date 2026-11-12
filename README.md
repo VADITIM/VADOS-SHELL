@@ -5,7 +5,7 @@ A desktop environment for Wayland, written in [Quickshell](https://quickshell.or
 It targets [driftwm](https://github.com/malbiruk/driftwm) first and stays usable on Hyprland and on any wlroots-style compositor.
 
 - **Taskbar** on the left or right edge in three styles, with foldable idle pills (power, audio, battery, network, USB, tray, clock).
-- **Search** as a full-height liquid column: fuzzy app search, favourites, best match.
+- **Search** as a full-height liquid column: fuzzy app search, pinned apps, best match, profile and power.
 - **Dashboard** with CPU, GPU, RAM, disk, battery and a seven-day weather forecast.
 - **Settings** that open from the taskbar: accent colour, taskbar style and side, window mode.
 - **Window modes** on driftwm: free infinite canvas, or a Windows-style desktop with snap, maximize and minimize.
@@ -126,7 +126,7 @@ Switching back to Canvas restores every minimized window to where it was.
 
 ## Search
 
-`SUPER + G` opens the app search: the taskbar streams into a circle at the edge, which bursts into a full-height liquid column. Results run down its left side, favourites sit in a lobe off the top, the best match swells out of the middle of the wall, and the field is at the bottom. Type to fuzzy search. Arrows and Tab move, Enter opens, Esc clears and then closes, and right click pins an app to favourites.
+`SUPER + G` opens the app search: the taskbar streams into a circle at the edge, which bursts into a full-height liquid column. Results run down its left side from the top, the best match swells out of the middle of the wall, and the field is at the bottom. Near the top a droplet shoots out of the wall and bursts into your profile: your picture in a liquid blob, your name below it (click either to edit your profile in settings) and the power options (lock, suspend, restart, shut down; restart and shut down ask twice) stacked close on its left. The best match is tinted with its app's own colour. Type to fuzzy search. Arrows and Tab move, Enter opens, Esc clears and then closes. Right click (or the Menu key) opens a small menu to favourite an app (favourites lead the list while the field is empty) or hide it; the grey HIDDEN at the very bottom (or Ctrl+H) shows hidden apps again.
 
 ## Taskbar
 
@@ -156,7 +156,7 @@ A liquid pill in the middle of the taskbar shows what is running now. It has fou
 - **Shape**: picking it switches to drawing at once, and droplets for box, circle, line and arrow pop out; drag anywhere to draw one. Every shape stays editable: drag a corner (or a line's end) to reshape it, drag its outline to move it.
 - **Text**: tap anywhere to type there in large bold text with a dark outline; Enter or Esc finishes (Shift+Enter for a new line), tap a text to edit it again, drag it to move it. An empty text disappears.
 
-**Ctrl+C** (or Enter) copies the area with your drawing to the clipboard, saves it as `Screenshot_<date>_<time>.png`, the screen fades back and the activity pill says COPIED. **Esc** fades back without copying. Ctrl+Z undoes the last stroke, Tab and Shift+Tab switch tools, the arrows nudge the area (Shift for 10 px). Ctrl+C without an area copies the whole screen. It needs `grim` (and `wl-copy` for the clipboard).
+**Ctrl+C**, **Ctrl+S** or Enter copies the area with your drawing to the clipboard, saves it as `Screenshot_<date>_<time>.png`, the screen fades back and the activity pill says COPIED. **Esc** fades back without copying. **Ctrl+A** selects the whole monitor, Ctrl+Z undoes the last stroke, Tab and Shift+Tab switch tools, the arrows nudge the area (Shift for 10 px). Ctrl+C without an area copies the whole screen. It needs `grim` (and `wl-copy` for the clipboard).
 
 **SHIFT + PRINT** starts recording the screen you are on. The activity pill says RECORDING NOW, and a moment later becomes a recording pill with the time and a softly pulsing dot. Click it to pause (the dot turns into a pause sign) and again to resume. Hover it for a moment to open its controls: Pause or Resume, and Stop; move away and it folds back. SHIFT + PRINT again stops too. Recordings are saved as `Recording_<date>_<time>.mp4`. It uses `gpu-screen-recorder` (pauses, records desktop audio) or else `wf-recorder` (no pause, no audio).
 
@@ -245,7 +245,8 @@ shell.json        user config
 | `taskbar.gather` | how the taskbar leaves when an overlay opens (Settings > Settings, a trial toggle)<br>`"merge"`: the pills stream into one circle at the taskbar column, which bursts into the overlay<br>`"shrink"`: each pill turns into a circle and shrinks away in place while the overlay's circle grows and bursts at once; on close the overlay shrinks into the edge and the pills pop back in where they sit, nothing streams | `"merge"` |
 | `appearance.accent` | hex colour, e.g. `"#ffffff"`; set live from the settings window (User tab) | `"#ffffff"` |
 | `desktop.mode` | `"canvas"` / `"desktop"` (driftwm only) | `"canvas"` |
-| `search.favorites` | desktop entry ids, e.g. `["firefox.desktop"]` | `[]` |
+| `search.favorites` | desktop entry ids, e.g. `["firefox.desktop"]`; they lead the search list while the field is empty | `[]` |
+| `search.hidden` | desktop entry ids the search leaves out unless HIDDEN is on | `[]` |
 | `profile.name` | your name; its initial shows in the search circle when there is no picture | `""` |
 | `profile.secondName` | optional second name | `""` |
 | `profile.github` | your GitHub username | `""` |
@@ -255,11 +256,11 @@ shell.json        user config
 | `lock.wallpaper` | image path of the lock screen background | `""` |
 | `pills.color` | hex colour of every pill and overlay body; `""` is the default dark | `""` |
 | `services.mediaPlayer` | `true`: the media player appears in the activity pill when something plays (settings, Advanced)<br>`false`: it never does | `true` |
-| `profile.picture` | your profile picture (chosen by clicking the avatar in settings), shown in the search circle until you type | `""` |
+| `profile.picture` | your profile picture (chosen by clicking the avatar in settings), shown in the search's profile blob | `""` |
 | `weather.location` | city for the dashboard weather, e.g. `"Berlin"`; `""` guesses from your IP | `""` |
 | `dashboard.taskIcons` | `true`: task manager rows are taller and show each program's icon before its name (also the grid button beside NAME in the task manager)<br>`false`: names only | `false` |
 | `motion.reduced` | `true`: transitions are instant and idle bubbles and splashes stop; typed text and drags stay (also in settings, Settings tab)<br>`false`: full motion | `false` |
-| `motion.burst` | `"static"`: every overlay bursts open with the same wave<br>`"procedural"`: each burst rolls its own wave (crest heights, lengths, jet, splashes) and shoots a random handful of small blobs out of the body that fall back into it (also in settings, Settings tab, BURST) | `"static"` |
+| `motion.burst` | `"static"`: every overlay bursts open with the same wave<br>`"procedural"`: each burst rolls its own wave (crest heights, lengths, jet, splashes) and shoots a random handful of small blobs from random points on the body's outline that fall back into it (also in settings, Settings tab, BURST) | `"static"` |
 | `attention.doNotDisturb` | `true`: only critical notifications may pop up; the rest wait in the activity bar (also in settings, Settings tab)<br>`false`: notifications may pop up unless a window is fullscreen | `false` |
 | `notifications.enabled` | `true`: the shell becomes the notification daemon (replaces mako, dunst, swaync) and shows notifications as alerts out of the activity pill<br>`false`: your existing daemon keeps them | `false` |
 | `notifications.history` | how many notifications the notification menu keeps, 0 to 1000; the oldest go first. The history is saved in `~/.cache/vados/notifications.json` (message text included); clearing the menu empties it | `200` |

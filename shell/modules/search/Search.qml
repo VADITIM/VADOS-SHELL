@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Shapes
 import qs.config
 import qs.services
 import qs.components
@@ -10,6 +9,12 @@ FocusScope {
 
     property bool isOpen: false
     property var favoriteIds: []
+    property var hiddenIds: []
+    property bool isShowingHidden: false
+    property var menuApp: null
+    property var pinnedOrder: []
+    property string syncedQuery: ""
+    property point menuAt: Qt.point(0, 0)
     property string profileName: ""
     property string profilePicture: ""
     property var parts: []
@@ -18,7 +23,7 @@ FocusScope {
     property bool canHandOff: false
     property bool isHandingOver: false
     property bool hasCircle: false
-    readonly property bool isPresent: isOpen || burst.isActive
+    readonly property bool isPresent: isOpen || burst.isActive || profile.isActive
     readonly property string phase: burst.phase
     readonly property bool isContentShown: burst.isOpened
     readonly property var visitor: burst.visitor
@@ -30,22 +35,16 @@ FocusScope {
 
     readonly property string query: input.text
     readonly property bool isSearching: query.trim().length > 0
-    readonly property var results: isSearching ? Apps.search(query) : Apps.recent()
+    readonly property var results: (isSearching ? Apps.search(query) : Apps.recent()).filter(app => isShowingHidden || !isHidden(app))
     readonly property var best: results.length > 0 ? results[0] : null
-    readonly property var listApps: results.slice(1)
-    readonly property var favorites: (favoriteIds || []).map(appId => Apps.byId(appId)).filter(app => app !== null)
+    readonly property var listApps: isSearching ? results.slice(1) : pinnedFirst(results.slice(1))
 
     readonly property var look: Appearance.search
     readonly property real rootX: Appearance.taskbar.margin
     readonly property real formWidth: Math.round(width * look.widthShare)
     readonly property real formRight: rootX + formWidth
-    readonly property real cellWidth: look.tile + look.tileGap
-    readonly property real cellHeight: look.tile + look.label + look.tileGap
     readonly property real listWidth: formWidth - look.inset * 2
-    readonly property real fieldY: height - look.top - look.fieldHeight
-    readonly property real favoritesHeight: cellHeight * look.favoriteRows - look.tileGap
-    readonly property real listLead: favoritesHeight + look.sectionGap
-    readonly property int favoriteColumns: Math.max(look.favoriteColumns, Math.ceil(favorites.length / look.favoriteRows))
+    readonly property real fieldY: height - look.top - look.hiddenRow - look.fieldHeight
     readonly property real listX: rootX + look.inset
     readonly property real middleY: Math.round(height / 2)
     readonly property real foundRadius: look.found / 2
@@ -57,24 +56,116 @@ FocusScope {
     readonly property real wallReach: wallOutline.length > 0 ? Math.max(...wallOutline.map(point => point.x)) : burst.formRight
     readonly property var settledWall: look.wall.map(point => Qt.point(foundCenterX + point[0] * foundRadius, point[1] * height))
     readonly property var wallBands: settledWall.slice(1).map((point, index) => Qt.rect(0, settledWall[index].y, Math.min(point.x, settledWall[index].x), point.y - settledWall[index].y))
-    readonly property real maskTop: wallOutline.length === 0 ? 0 : wallOutline[0].y - look.wallOverhang * burst.flare
-    readonly property real maskBottom: wallOutline.length === 0 ? 0 : wallOutline[wallOutline.length - 1].y + look.wallOverhang * burst.flare
-    readonly property var maskOutline: wallOutline.length === 0 ? [] : [Qt.point(-look.wallOverhang, maskTop), Qt.point(wallOutline[0].x, maskTop)]
-        .concat(wallOutline, [Qt.point(wallOutline[wallOutline.length - 1].x, maskBottom), Qt.point(-look.wallOverhang, maskBottom)])
+    readonly property var profileLook: look.profile
+    readonly property real profileY: Math.round(height * profileLook.share)
+    readonly property real profileTop: profileY - Math.max(profile.columnHeight, profileLook.blob) / 2
+    readonly property real profileWall: wallReachBetween(profileTop, profileY + Math.max(profile.columnHeight, profileLook.blob) / 2)
+    readonly property real profileButtonX: profileWall + profileLook.gap + profileLook.button / 2
+    readonly property real profileX: profileButtonX + profileLook.button / 2 + profileLook.blobGap + profileLook.blob / 2
 
     signal closeRequested()
     signal landed()
     signal favoriteToggled(string appId)
+    signal hiddenToggled(string appId)
+    signal profileRequested()
 
     function edgeX(localX, itemWidth) {
         return isMirrored ? width - localX - itemWidth : localX
     }
 
+    function wallAt(pointY) {
+        const wall = settledWall
+        for (let index = 1; index < wall.length; index++) {
+            if (wall[index].y >= pointY) {
+                const span = Math.max(1, wall[index].y - wall[index - 1].y)
+                return Geometry.mix(wall[index - 1].x, wall[index].x, Geometry.clampUnit((pointY - wall[index - 1].y) / span))
+            }
+        }
+        return wall.length > 0 ? wall[wall.length - 1].x : formRight
+    }
+
+    function wallReachBetween(top, bottom) {
+        const inside = settledWall.filter(point => point.y > top && point.y < bottom).map(point => point.x)
+        return Math.max(wallAt(top), wallAt(bottom), ...inside)
+    }
+
+    function isHidden(app) {
+        return (hiddenIds || []).indexOf(app.id) >= 0
+    }
+
+    function openMenu(app, at) {
+        if (!app)
+            return
+        menuApp = app
+        menuAt = at
+    }
+
+    function openMenuForSelection() {
+        const app = selectedApp()
+        if (zone === "list" && listView.currentItem) {
+            const row = listView.currentItem
+            openMenu(app, row.mapToItem(search, row.width / 2, row.height / 2))
+            return
+        }
+        openMenu(app, Qt.point(edgeX(foundCenterX, 0), foundCenterY))
+    }
+
+    function closeMenu() {
+        menuApp = null
+    }
+
+    function chooseFromMenu(key) {
+        const app = menuApp
+        closeMenu()
+        if (!app)
+            return
+        if (key === "favorite")
+            favoriteToggled(app.id)
+        else
+            hiddenToggled(app.id)
+    }
+
+    function pinnedFirst(apps) {
+        const pinned = pinnedOrder
+        return apps.filter(app => pinned.indexOf(app.id) >= 0).concat(apps.filter(app => pinned.indexOf(app.id) < 0))
+    }
+
+    function syncList(isReset) {
+        const ids = listApps.map(app => app.id)
+        if (isReset) {
+            listModel.clear()
+            ids.forEach(appId => listModel.append({ appId: appId }))
+            return
+        }
+        for (let index = listModel.count - 1; index >= 0; index--) {
+            if (ids.indexOf(listModel.get(index).appId) < 0)
+                listModel.remove(index)
+        }
+        for (let index = 0; index < ids.length; index++) {
+            if (index < listModel.count && listModel.get(index).appId === ids[index])
+                continue
+            let found = -1
+            for (let later = index + 1; later < listModel.count; later++) {
+                if (listModel.get(later).appId === ids[index]) {
+                    found = later
+                    break
+                }
+            }
+            if (found >= 0)
+                listModel.move(found, index, 1)
+            else
+                listModel.insert(index, { appId: ids[index] })
+        }
+    }
+
+    function requestProfile() {
+        profileRequested()
+        closeRequested()
+    }
+
     function selectedApp() {
         if (zone === "list")
             return listApps[cursor] ?? null
-        if (zone === "fav")
-            return favorites[cursor] ?? null
         return best
     }
 
@@ -91,13 +182,13 @@ FocusScope {
     }
 
     function enter(nextZone) {
-        const count = nextZone === "list" ? listApps.length : nextZone === "fav" ? favorites.length : 1
+        const count = nextZone === "list" ? listApps.length : nextZone === "profile" ? profile.count : 1
         if (count > 0)
             select(nextZone, 0)
     }
 
     function cycle(step) {
-        const order = ["list", "found", "fav"].filter(name => name === "found" || (name === "list" ? listApps.length : favorites.length) > 0)
+        const order = ["list", "found", "profile"].filter(name => name !== "list" || listApps.length > 0)
         const at = order.indexOf(zone)
         select(order[(at + step + order.length) % order.length], 0)
     }
@@ -107,27 +198,23 @@ FocusScope {
         if (zone === "found") {
             if (towardFar < 0 || stepY > 0)
                 enter("list")
-            else if (stepY < 0)
-                enter("fav")
+            else if (towardFar > 0 || stepY < 0)
+                enter("profile")
+            return
+        }
+        if (zone === "profile") {
+            if (towardFar < 0)
+                select("found", 0)
+            else if (stepY !== 0)
+                cursor = Math.max(0, Math.min(profile.count - 1, cursor + stepY))
             return
         }
         if (zone === "list") {
             if (towardFar > 0)
                 select("found", 0)
-            else if (stepY < 0 && cursor === 0)
-                enter("fav")
             else if (stepY !== 0)
                 cursor = Math.max(0, Math.min(listApps.length - 1, cursor + stepY))
-            return
         }
-        const columns = favoriteColumns
-        if (stepY > 0 && cursor + columns >= favorites.length) {
-            enter("list")
-            return
-        }
-        const next = cursor + towardFar + stepY * columns
-        if (next >= 0 && next < favorites.length)
-            cursor = next
     }
 
     function rowRoom(rowTop) {
@@ -141,22 +228,13 @@ FocusScope {
     }
 
     function rowFade(rowTop) {
-        return Math.max(0, Math.min(1, (rowTop - look.top) / listLead))
-    }
-
-    function keepFavoriteShown(index) {
-        const column = index % favoriteColumns
-        const start = favoriteView.lead + column * cellWidth
-        const shown = isMirrored ? favoriteView.contentWidth - start - cellWidth : start
-        const lowest = shown + cellWidth - favoriteView.width
-        const highest = shown - favoriteView.lead
-        favoriteDrift.glideTo(Math.max(0, Math.max(lowest, Math.min(highest, favoriteDrift.destination()))))
+        return Math.max(0, Math.min(1, (rowTop - look.top + look.topFade) / look.topFade))
     }
 
     function keepRowShown(index) {
         const rowY = index * look.row
         const lowest = rowY + look.row - listView.height
-        const highest = rowY - listLead
+        const highest = rowY
         listDrift.glideTo(Math.max(lowest, Math.min(highest, listDrift.destination())))
     }
 
@@ -166,14 +244,23 @@ FocusScope {
         return Math.round((localX - rootX) * Motion.search.ripple) + row * Motion.pill.elementStagger
     }
 
-    onResultsChanged: select("found", 0)
-    onFavoritesChanged: {
-        if (zone === "fav" && cursor >= favorites.length)
-            select(favorites.length > 0 ? "fav" : "found", Math.max(0, favorites.length - 1))
+    onQueryChanged: {
+        pinnedOrder = (favoriteIds || []).slice()
+        select("found", 0)
+    }
+    onListAppsChanged: {
+        syncList(query !== syncedQuery)
+        syncedQuery = query
+        if (zone === "list" && cursor >= listApps.length)
+            select(listApps.length > 0 ? "list" : "found", Math.max(0, listApps.length - 1))
     }
     onIsOpenChanged: {
+        closeMenu()
         if (isOpen) {
             input.text = ""
+            isShowingHidden = false
+            pinnedOrder = (favoriteIds || []).slice()
+            syncList(true)
             select("found", 0)
             input.forceActiveFocus()
         }
@@ -225,13 +312,14 @@ FocusScope {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
-        isShown: burst.isActive
+        isShown: burst.isActive || profile.isActive
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
         melt: search.look.melt
 
         Item {
+            id: shapeRoot
             parent: liquid.shapes
             anchors.fill: parent
             transform: Upright {
@@ -299,10 +387,11 @@ FocusScope {
                 y: search.look.top
                 width: search.listWidth
                 height: search.fieldY - search.look.sectionGap - y
-                topMargin: search.listLead
                 clip: true
                 boundsBehavior: Flickable.DragOverBounds
-                model: search.listApps
+                model: ListModel {
+                    id: listModel
+                }
                 currentIndex: search.zone === "list" ? search.cursor : -1
                 onCurrentIndexChanged: if (currentIndex >= 0) search.keepRowShown(currentIndex)
 
@@ -311,20 +400,22 @@ FocusScope {
                 }
 
                 delegate: ResultRow {
-                    required property var modelData
+                    required property string appId
                     required property int index
+                    readonly property var entry: Apps.byId(appId)
                     readonly property real rowTop: listView.y + y - listView.contentY
                     width: listView.width
                     fade: search.rowFade(rowTop)
                     room: search.rowRoom(rowTop)
                     isMirrored: search.isMirrored
-                    app: modelData
-                    isShown: search.isContentShown
+                    app: entry
+                    isShown: search.isContentShown && entry !== null
                     isSelected: search.zone === "list" && search.cursor === index
-                    isFavorite: search.favoriteIds.indexOf(modelData.id) >= 0
+                    isFavorite: search.favoriteIds.indexOf(appId) >= 0
+                    isHidden: (search.hiddenIds || []).indexOf(appId) >= 0
                     enterDelay: search.revealDelay(search.listX, index)
-                    onActivated: search.launch(modelData)
-                    onPinToggled: search.favoriteToggled(modelData.id)
+                    onActivated: search.launch(entry)
+                    onMenuRequested: at => search.openMenu(entry, at)
                     onPointed: search.select("list", index)
                 }
             }
@@ -363,7 +454,38 @@ FocusScope {
                     font.pixelSize: search.look.fieldText
 
                     Keys.onPressed: event => {
+                        if (search.menuApp !== null) {
+                            switch (event.key) {
+                            case Qt.Key_Up:
+                            case Qt.Key_Backtab:
+                                appMenu.moveHighlight(-1)
+                                break
+                            case Qt.Key_Down:
+                            case Qt.Key_Tab:
+                                appMenu.moveHighlight(1)
+                                break
+                            case Qt.Key_Return:
+                            case Qt.Key_Enter:
+                                search.chooseFromMenu(appMenu.actions[appMenu.highlighted].key)
+                                break
+                            default:
+                                search.closeMenu()
+                                if (event.key !== Qt.Key_Escape && event.key !== Qt.Key_Menu)
+                                    return
+                            }
+                            event.accepted = true
+                            return
+                        }
+                        if (event.key === Qt.Key_H && (event.modifiers & Qt.ControlModifier)) {
+                            search.isShowingHidden = !search.isShowingHidden
+                            event.accepted = true
+                            return
+                        }
                         switch (event.key) {
+                        case Qt.Key_Menu:
+                            if (search.zone !== "profile")
+                                search.openMenuForSelection()
+                            break
                         case Qt.Key_Escape:
                             if (input.text.length > 0)
                                 input.text = ""
@@ -372,7 +494,10 @@ FocusScope {
                             break
                         case Qt.Key_Return:
                         case Qt.Key_Enter:
-                            search.launch(search.selectedApp())
+                            if (search.zone === "profile")
+                                profile.activate(search.cursor)
+                            else
+                                search.launch(search.selectedApp())
                             break
                         case Qt.Key_Tab:
                             search.cycle(1)
@@ -432,6 +557,41 @@ FocusScope {
                     color: search.isSearching ? Appearance.color.accent : Appearance.color.textMuted
                 }
             }
+
+            Turn {
+                id: hiddenToggle
+                x: search.edgeX(search.listX + search.look.fieldPadding, width)
+                y: search.fieldY + search.look.fieldHeight + (search.look.top + search.look.hiddenRow - height) / 2
+                width: hiddenLabel.implicitWidth
+                height: hiddenLabel.implicitHeight
+                isShown: search.isContentShown
+                enterDelay: search.revealDelay(search.listX, 1)
+                leaveWindow: 0
+
+                Text {
+                    id: hiddenLabel
+                    text: (search.hiddenIds || []).length > 0 ? "HIDDEN " + search.hiddenIds.length : "HIDDEN"
+                    color: search.isShowingHidden ? Appearance.color.accent : hiddenArea.containsMouse ? Appearance.color.textMuted : Appearance.color.textFaint
+                    font.family: Appearance.font.mono
+                    font.pixelSize: Appearance.font.label
+                    font.letterSpacing: Appearance.font.labelSpacing
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.pace(Motion.hoverIn)
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: hiddenArea
+                    anchors.fill: parent
+                    anchors.margins: -search.look.fieldPadding / 2
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: search.isShowingHidden = !search.isShowingHidden
+                }
+            }
         }
     }
 
@@ -443,106 +603,50 @@ FocusScope {
         nameX: search.wallReach - search.foundCenterX + search.foundRadius + search.look.nameReach
         app: search.best
         isSearching: search.isSearching
-        profileName: search.profileName
-        profilePicture: search.profilePicture
         isShown: search.isContentShown
         isSelected: search.zone === "found"
         enterDelay: search.revealDelay(search.foundCenterX, 1)
         onActivated: search.launch(app)
-        onPinToggled: search.favoriteToggled(app.id)
+        onMenuRequested: at => search.openMenu(search.best, at)
         onPointed: search.select("found", 0)
     }
 
-    Masked {
+    ProfileBlob {
+        id: profile
         anchors.fill: parent
-        mask: Item {
-            anchors.fill: parent
-            transform: Upright {
-                isMirrored: search.isMirrored
-                axis: search.width / 2
-            }
+        isWanted: search.isOpen && burst.isCarrying && !burst.isLeaving
+        isMirrored: search.isMirrored
+        liquidParent: shapeRoot
+        centerX: search.profileX
+        centerY: search.profileY
+        buttonX: search.profileButtonX
+        homeX: search.rootX + Appearance.taskbar.thickness / 2
+        homeY: search.middleY
+        edgeY: Math.round(search.height * search.profileLook.throwEdge)
+        apexY: search.profileLook.throwApexY
+        riseX: search.profileLook.enterApexX
+        riseY: search.height + search.profileLook.enterApexY
+        name: search.profileName
+        picture: search.profilePicture
+        selected: search.zone === "profile" ? search.cursor : -1
+        onPointed: index => search.select("profile", index)
+        onProfileRequested: search.requestProfile()
+    }
 
-            Shape {
-                anchors.fill: parent
-                preferredRendererType: Shape.CurveRenderer
+    MouseArea {
+        anchors.fill: parent
+        enabled: search.menuApp !== null
+        acceptedButtons: Qt.AllButtons
+        onPressed: search.closeMenu()
+    }
 
-                ShapePath {
-                    fillColor: "white"
-                    strokeColor: "transparent"
-                    strokeWidth: 0
-                    PathPolyline { path: search.maskOutline }
-                }
-            }
-        }
-
-        Flickable {
-            id: favoriteView
-
-            readonly property real lead: search.look.inset - search.look.tileGap / 2
-
-            x: search.edgeX(search.rootX, width)
-            y: search.look.top - search.look.tileGap / 2
-            width: Math.max(0, search.wallReach - search.rootX)
-            height: search.cellHeight * search.look.favoriteRows
-            contentWidth: lead + favoriteGrid.width
-            contentHeight: height
-            contentX: search.isMirrored ? contentWidth - width : 0
-            flickableDirection: Flickable.HorizontalFlick
-            boundsBehavior: Flickable.DragOverBounds
-
-            Drift {
-                id: favoriteDrift
-                isHorizontal: true
-                isReversed: search.isMirrored
-            }
-
-            GridView {
-                id: favoriteGrid
-                x: search.isMirrored ? favoriteView.contentWidth - favoriteView.lead - width : favoriteView.lead
-                width: search.cellWidth * search.favoriteColumns
-                height: favoriteView.height
-                interactive: false
-                cellWidth: search.cellWidth
-                cellHeight: search.cellHeight
-                layoutDirection: search.isMirrored ? Qt.RightToLeft : Qt.LeftToRight
-                model: search.favorites
-                currentIndex: search.zone === "fav" ? search.cursor : -1
-                onCurrentIndexChanged: if (currentIndex >= 0) search.keepFavoriteShown(currentIndex)
-
-                delegate: AppTile {
-                    id: favorite
-                    required property var modelData
-                    required property int index
-                    readonly property real start: {
-                        favoriteView.contentX
-                        const position = favorite.mapToItem(favoriteView, 0, 0).x
-                        return search.isMirrored ? favoriteView.width - position - width : position
-                    }
-                    opacity: Math.max(0, Math.min(1, (start - favoriteView.lead + search.cellWidth) / search.cellWidth))
-                    app: modelData
-                    isShown: search.isContentShown
-                    isSelected: search.zone === "fav" && search.cursor === index
-                    enterDelay: search.revealDelay(search.listX + (index % search.favoriteColumns) * search.cellWidth, Math.floor(index / search.favoriteColumns))
-                    onActivated: search.launch(modelData)
-                    onPinToggled: search.favoriteToggled(modelData.id)
-                    onPointed: search.select("fav", index)
-                }
-            }
-        }
-
-        Turn {
-            x: search.edgeX(search.listX, width)
-            y: search.look.top + (search.favoritesHeight - height) / 2
-            isShown: search.isContentShown && search.favorites.length === 0
-            enterDelay: search.revealDelay(search.listX, 0)
-
-            Text {
-                text: "RIGHT CLICK TO PIN"
-                color: Appearance.color.textFaint
-                font.family: Appearance.font.mono
-                font.pixelSize: Appearance.font.label
-                font.letterSpacing: Appearance.font.labelSpacing
-            }
-        }
+    AppMenu {
+        id: appMenu
+        x: Math.max(0, Math.min(search.width - width, search.menuAt.x))
+        y: Math.max(0, Math.min(search.height - height, search.menuAt.y))
+        isOpen: search.menuApp !== null && search.isOpen
+        isFavorite: search.menuApp !== null && search.favoriteIds.indexOf(search.menuApp.id) >= 0
+        isHidden: search.menuApp !== null && search.isHidden(search.menuApp)
+        onChosen: key => search.chooseFromMenu(key)
     }
 }

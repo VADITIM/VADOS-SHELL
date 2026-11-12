@@ -180,12 +180,28 @@ FocusScope {
                     leaveDuration: Motion.notifications.rowLeave
                     leaveWindow: 0
 
-                    Text {
-                        text: manager.summary[headerCell.modelData.key] ?? ""
-                        color: Appearance.color.text
-                        font.family: Appearance.font.mono
-                        font.pixelSize: manager.look.font.summary
-                        font.bold: true
+                    Row {
+                        readonly property var parts: String(manager.summary[headerCell.modelData.key] ?? "").split(" ")
+
+                        spacing: manager.look.unitGap
+
+                        Text {
+                            id: summaryValue
+                            text: parent.parts[0]
+                            color: headerCell.isName ? Appearance.color.accent : Appearance.color.text
+                            font.family: Appearance.font.mono
+                            font.pixelSize: manager.look.font.summary
+                            font.bold: true
+                        }
+
+                        Text {
+                            anchors.baseline: summaryValue.baseline
+                            visible: text.length > 0
+                            text: parent.parts.slice(1).join(" ")
+                            color: Appearance.color.textMuted
+                            font.family: Appearance.font.mono
+                            font.pixelSize: manager.look.font.unit
+                        }
                     }
                 }
 
@@ -252,7 +268,7 @@ FocusScope {
                         height: implicitHeight
                         glyphName: "grid"
                         glyphSize: manager.look.toggleGlyph
-                        color: Appearance.color.textMuted
+                        color: Appearance.color.accent
                         isSelected: manager.hasIcons
                         onClicked: manager.iconsToggled()
                     }

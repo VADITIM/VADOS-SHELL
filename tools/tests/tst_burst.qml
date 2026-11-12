@@ -121,9 +121,10 @@ Item {
             splitting.trace()
             const cut = splitting.cutLines()
             const right = cut.upper[cut.upper.length - 1].x
-            const head = splitting.cutHead(right, splitting.traceContext())
+            const head = splitting.cutHead(cut.upper[0].x, right, splitting.traceContext())
             verify(head > cut.upper[0].x && head < right, "the crest is on the gap")
-            fuzzyCompare(gapAt(cut, head), 0, 0.5)
+            verify(gapAt(cut, head) < 30 * (1 - Appearance.burst.cutReach / 2), "the crest narrows the gap")
+            verify(gapAt(cut, head) > 1, "without pinching it shut")
             const trough = head + Appearance.burst.crestLength / 2 + Appearance.burst.troughLength / 2
             if (trough < right)
                 verify(gapAt(cut, trough) > 30 + 4, "the trough widens the gap ahead of the crest")
@@ -134,27 +135,25 @@ Item {
             splitting.lifecycle.send("settle")
         }
 
-        function test_theGapCarriesThePillsWave() {
+        function test_theGapWaveSweepsTheWholeGapWithTheOuterWave() {
             splitting.isShown = true
             tryCompare(splitting, "phase", "active", 3000)
             splitting.stopAll()
             splitting.split = 1
             splitting.impact = 0.1
-            splitting.spread = 0.5
-            splitting.trace()
-            const track = splitting.topTrack
-            const distance = splitting.waveHead(track.total)
             const context = splitting.traceContext()
-            let passed = 0
-            let outer = 0
-            for (const segment of track.segments) {
-                if (passed + segment.length >= distance) {
-                    outer = splitting.basePoint(segment, -1, distance - passed, context).x
-                    break
-                }
-                passed += segment.length
+            const margin = Appearance.burst.crestLength / 2 + Appearance.burst.troughLength
+            let previous = -Infinity
+            for (const spread of [0.3, 0.5, 0.7, 0.9, 1]) {
+                splitting.spread = spread
+                splitting.trace()
+                const left = splitting.form.x - splitting.form.width / 2
+                const right = Math.max(left + 1, splitting.wallXAt(splitting.splitCenter))
+                const head = splitting.cutHead(left, right, context)
+                verify(head > previous, "the crest keeps moving along the gap")
+                previous = head
             }
-            fuzzyCompare(splitting.cutHead(10000, context), outer, 0.5)
+            verify(previous > splitting.form.x, "the crest has swept past the gap's far end when the outer wave is done")
             splitting.lifecycle.send("settle")
         }
 
@@ -166,7 +165,7 @@ Item {
             const cut = splitting.cutLines()
             const left = cut.upper[0].x
             const right = cut.upper[cut.upper.length - 1].x
-            verify(splitting.cutHead(right, splitting.traceContext()) < left + (right - left) / 2, "the wave has not crossed the gap before it opened")
+            verify(splitting.cutHead(left, right, splitting.traceContext()) < left + (right - left) / 2, "the wave has not crossed the gap before it opened")
             tryCompare(splitting, "phase", "active", 3000)
         }
 
@@ -717,18 +716,38 @@ Item {
             verify(rolls[0] !== rolls[1] || rolls[1] !== rolls[2], "every burst is its own")
         }
 
-        function test_blobsShootOutOfTheWallAndFallBack() {
+        function test_blobsShootOutOfTheOutlineAndFallBack() {
             Config.setBurstStyle("procedural")
             burst.isShown = true
             tryCompare(burst, "phase", "active", 3000)
             burst.stopAll()
-            const blob = burst.variation.blobs[0]
-            burst.impact = blob.launch + blob.flight / 2
-            const flying = burst.blobForm(blob)
-            verify(flying.size > 0.5, "the blob is out mid flight")
-            verify(flying.x > burst.edgeXAt(burst.formTop + burst.form.height * blob.along) + blob.reach / 2, "it flew away from the wall")
-            burst.impact = 1
-            compare(burst.blobForm(blob).size, 0)
+            const blobs = burst.variation.blobs
+            burst.scatter = blobs[0].launch + blobs[0].flight / 2
+            burst.trace()
+            const spot = burst.blobSpots[0]
+            verify(spot.size > 0.5, "the blob is out mid flight")
+            const form = burst.form
+            const outside = spot.x > form.x + form.width / 2 || spot.y < form.y - form.height / 2 || spot.y > form.y + form.height / 2
+            verify(outside, "it flew off the outline: " + JSON.stringify(spot))
+            burst.scatter = 1
+            burst.trace()
+            verify(burst.blobSpots.every(place => place.size === 0), "every blob is back once the scatter ends")
+            burst.lifecycle.send("settle")
+        }
+
+        function test_blobsKeepOffTheScreenEdges() {
+            Config.setBurstStyle("procedural")
+            burst.isShown = true
+            tryCompare(burst, "phase", "active", 3000)
+            burst.stopAll()
+            const context = burst.traceContext()
+            for (let step = 0; step <= 40; step++) {
+                burst.scatter = step / 40
+                burst.trace()
+                for (const spot of burst.blobSpots)
+                    if (spot.size > 0.5)
+                        verify(spot.y - spot.size / 2 > 0 && spot.y + spot.size / 2 < burst.screenHeight && spot.x - spot.size / 2 > 0, "a blob crossed a screen edge: " + JSON.stringify(spot))
+            }
             burst.lifecycle.send("settle")
         }
 

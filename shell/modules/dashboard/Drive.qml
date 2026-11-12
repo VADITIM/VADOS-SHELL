@@ -96,6 +96,7 @@ Item {
             color: drive.usageColor
             font.family: Appearance.font.mono
             font.pixelSize: Appearance.dashboard.font.reading
+            font.bold: true
         }
 
         LevelBar {

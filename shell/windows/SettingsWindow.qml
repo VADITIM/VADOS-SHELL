@@ -26,6 +26,7 @@ OverlayWindow {
         id: settings
         anchors.fill: parent
         isOpen: window.isOpen
+        openingTab: Overlays.pageOf("settings")
         parts: window.parts
         shouldStream: window.shouldStream
         isMirrored: Config.data.taskbar.side === "right"

@@ -58,6 +58,45 @@ TestCase {
         tryVerify(() => !Overlays.isTaskbarAway(window.screenName), 10000)
     }
 
+    function listViewIn(item) {
+        const queue = [item]
+        while (queue.length > 0) {
+            const next = queue.shift()
+            if (next.itemAtIndex !== undefined && next.highlightRangeMode !== undefined && next.orientation === ListView.Vertical && next.model && next.model.count !== undefined)
+                return next
+            for (const child of next.children)
+                queue.push(child)
+        }
+        return null
+    }
+
+    function test_favouritingAndHidingKeepTheOtherRows() {
+        failOnWarning(/.*/)
+        const search = overlayModule("favoriteIds")
+        Overlays.open("search", window.screenName)
+        tryVerify(() => Overlays.phaseOf("search", window.screenName) === "active", 10000)
+        const list = listViewIn(search)
+        verify(list !== null)
+        tryVerify(() => list.count > 3, 2000)
+        const first = list.itemAtIndex(0)
+        const second = list.itemAtIndex(1)
+        const third = list.itemAtIndex(2)
+        const secondId = second.appId
+        search.openMenu(second.entry, Qt.point(0, 0))
+        search.chooseFromMenu("favorite")
+        verify(Config.data.search.favorites.indexOf(secondId) >= 0)
+        verify(list.itemAtIndex(0) === first && list.itemAtIndex(1) === second, "favouriting neither rebuilds nor reorders the open list")
+        verify(second.isFavorite)
+        search.openMenu(second.entry, Qt.point(0, 0))
+        search.chooseFromMenu("hide")
+        verify(list.itemAtIndex(0) === first, "the rows above stay")
+        tryVerify(() => list.itemAtIndex(1) === third, 1000, "the row below moves up instead of being rebuilt")
+        Config.toggleHidden(secondId)
+        Config.toggleFavorite(secondId)
+        Overlays.close("search")
+        tryVerify(() => Overlays.phaseOf("search", window.screenName) === "idle", 10000)
+    }
+
     function test_frameDebuggerOwnsTheKeyboardOverTheSearchField() {
         failOnWarning(/.*/)
         Overlays.toggle("search", window.screenName)

@@ -39,6 +39,7 @@ ENGINE_TESTS = {
     "shell/utils/Processes.js": "tst_processes.qml",
     "shell/utils/Clipboard.js": "tst_clipboard.qml",
     "shell/components/Gulp.qml": "tst_gulp.qml",
+    "shell/components/Throw.qml": "tst_throw.qml",
     "shell/components/Drift.qml": "tst_drift.qml",
     "shell/components/Roll.qml": "tst_roll.qml",
     "shell/utils/Capture.js": "tst_capture.qml",

@@ -1,6 +1,7 @@
 import QtQuick
 import qs.config
 import qs.components
+import "../../utils/Tint.js" as Tint
 
 Item {
     id: card
@@ -14,16 +15,6 @@ Item {
     property var shownApp: null
     property bool isSwapping: false
     property bool isSearching: false
-    property string profileName: ""
-    property string profilePicture: ""
-    property real mutation: isSearching ? 1 : 0
-
-    Behavior on mutation {
-        NumberAnimation {
-            duration: Motion.pace(Motion.search.mutate)
-            easing.type: card.isSearching ? Easing.OutBack : Easing.OutCubic
-        }
-    }
 
     readonly property var look: Appearance.search
     readonly property bool isNamed: card.isShown && !card.isSwapping && card.shownApp !== null
@@ -33,7 +24,7 @@ Item {
     readonly property real nameSpan: bloom <= 0 ? 0 : Math.max(nameThickness, nameWidth * bloom)
 
     signal activated()
-    signal pinToggled()
+    signal menuRequested(point at)
     signal pointed()
 
     width: look.found
@@ -73,14 +64,28 @@ Item {
         }
 
         Squircle {
+            readonly property bool isTinted: foundIcon.tint.length > 0 && card.shownApp !== null
             anchors.fill: parent
-            color: Appearance.color.wash
+            color: isTinted ? foundIcon.tint : Appearance.color.wash
+            shade: isTinted ? Tint.nudge(foundIcon.tint, card.look.foundShade) : Appearance.color.wash
             strokeWidth: card.look.ringStroke
             strokeColor: card.isSelected ? Appearance.color.accent : Appearance.color.hairline
 
             Behavior on strokeColor {
                 ColorAnimation {
                     duration: Motion.pace(Motion.hoverIn)
+                }
+            }
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.pace(Motion.search.swap)
+                }
+            }
+
+            Behavior on shade {
+                ColorAnimation {
+                    duration: Motion.pace(Motion.search.swap)
                 }
             }
         }
@@ -100,58 +105,13 @@ Item {
                 }
             }
 
-            Item {
-                id: avatar
-                anchors.centerIn: parent
-                width: card.look.foundAvatar
-                height: width
-                opacity: 1 - card.mutation
-                scale: 1 - card.mutation * (1 - card.look.avatarShrink)
-                visible: opacity > 0
-
-                Masked {
-                    anchors.fill: parent
-                    visible: portrait.status === Image.Ready
-                    mask: Squircle {
-                        anchors.fill: parent
-                        color: "black"
-                    }
-
-                    Image {
-                        id: portrait
-                        anchors.fill: parent
-                        source: card.profilePicture
-                        sourceSize.width: avatar.width * 2
-                        sourceSize.height: avatar.height * 2
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        smooth: true
-                    }
-                }
-
-                Squircle {
-                    anchors.fill: parent
-                    color: Appearance.color.wash
-                    visible: portrait.status !== Image.Ready
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: (card.profileName || "?").charAt(0).toUpperCase()
-                        color: Appearance.color.text
-                        font.family: Appearance.font.mono
-                        font.pixelSize: Math.round(avatar.width * 0.4)
-                        font.bold: true
-                    }
-                }
-            }
-
             AppIcon {
+                id: foundIcon
                 anchors.centerIn: parent
                 size: card.look.foundIcon
+                isSampled: true
                 app: card.shownApp
-                opacity: card.mutation
-                scale: card.look.avatarShrink + card.mutation * (1 - card.look.avatarShrink)
-                visible: card.shownApp !== null && opacity > 0
+                visible: card.shownApp !== null
             }
 
             Text {
@@ -219,7 +179,7 @@ Item {
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
                 onPositionChanged: card.pointed()
-                onClicked: mouse => mouse.button === Qt.RightButton ? card.pinToggled() : card.activated()
+                onClicked: mouse => mouse.button === Qt.RightButton ? card.menuRequested(mapToItem(null, mouse.x, mouse.y)) : card.activated()
             }
         }
     }
@@ -232,6 +192,6 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onPositionChanged: card.pointed()
-        onClicked: mouse => mouse.button === Qt.RightButton ? card.pinToggled() : card.activated()
+        onClicked: mouse => mouse.button === Qt.RightButton ? card.menuRequested(mapToItem(null, mouse.x, mouse.y)) : card.activated()
     }
 }

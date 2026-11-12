@@ -11,6 +11,7 @@ const settings = {
     "appearance.accent": { type: "colour", fallback: "#ffffff" },
     "desktop.mode": { type: "string", fallback: "canvas", choices: ["canvas", "desktop"] },
     "search.favorites": { type: "names", fallback: [] },
+    "search.hidden": { type: "names", fallback: [] },
     "profile.name": { type: "string", fallback: "" },
     "profile.picture": { type: "string", fallback: "" },
     "profile.secondName": { type: "string", fallback: "" },

@@ -1,14 +1,20 @@
 import QtQuick
 import qs.config
+import "../../utils/Tint.js" as Tint
 
 Item {
     id: icon
 
     property var app: null
-    property real size: Appearance.search.tile
+    required property real size
+    property bool isSampled: false
+    readonly property var tintLook: Appearance.search.foundTint
+    property string tint: ""
 
     width: size
     height: size
+
+    onAppChanged: tint = ""
 
     Image {
         id: image
@@ -20,6 +26,22 @@ Item {
         asynchronous: true
         smooth: true
         mipmap: true
+        onStatusChanged: if (status === Image.Ready && icon.isSampled) sampler.requestPaint()
+    }
+
+    Canvas {
+        id: sampler
+        width: icon.tintLook.sample
+        height: icon.tintLook.sample
+        opacity: 0
+        enabled: false
+        visible: icon.isSampled
+        onPaint: {
+            const context = getContext("2d")
+            context.clearRect(0, 0, width, height)
+            context.drawImage(image, 0, 0, width, height)
+            icon.tint = Tint.dominant(context.getImageData(0, 0, width, height).data, icon.tintLook)
+        }
     }
 
     Rectangle {

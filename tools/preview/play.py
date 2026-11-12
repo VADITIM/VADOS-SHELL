@@ -21,7 +21,7 @@ QtObject {
         }
         property QtObject appearance: QtObject { property string accent: "#ffffff" }
         property QtObject desktop: QtObject { property string mode: "canvas" }
-        property QtObject search: QtObject { property var favorites: ["firefox.desktop", "kitty.desktop"] }
+        property QtObject search: QtObject { property var favorites: ["firefox.desktop", "kitty.desktop"]; property var hidden: [] }
         property QtObject weather: QtObject { property string location: "" }
         property QtObject notifications: QtObject { property bool enabled: false; property int history: 200 }
         property QtObject send: QtObject { property string app: "blip"; property var devices: [] }
@@ -82,6 +82,15 @@ QtObject {
         else
             favorites.push(appId)
         data.search.favorites = favorites
+    }
+    function toggleHidden(appId) {
+        const hidden = data.search.hidden.slice()
+        const at = hidden.indexOf(appId)
+        if (at >= 0)
+            hidden.splice(at, 1)
+        else
+            hidden.push(appId)
+        data.search.hidden = hidden
     }
 }
 """

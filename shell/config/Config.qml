@@ -285,15 +285,23 @@ Singleton {
     }
 
     function toggleFavorite(appId) {
-        const favorites = (adapter.search.favorites || []).slice()
-        const at = favorites.indexOf(appId)
+        toggleListed("favorites", appId)
+    }
+
+    function toggleHidden(appId) {
+        toggleListed("hidden", appId)
+    }
+
+    function toggleListed(field, appId) {
+        const listed = (adapter.search[field] || []).slice()
+        const at = listed.indexOf(appId)
         if (at >= 0)
-            favorites.splice(at, 1)
+            listed.splice(at, 1)
         else
-            favorites.push(appId)
-        if (!accept("search.favorites", favorites))
+            listed.push(appId)
+        if (!accept("search." + field, listed))
             return
-        adapter.search.favorites = favorites
+        adapter.search[field] = listed
         file.writeAdapter()
     }
 
@@ -327,6 +335,7 @@ Singleton {
             }
             property JsonObject search: JsonObject {
                 property var favorites: []
+                property var hidden: []
             }
             property JsonObject profile: JsonObject {
                 property string name: ""

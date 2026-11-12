@@ -40,6 +40,7 @@ FocusScope {
     property var lockLayout: []
     property string lockWallpaper: ""
     property string pickedModule: ""
+    property string openingTab: ""
     property string tab: "home"
     property string shownTab: tab
     property string subTab: ""
@@ -172,7 +173,7 @@ FocusScope {
     onIsOpenChanged: {
         if (!isOpen)
             return
-        tab = "home"
+        tab = openingTab.length > 0 ? openingTab : "home"
         forceActiveFocus()
     }
     Component.onCompleted: subTab = subTabs.length > 0 ? subTabs[0].key : ""

@@ -68,6 +68,16 @@ Item {
             }
         }
 
+        function test_aNudgeDarkensLightColoursAndLightensDarkOnes() {
+            const light = root.shadeOfHex("#7fb8ff")
+            const darker = root.shadeOfHex(Tint.nudge("#7fb8ff", 0.1))
+            verify(Math.abs(darker.lightness - (light.lightness - 0.1)) < 0.01, "darker " + darker.lightness)
+            verify(Math.abs(darker.hue - light.hue) < 0.01, "same hue")
+            const dark = root.shadeOfHex("#102a60")
+            const lighter = root.shadeOfHex(Tint.nudge("#102a60", 0.1))
+            verify(Math.abs(lighter.lightness - (dark.lightness + 0.1)) < 0.01, "lighter " + lighter.lightness)
+        }
+
         function test_anIconIsSampledThroughAnInvisibleCanvas() {
             tryVerify(() => root.sampled.length > 0, 3000, "the canvas sampled the icon")
             const shade = root.shadeOfHex(root.sampled)

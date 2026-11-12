@@ -249,11 +249,6 @@ Singleton {
         readonly property real taskShotLand: 0.8
         readonly property real taskShotBounce: 1.6
         readonly property int taskShotBack: 160
-        readonly property int taskGrow: 440
-        readonly property int taskShrink: 170
-        readonly property int taskLag: 50
-        readonly property real taskOvershoot: 1.4
-        readonly property real taskArrive: 0.45
         readonly property int taskTabStagger: 60
         readonly property int taskTabLeave: 70
         readonly property real taskTabSpin: -120
@@ -278,8 +273,10 @@ Singleton {
         readonly property real sideVariance: 0.25
         readonly property int blobsLeast: 2
         readonly property int blobsMost: 6
+        readonly property int scatter: 760
         readonly property real blobLaunch: 0.4
-        readonly property real blobFlight: 0.4
+        readonly property real blobFlight: 0.45
+        readonly property real blobShrink: 0.45
         readonly property int converge: 540
         readonly property int grow: 260
         readonly property real handShare: 0.4
@@ -357,12 +354,24 @@ Singleton {
         readonly property real ripple: 0.32
         readonly property int settledStagger: 18
         readonly property int swap: 90
-        readonly property int mutate: 220
         readonly property int bud: 340
         readonly property int budOut: 140
         readonly property int nameGrow: 360
         readonly property int nameShrink: 110
         readonly property real nameHeightLead: 2.5
+        readonly property int profileEnter: 620
+        readonly property real profileEnterBounce: 0.5
+        readonly property int profileShrink: 130
+        readonly property int profileSwell: 520
+        readonly property int profileSplash: 460
+        readonly property int profileGather: 160
+        readonly property int profileThrow: 420
+        readonly property int menu: 140
+        readonly property int menuOut: 90
+        readonly property int profileThrowStagger: 30
+        readonly property int profileContent: 240
+        readonly property int profileStagger: 45
+        readonly property int profileDisarm: 2400
     }
 
     readonly property QtObject budget: QtObject {

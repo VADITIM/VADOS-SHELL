@@ -30,6 +30,11 @@ function mix(from, to, share) {
     return from + (to - from) * share
 }
 
+function arcAt(from, control, to, share) {
+    const inverse = 1 - share
+    return Qt.point(inverse * inverse * from.x + 2 * inverse * share * control.x + share * share * to.x, inverse * inverse * from.y + 2 * inverse * share * control.y + share * share * to.y)
+}
+
 function centerOf(rectangle) {
     return Qt.point(rectangle.x + rectangle.width / 2, rectangle.y + rectangle.height / 2)
 }
@@ -232,6 +237,18 @@ function clipAlong(points, line, isKeepingAbove) {
             kept.push(current)
     }
     return kept.length >= 3 ? kept : []
+}
+
+function farthestCrossing(points, y) {
+    let farthest = -Infinity
+    for (let index = 0; index < points.length; index++) {
+        const from = points[index]
+        const to = points[(index + 1) % points.length]
+        if ((from.y - y) * (to.y - y) > 0 || from.y === to.y)
+            continue
+        farthest = Math.max(farthest, from.x + (to.x - from.x) * (y - from.y) / (to.y - from.y))
+    }
+    return farthest
 }
 
 function splitAlong(points, upper, lower) {

@@ -132,6 +132,11 @@ Item {
             selection = Ink.moved(selection, stepX, stepY, bounds)
     }
 
+    function selectAll() {
+        finishText()
+        selection = { x: 0, y: 0, width: width, height: height }
+    }
+
     function cut() {
         if (isCutting || !lifecycle.isShowing)
             return
@@ -304,8 +309,10 @@ Item {
         const step = (event.modifiers & Qt.ShiftModifier) !== 0 ? look.nudgeFar : look.nudge
         if (event.key === Qt.Key_Escape)
             shot.closeRequested()
-        else if ((isControl && event.key === Qt.Key_C) || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+        else if ((isControl && (event.key === Qt.Key_C || event.key === Qt.Key_S)) || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
             shot.cut()
+        else if (isControl && event.key === Qt.Key_A)
+            shot.selectAll()
         else if (isControl && event.key === Qt.Key_Z)
             shot.undo()
         else if (event.key === Qt.Key_Tab)

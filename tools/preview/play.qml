@@ -176,6 +176,7 @@ Window {
             visible: isPresent
             isOpen: root.isOverlayOpen("search")
             favoriteIds: Config.data.search.favorites
+            hiddenIds: Config.data.search.hidden
             parts: Overlays.taskbarParts[root.screenName] ?? []
             isMirrored: root.isRight
             canHandOff: Config.data.taskbar.style !== "bare"
@@ -186,6 +187,7 @@ Window {
             onCloseRequested: Overlays.close("search")
             onLanded: root.landOverlay()
             onFavoriteToggled: appId => Config.toggleFavorite(appId)
+            onHiddenToggled: appId => Config.toggleHidden(appId)
         }
 
         Settings {

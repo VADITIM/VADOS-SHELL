@@ -25,6 +25,14 @@ TestCase {
         gathers = 0
     }
 
+    function test_openCarriesThePageItWasAskedFor() {
+        Overlays.open("settings", "A", "user")
+        compare(Overlays.pageOf("settings"), "user")
+        Overlays.close("settings")
+        Overlays.open("settings", "A")
+        compare(Overlays.pageOf("settings"), "", "a plain open asks for no page")
+    }
+
     function test_screenIsHeldUntilItsLastOverlayHasLeft() {
         verify(!Overlays.isHolding("A"))
         Overlays.open("dashboard", "A")

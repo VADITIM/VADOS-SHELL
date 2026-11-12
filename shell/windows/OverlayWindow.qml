@@ -19,6 +19,8 @@ PanelWindow {
     readonly property var parts: Overlays.taskbarParts[screenName] ?? []
     readonly property bool shouldStream: Config.data.taskbar.gather === "merge"
     readonly property bool canHandOff: Config.data.taskbar.style !== "bare" && !Occupancy.isCovered(screenName, true)
+    readonly property bool isPointedAt: !Compositor.capabilities.focusTracking || Compositor.focusedScreen === screenName
+    readonly property bool hasKeyboard: Overlays.ownsKeyboard(overlayKey, screenName) && isPointedAt && !FrameDebug.isActive
 
     function requestClose() {
         Overlays.close(overlayKey)
@@ -58,6 +60,6 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "vados-" + overlayKey
-    WlrLayershell.keyboardFocus: Overlays.ownsKeyboard(overlayKey, screenName) && !FrameDebug.isActive ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: hasKeyboard ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
 }

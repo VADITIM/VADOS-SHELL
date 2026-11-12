@@ -15,12 +15,17 @@ Singleton {
     property var visitors: ({})
     property var phases: ({})
     property var swaps: ({})
+    property var pages: ({})
     readonly property string top: stack.length > 0 ? stack[stack.length - 1] : ""
 
     signal taskbarGathering(string screenName)
 
     function screenOf(key) {
         return screens[key] ?? ""
+    }
+
+    function pageOf(key) {
+        return pages[key] ?? ""
     }
 
     function isOpen(key, screenName) {
@@ -135,9 +140,12 @@ Singleton {
         return gathering.indexOf(screenName) >= 0
     }
 
-    function open(key, screenName) {
+    function open(key, screenName, page) {
         if (!kinds[key] || screenName.length === 0)
             return
+        const placedPages = Object.assign({}, pages)
+        placedPages[key] = page ?? ""
+        pages = placedPages
         const layer = kinds[key].layer
         const isKeeping = kinds[key].keepsTaskbar === true
         const isSwap = !isKeeping && stack.some(other => other !== key && screens[other] === screenName && phaseOf(other, screenName) !== "idle" && kinds[other].layer <= layer)

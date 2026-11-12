@@ -28,12 +28,14 @@ function roll(random, range) {
     const blobs = []
     for (let index = 0; index < count; index++) {
         blobs.push({
-            along: between(random, range.band, 1 - range.band),
+            side: random() < 0.5 ? -1 : 1,
+            along: random(),
             launch: between(random, 0, range.launch),
             flight: range.flight * around(random, range.spread),
             reach: range.reach * around(random, range.spread),
             size: range.size * around(random, range.sizeSpread),
-            lift: range.lift * (2 * random() - 1)
+            drift: range.drift * (2 * random() - 1),
+            shrink: range.shrink
         })
     }
     return {
@@ -51,14 +53,13 @@ function roll(random, range) {
     }
 }
 
-function blobAt(blob, impact) {
-    const flown = (impact - blob.launch) / Math.max(0.001, blob.flight)
+function blobAt(blob, clock) {
+    const flown = (clock - blob.launch) / Math.max(0.001, blob.flight)
     if (flown <= 0 || flown >= 1)
-        return { out: 0, rise: 0, size: 0 }
-    const arc = Math.sin(Math.PI * flown)
+        return { out: 0, drift: 0, size: 0 }
     return {
-        out: blob.reach * arc,
-        rise: blob.lift * Geometry.smooth(flown),
-        size: blob.size * Math.sqrt(arc) * (1 - flown * flown)
+        out: blob.reach * Math.sin(Math.PI * flown),
+        drift: blob.drift * Geometry.smooth(flown),
+        size: blob.size * (1 - blob.shrink * flown)
     }
 }

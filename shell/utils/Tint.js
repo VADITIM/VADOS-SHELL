@@ -69,3 +69,10 @@ function dominant(pixels, look) {
     shade.lightness = Math.max(look.lightness, shade.lightness)
     return hexOf(colorOf(shade))
 }
+
+function nudge(hex, amount) {
+    const color = Qt.color(hex)
+    const shade = shadeOf(color.r, color.g, color.b)
+    shade.lightness = Math.max(0, Math.min(1, shade.lightness + (shade.lightness > 0.5 ? -amount : amount)))
+    return hexOf(colorOf(shade))
+}

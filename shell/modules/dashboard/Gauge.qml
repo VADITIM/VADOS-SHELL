@@ -16,9 +16,7 @@ Item {
     property color usageColor: Appearance.color.accent
     property string readout: ""
     property string caption: ""
-    property point readoutAt: Qt.point(0, 0)
     property real nameTilt: 0
-    property bool isMirrored: false
     property bool hasBar: false
     property real barUsed: 0
     property real barTotal: 0
@@ -161,39 +159,6 @@ Item {
                 color: Appearance.color.text
                 pixelSize: gauge.look.name
                 letterSpacing: Appearance.font.labelSpacing
-            }
-        }
-
-        Item {
-            x: gauge.isMirrored ? gauge.width - gauge.readoutAt.x : gauge.readoutAt.x
-            y: gauge.readoutAt.y
-
-            Roll {
-                id: readoutText
-                x: gauge.isMirrored ? -width : 0
-                target: gauge.readout
-                isShown: gauge.isHovered
-                holdsWidth: true
-                characterInterval: Motion.type.quick
-                untypeInterval: Motion.type.quickUntype
-                color: Appearance.color.text
-                font.family: Appearance.font.mono
-                font.pixelSize: gauge.look.readout
-                font.bold: true
-            }
-
-            Roll {
-                x: gauge.isMirrored ? -width : 0
-                y: readoutText.height + gauge.look.readoutGap
-                target: gauge.caption
-                isShown: gauge.isHovered
-                holdsWidth: true
-                characterInterval: Motion.type.quick
-                untypeInterval: Motion.type.quickUntype
-                color: Appearance.color.text
-                font.family: Appearance.font.mono
-                font.pixelSize: gauge.look.caption
-                font.bold: true
             }
         }
     }

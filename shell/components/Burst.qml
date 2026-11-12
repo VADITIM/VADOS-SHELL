@@ -51,6 +51,10 @@ Item {
     property bool startsFromCircle: false
     property bool isProcedural: Motion.burst.isProcedural
     property var variation: Variation.identity()
+    property real scatter: 0
+    property var blobSpots: []
+    property real ball: look.ball
+    property real leaveBall: look.leaveBall
 
     readonly property var look: Appearance.burst
     readonly property var pace: Motion.burst
@@ -69,7 +73,7 @@ Item {
     readonly property real halfHeight: formHeight / 2
     readonly property real farX: rootX + formWidth
     readonly property real farDistance: farX - seedX
-    readonly property real startReach: look.ball * (1 + pace.inflate) / 2
+    readonly property real startReach: ball * (1 + pace.inflate) / 2
     readonly property real opening: Geometry.clampUnit((spread - pace.impactShare) / (1 - pace.impactShare))
     readonly property real widthShare: Liquid.rise(character, opening * openTime)
     readonly property real heightShare: Liquid.rise(character, opening * pace.heightLead * openTime)
@@ -94,7 +98,7 @@ Item {
     readonly property var closed: ({ x: seedX, y: seedY, width: 0, height: 0, left: 0, right: 0 })
     readonly property var form: !isActive ? closed : isLeaving ? leaveForm(exit, leaveFrom) : enterForm(spread)
     readonly property real formRight: form.x + form.width / 2
-    readonly property real restSize: isSwapped ? look.ball : look.leaveBall
+    readonly property real restSize: isSwapped ? ball : leaveBall
     readonly property bool isHandedOff: (shouldHandOff || isSwapped) && !isReleasing && isLeaving && exit >= pace.leaveShrink
     readonly property bool hasReleased: isReleasing && release >= 1
     readonly property real releasedArea: isReleasing && totalArea > 0 ? flights.reduce((sum, flight) => sum + flight.area * releaseTravelOf(flight), 0) / totalArea : 0
@@ -132,6 +136,7 @@ Item {
     property var bodyOutline: []
     property var bodyPieces: []
     property var crests: [[], []]
+    property var crestPieces: [[], []]
     property real farFront: 0
     readonly property var visitor: isActive && isLeaving && !isSwapped ? ({ x: form.x, y: form.y, width: form.width, height: form.height, isHandedOff: isHandedOff, hasReleased: hasReleased, isReleasing: isReleasing, release: release, arrivals: flights.map(flight => ({ y: flight.y, arrival: arrivalOf(flight) })) }) : null
 
@@ -166,13 +171,13 @@ Item {
 
     function enterForm(share) {
         if (share <= 0) {
-            const size = look.ball * Math.sqrt(arrived)
+            const size = ball * Math.sqrt(arrived)
             const corner = size * (1 - Math.abs(gulp)) / 2
             return { x: seedX, y: seedY, width: size * (1 + gulp), height: size * (1 - gulp), left: corner, right: corner }
         }
         if (share < pace.impactShare) {
             const charge = share / pace.impactShare
-            const size = look.ball * (1 + pace.inflate * charge)
+            const size = ball * (1 + pace.inflate * charge)
             const squash = pace.squash * Math.sin(Math.PI * charge)
             const narrow = size * (1 - squash) / 2
             return { x: seedX, y: seedY, width: size * (1 + squash), height: size * (1 - squash), left: narrow, right: narrow }
@@ -485,24 +490,25 @@ Item {
             bodyOutline = []
             bodyPieces = []
             crests = [[], []]
+            crestPieces = [[], []]
+            blobSpots = []
             return
         }
         topTrack = wallTrack(-1)
         bottomTrack = wallTrack(1)
         bodyOutline = hasWall ? roundedOutline(edgePoints(-1).concat(edgePoints(1).reverse())) : []
-        if (isSplit) {
-            const cut = cutLines()
-            bodyPieces = Geometry.splitAlong(bodyOutline, cut.upper, cut.lower)
-        } else {
-            bodyPieces = [bodyOutline]
-        }
+        const cut = isSplit ? cutLines() : null
+        bodyPieces = cut ? Geometry.splitAlong(bodyOutline, cut.upper, cut.lower) : [bodyOutline]
         crests = [crestPath(-1), crestPath(1)]
+        crestPieces = crests.map(crest => cut && crest.length >= 3 ? Geometry.splitAlong(crest, cut.upper, cut.lower) : [crest])
+        blobSpots = variation.blobs.length > 0 && isSplashing ? blobPlaces() : []
     }
 
     function cutLines() {
         const context = traceContext()
         const left = form.x - form.width / 2
-        const right = Math.max(left + 1, wallXAt(splitCenter))
+        const reached = Geometry.farthestCrossing(bodyOutline, splitCenter)
+        const right = Math.max(left + 1, isFinite(reached) ? reached : wallXAt(splitCenter))
         const length = right - left
         const middle = left + length / 2
         const half = splitGap * splitShare / 2
@@ -510,7 +516,8 @@ Item {
         const pinch = Geometry.smooth(Geometry.clampUnit(closeness / Motion.liquid.neck.merge))
         const neckWidth = Geometry.mix(look.splitNeck, 1, closeness) * length / 2
         const height = crestHeight() * sideScale(-1)
-        const head = cutHead(right, context)
+        const reach = half * look.cutReach / (look.crest * variation.crest)
+        const head = cutHead(left, right, context)
         const count = Geometry.samplesFor(length, look.troughStep)
         const upper = []
         const lower = []
@@ -518,7 +525,7 @@ Item {
             const x = left + length * sample / count
             const away = Math.abs(x - middle) / neckWidth
             const neck = away >= 1 ? 0 : Math.pow(Math.cos(Math.PI * away / 2), 2)
-            const wave = cutWave(x - head, height, context) * freeShare(Qt.point(x, splitCenter), context)
+            const wave = cutWave(x - head, height, context) * reach * freeShare(Qt.point(x, splitCenter), context) * seamShare(right - x, context)
             const gap = Math.max(0, half * (1 - pinch * neck) - wave)
             upper.push(Qt.point(x, splitCenter - gap))
             lower.push(Qt.point(x, splitCenter + gap))
@@ -526,33 +533,13 @@ Item {
         return { upper: upper, lower: lower }
     }
 
-    function cutHead(right, context) {
+    function cutHead(left, right, context) {
         const track = topTrack
-        if (!track)
+        if (!track || track.total <= 0)
             return -Infinity
-        const head = waveHead(track.total)
-        let passed = 0
-        for (const segment of track.segments) {
-            const end = passed + segment.length
-            const last = basePoint(segment, -1, segment.length, context)
-            if (head <= end && last.x < right)
-                return basePoint(segment, -1, head - passed, context).x
-            if (last.x >= right) {
-                let low = 0
-                let high = segment.length
-                for (let step = 0; step < look.cutSearch; step++) {
-                    const middle = (low + high) / 2
-                    if (basePoint(segment, -1, middle, context).x < right)
-                        low = middle
-                    else
-                        high = middle
-                }
-                const reach = passed + high
-                return head <= reach ? basePoint(segment, -1, head - passed, context).x : right + head - reach
-            }
-            passed = end
-        }
-        return right + head - passed
+        const margin = context.crestLength / 2 + context.troughLength
+        const share = waveHead(track.total) / track.total
+        return left - margin + (right - left + margin * 2) * share
     }
 
     function cutWave(distance, height, context) {
@@ -688,36 +675,59 @@ Item {
         }
     }
 
-    function edgeXAt(y) {
-        if (wallOutline.length > 0)
-            return wallXAt(y)
-        const half = form.height / 2
-        const radius = Math.min(form.right, half)
-        const away = Math.abs(y - form.y) - (half - radius)
-        return away <= 0 ? formRight : formRight - radius + Math.sqrt(Math.max(0, radius * radius - away * away))
+    function freeStretches(track, side, context) {
+        const stretches = []
+        let passed = 0
+        for (const segment of track.segments) {
+            const middle = basePoint(segment, side, segment.length / 2, context)
+            const isFree = freeShare(middle, context) >= 1 && middle.x > rootLobe.neck
+            if (isFree && segment.length > 0)
+                stretches.push({ segment: segment, from: passed, length: segment.length })
+            passed += segment.length
+        }
+        return stretches
     }
 
-    function blobForm(blob) {
-        const flight = Variation.blobAt(blob, impact)
-        if (flight.size <= 0)
-            return { x: 0, y: 0, size: 0 }
-        const y = formTop + form.height * blob.along
-        return { x: edgeXAt(y) + flight.out, y: y + flight.rise, size: flight.size }
+    function blobPlaces() {
+        const context = traceContext()
+        const stretches = { "-1": freeStretches(topTrack, -1, context), "1": freeStretches(bottomTrack, 1, context) }
+        return variation.blobs.map(blob => {
+            const flight = Variation.blobAt(blob, scatter)
+            const pieces = stretches[blob.side < 0 ? "-1" : "1"]
+            const total = pieces.reduce((sum, piece) => sum + piece.length, 0)
+            if (flight.size <= 0 || total <= 0)
+                return { x: 0, y: 0, size: 0 }
+            const track = trackOf(blob.side)
+            let left = total * blob.along
+            let piece = pieces[pieces.length - 1]
+            for (const candidate of pieces) {
+                if (left <= candidate.length) {
+                    piece = candidate
+                    break
+                }
+                left -= candidate.length
+            }
+            const remaining = Math.min(left, piece.segment.length)
+            const base = basePoint(piece.segment, blob.side, remaining, context)
+            const normal = normalAt(piece.segment, blob.side, remaining, track.total - piece.from - remaining, context)
+            const point = Qt.point(base.x + normal.x * flight.out - normal.y * flight.drift, base.y + normal.y * flight.out + normal.x * flight.drift)
+            return { x: point.x, y: point.y, size: flight.size * freeShare(point, context) }
+        })
     }
 
     function rangeOf() {
         return {
             spread: pace.variance,
+            shrink: pace.blobShrink,
             sideSpread: pace.sideVariance,
             blobsLeast: pace.blobsLeast,
             blobsMost: pace.blobsMost,
             launch: pace.blobLaunch,
             flight: pace.blobFlight,
-            band: look.blobBand,
             reach: look.blobReach,
             size: look.blob,
             sizeSpread: look.blobVariance,
-            lift: look.blobLift
+            drift: look.blobDrift
         }
     }
 
@@ -755,7 +765,8 @@ Item {
         if (hasWall && wallOutline.length > 0) {
             const corner = index === 0 ? wallOutline[0] : wallOutline[wallOutline.length - 1]
             const reach = look.cornerReach * arc * Math.SQRT1_2
-            return { x: corner.x + reach, y: corner.y + side * reach, size: look.cornerSplash * arc }
+            const free = freeShare(Qt.point(corner.x + reach, corner.y + side * reach), traceContext())
+            return { x: corner.x + reach, y: corner.y + side * reach, size: look.cornerSplash * arc * free }
         }
         const offset = rightCorner * (1 - Math.SQRT1_2) - look.cornerReach * arc * Math.SQRT1_2
         return { x: formRight - offset, y: seedY + side * (form.height / 2 - offset), size: look.cornerSplash * arc }
@@ -776,6 +787,7 @@ Item {
         merge = startsFromCircle ? 1 : 0
         spread = 0
         impact = 0
+        scatter = 0
         exit = 0
         release = 0
         split = 0
@@ -797,6 +809,7 @@ Item {
         spread = leaveSpread
         impact = leaveImpact
         split = leaveSplit
+        scatter = 1
         resuming.restart()
     }
 
@@ -841,6 +854,7 @@ Item {
             spread = 1
             impact = 1
             split = 1
+            scatter = 1
         }
         exit = phase === "active" ? 0 : 1
         release = phase === "idle" && isReleasing ? 1 : 0
@@ -872,6 +886,7 @@ Item {
     onIsShownChanged: lifecycle.send(isShown ? "show" : "hide")
     onFormChanged: queueTrace()
     onImpactChanged: queueTrace()
+    onScatterChanged: queueTrace()
     onHasTracksChanged: queueTrace()
     onWallChanged: queueTrace()
     onSplitShareChanged: queueTrace()
@@ -979,7 +994,7 @@ Item {
                 fillRule: ShapePath.WindingFill
                 strokeColor: "transparent"
                 strokeWidth: 0
-                PathPolyline { path: burst.crests[modelData < 0 ? 0 : 1] }
+                PathMultiline { paths: burst.crestPieces[modelData < 0 ? 0 : 1] }
             }
         }
     }
@@ -1008,11 +1023,11 @@ Item {
     }
 
     Repeater {
-        model: burst.variation.blobs
+        model: burst.variation.blobs.length
 
         LiquidShape {
-            required property var modelData
-            readonly property var blob: burst.blobForm(modelData)
+            required property int index
+            readonly property var blob: burst.blobSpots[index] ?? ({ x: 0, y: 0, size: 0 })
             visible: burst.isSplashing && blob.size > 0.5
             width: blob.size
             height: blob.size
@@ -1058,6 +1073,15 @@ Item {
                     easing.type: Easing.OutBack
                 }
             }
+            SequentialAnimation {
+                PauseAnimation { duration: Motion.pace(Math.round(Motion.burst.spread * burst.meetShare)) }
+                NumberAnimation {
+                    target: burst
+                    property: "scatter"
+                    to: 1
+                    duration: Motion.pace(burst.variation.blobs.length > 0 ? Motion.burst.scatter : 0)
+                }
+            }
         }
         ScriptAction { script: burst.lifecycle.send("entered") }
     }
@@ -1100,6 +1124,7 @@ Item {
                 duration: Motion.pace(Math.round(Motion.burst.split * (1 - burst.leaveSplit)))
                 easing.type: Easing.OutCubic
             }
+
         }
         ScriptAction { script: burst.lifecycle.send("entered") }
     }

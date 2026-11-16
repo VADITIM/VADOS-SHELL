@@ -2,8 +2,9 @@
 
 Newest version first. The version and its number are set by the user on each push.
 
-## Unreleased
+## 0.1.2
 
+- App icon (`design/app-icon/icon.svg`): the desktop, a dotted canvas with two windows and the taskbar edge with its idle pills, on the V/AS squircle.
 - Notifications: the wave burst now runs along the gap between the two pills for the whole burst, in step with the outer wave: it narrows and widens the gap as it passes instead of pinching it into points, the gap's lines reach the outline at the wall, and the crests no longer cover the gap with straight edges.
 - Search: the profile picture left the best-match circle, which now always shows the best match (the most recent app while the field is empty). The profile is a round liquid blob of its own: a droplet shoots out of the wall near the top of the screen and bursts into a large blob with a ring of splashing droplets and a swell, then holds still, with the profile picture inside, the user's name below it (click it, or the picture, to open settings on USER) and larger power options (lock, suspend, restart, shut down) stacked top to bottom close on its left. The space to its right is kept free for the AI agent widget. Restart and shut down ask for a second press. Arrows and Tab reach it from the keyboard.
 - Search: the favourites strip is gone; favourite apps now lead the list while the field is empty, marked by their dot. List names are set in a sans font.

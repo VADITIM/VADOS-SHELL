@@ -25,7 +25,11 @@ Item {
 
     signal activated()
     signal menuRequested(point at)
+    readonly property bool isRaised: area.containsMouse || pillArea.containsMouse || isSelected
+    readonly property real raiseGap: Math.ceil(width / 2 * Math.max(0, Motion.press.raise - 1))
+
     signal pointed()
+    signal released()
 
     width: look.found
     height: look.found
@@ -60,6 +64,7 @@ Item {
         Press {
             target: frame
             isPressed: area.pressed
+            isRaised: area.containsMouse || card.isSelected
             depth: Motion.press.card
         }
 
@@ -137,9 +142,9 @@ Item {
         height: card.look.nameHeight
 
         Rectangle {
-            x: card.isMirrored ? card.nameWidth : card.width / 2
+            x: card.isMirrored ? card.nameWidth : card.width / 2 + card.raiseGap
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(0, tag.reach - card.width / 2)
+            width: Math.max(0, tag.reach - card.width / 2 - card.raiseGap)
             height: card.look.tether
             opacity: Math.max(0, Math.min(1, card.bloom))
             color: card.isSelected ? Appearance.color.accent : Appearance.color.hairline
@@ -153,6 +158,12 @@ Item {
             height: card.nameThickness
             visible: width > 0.5
             clip: true
+            transformOrigin: card.isMirrored ? Item.Right : Item.Left
+
+            Press {
+                target: pill
+                isRaised: card.isRaised
+            }
 
             Text {
                 id: name
@@ -174,11 +185,13 @@ Item {
             }
 
             MouseArea {
+                id: pillArea
                 anchors.fill: parent
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
                 onPositionChanged: card.pointed()
+                onContainsMouseChanged: if (!containsMouse) card.released()
                 onClicked: mouse => mouse.button === Qt.RightButton ? card.menuRequested(mapToItem(null, mouse.x, mouse.y)) : card.activated()
             }
         }
@@ -192,6 +205,7 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onPositionChanged: card.pointed()
+        onContainsMouseChanged: if (!containsMouse) card.released()
         onClicked: mouse => mouse.button === Qt.RightButton ? card.menuRequested(mapToItem(null, mouse.x, mouse.y)) : card.activated()
     }
 }

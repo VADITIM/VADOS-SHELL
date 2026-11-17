@@ -28,6 +28,7 @@ Item {
     property string picture: ""
     property int selected: -1
     property string armedAction: ""
+    property bool isHurried: false
 
     readonly property var look: Appearance.search.profile
     readonly property var actions: [
@@ -38,17 +39,25 @@ Item {
     ]
     readonly property int count: actions.length + 1
     readonly property bool isLanded: isComing && arrival.isLanded
-    readonly property real blobFlight: flightShare()
-    readonly property real restSize: isOut ? heldSize * flightScale(blobFlight) : isComing ? Geometry.mix(look.enterFrom, look.blob, arrival.share) : 0
+    readonly property real rate: isHurried ? Motion.search.profileHurry : 1
+    readonly property real elapsed: isOut ? thrower.share * thrower.span * rate : arrival.share * arrival.span
+    readonly property real blobFlight: isOut ? shareAt(elapsed) : 0
+    readonly property real restSize: isOut ? heldSize * flightScale(blobFlight) : isComing ? Geometry.mix(look.enterFrom, look.blob, shareAt(elapsed)) : 0
     readonly property real blobSize: restSize * (1 + swell.swell)
     readonly property bool isActive: isComing || (isOut && !thrower.isLanded)
-    readonly property point blobPoint: isOut ? flightPoint(heldPoint.x, heldPoint.y, blobFlight) : Geometry.arcAt(Qt.point(homeX, homeY), Qt.point(riseX, riseY), Qt.point(centerX, centerY), arrival.share)
+    readonly property bool isFlying: isOut ? !thrower.isLanded : isComing && arrival.share < 1
+    readonly property point blobPoint: pointAt(elapsed)
+    readonly property point trailPoint: pointAt(Math.max(0, elapsed - Motion.search.profileTrail))
+    readonly property real speed: Math.hypot(blobPoint.x - trailPoint.x, blobPoint.y - trailPoint.y) / Motion.search.profileTrail
+    readonly property real heading: Geometry.headingOf(trailPoint.x, trailPoint.y, blobPoint.x, blobPoint.y)
+    readonly property real stretch: isFlying ? Geometry.stretchOf(speed, look.stretch, look.stretchLimit) : -look.squash * swell.swell
     readonly property int gatherSpan: Motion.search.profileGather + Motion.search.profileThrowStagger * (actions.length - 1)
     readonly property real splash: isLanded ? Geometry.clampUnit(swell.time / Motion.search.profileSplash) : 1
     readonly property real columnHeight: actions.length * look.button + (actions.length - 1) * look.buttonGap
 
     signal profileRequested()
     signal pointed(int index)
+    signal released(int index)
 
     function edgeX(localX, itemWidth) {
         return isMirrored ? width - localX - itemWidth : localX
@@ -57,15 +66,21 @@ Item {
     function pieceShare(order) {
         if (!isOut)
             return 0
-        const elapsed = thrower.share * thrower.span - order * Motion.search.profileThrowStagger
-        return Geometry.smooth(Geometry.clampUnit(elapsed / Motion.search.profileGather))
+        return Geometry.smooth(Geometry.clampUnit((elapsed - order * Motion.search.profileThrowStagger) / Motion.search.profileGather))
     }
 
-    function flightShare() {
-        if (!isOut)
-            return 0
-        const local = Geometry.clampUnit(thrower.share * thrower.span / Motion.search.profileThrow)
-        return local * local
+    function shareAt(time) {
+        if (isOut) {
+            const local = Geometry.clampUnit(time / Motion.search.profileThrow)
+            return local * local
+        }
+        return Geometry.surge(Geometry.clampUnit(time / Motion.search.profileEnter), Motion.search.profileSurge, Motion.search.profileTurn)
+    }
+
+    function pointAt(time) {
+        if (isOut)
+            return flightPoint(heldPoint.x, heldPoint.y, shareAt(time))
+        return Geometry.arcAt(Qt.point(homeX, homeY), Qt.point(riseX, riseY), Qt.point(centerX, centerY), shareAt(time))
     }
 
     function flightScale(share) {
@@ -84,6 +99,7 @@ Item {
 
     function activate(index) {
         if (index === 0) {
+            isHurried = true
             profileRequested()
             return
         }
@@ -115,6 +131,7 @@ Item {
     onIsWantedChanged: {
         armedAction = ""
         if (isWanted) {
+            isHurried = false
             isOut = false
             isComing = true
             return
@@ -135,17 +152,18 @@ Item {
     LiquidShape {
         parent: profile.liquidParent
         visible: profile.isActive
-        width: profile.blobSize
-        height: profile.blobSize
+        width: profile.blobSize * (1 + profile.stretch)
+        height: profile.blobSize / (1 + profile.stretch)
         x: profile.blobPoint.x - width / 2
         y: profile.blobPoint.y - height / 2
+        rotation: profile.heading * 180 / Math.PI
     }
 
     Throw {
         id: thrower
         label: "profile throw"
         isThrown: profile.isOut
-        span: Math.max(profile.gatherSpan, Motion.search.profileThrow)
+        span: Math.round(Math.max(profile.gatherSpan, Motion.search.profileThrow) / profile.rate)
         easing: Easing.Linear
     }
 
@@ -154,8 +172,7 @@ Item {
         label: "profile arrival"
         isThrown: profile.isComing
         span: Motion.search.profileEnter
-        easing: Easing.OutBack
-        overshoot: Motion.search.profileEnterBounce
+        easing: Easing.Linear
     }
 
     Gulp {
@@ -207,6 +224,7 @@ Item {
             Press {
                 target: avatar
                 isPressed: avatarArea.pressed
+                isRaised: avatarArea.containsMouse || profile.selected === 0
                 depth: Motion.press.card
             }
 
@@ -269,6 +287,7 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onPositionChanged: profile.pointed(0)
+            onContainsMouseChanged: if (!containsMouse) profile.released(0)
             onClicked: profile.activate(0)
         }
     }
@@ -301,6 +320,7 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onPositionChanged: profile.pointed(0)
+            onContainsMouseChanged: if (!containsMouse) profile.released(0)
             onClicked: profile.activate(0)
         }
     }
@@ -347,6 +367,7 @@ Item {
                 Press {
                     target: face
                     isPressed: buttonArea.pressed
+                    isRaised: buttonArea.containsMouse || button.isSelected
                     depth: Motion.press.button
                 }
 
@@ -382,6 +403,7 @@ Item {
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onPositionChanged: profile.pointed(button.index + 1)
+                onContainsMouseChanged: if (!containsMouse) profile.released(button.index + 1)
                 onClicked: profile.activate(button.index + 1)
             }
         }

@@ -1,0 +1,3 @@
+module qs.modules.framedebug
+FrameHud 1.0 FrameHud.qml
+FrameStage 1.0 FrameStage.qml

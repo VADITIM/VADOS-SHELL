@@ -9,10 +9,18 @@ Item {
     property bool isOpen: false
     property bool isShown: false
     property bool isSettled: false
+    property bool isNamingHidden: false
+    readonly property bool isPrompting: isOpen && (Network.prompt !== null || isNamingHidden || (Network.joinResult === "wrong" && Network.joining.length > 0))
+    readonly property bool isTyping: isPrompting
+    readonly property string status: Network.joining.length > 0 && Network.prompt === null ? "JOINING " + Network.joining.toUpperCase() : Network.joinMessage.length > 0 && !isPrompting ? Network.joinMessage : ""
 
-    signal closeRequested()
-
-    onIsOpenChanged: Network.isWatching = isOpen
+    onIsOpenChanged: {
+        Network.isWatching = isOpen
+        if (!isOpen) {
+            isNamingHidden = false
+            Network.settleJoin()
+        }
+    }
     onIsShownChanged: {
         if (isShown)
             settle.restart()
@@ -54,9 +62,9 @@ Item {
             isShown: page.isShown
             characterInterval: Motion.type.quick
             untypeInterval: Motion.type.quickUntype
-            target: !Network.isEnabled ? "WIFI OFF" : Network.isConnected ? Network.ssid.toUpperCase() : "NO NETWORK"
-            color: Network.isConnected ? Appearance.color.text : Appearance.color.textMuted
-            font.family: Appearance.font.mono
+            target: page.status.length > 0 ? page.status : !Network.isEnabled ? "WIFI OFF" : Network.isConnected ? Network.ssid.toUpperCase() : "NO NETWORK"
+            color: Network.joinResult.length > 0 && Network.joinResult !== "connected" && page.status.length > 0 ? Appearance.color.danger : Network.isConnected || page.status.length > 0 ? Appearance.color.text : Appearance.color.textMuted
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.font.label
             font.letterSpacing: Appearance.font.labelSpacing
             font.bold: true
@@ -67,6 +75,20 @@ Item {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             spacing: 6
+
+            Turn {
+                visible: Network.isEnabled
+                isShown: page.isShown && Network.isEnabled && !page.isPrompting
+                enterDelay: Motion.pill.elementStagger
+                enterDuration: Motion.stateDuration
+                enterEasing: Easing.OutBack
+                leaveWindow: 0
+
+                GlyphButton {
+                    label: "OTHER"
+                    onClicked: page.isNamingHidden = true
+                }
+            }
 
             Turn {
                 isShown: page.isShown
@@ -80,19 +102,6 @@ Item {
                     onClicked: Network.toggle()
                 }
             }
-
-            Turn {
-                isShown: page.isShown
-                enterDelay: Motion.pill.elementStagger * 2
-                enterDuration: Motion.stateDuration
-                enterEasing: Easing.OutBack
-                leaveWindow: 0
-
-                GlyphButton {
-                    glyphName: "close"
-                    onClicked: page.closeRequested()
-                }
-            }
         }
     }
 
@@ -102,6 +111,7 @@ Item {
         width: parent.width
         height: parent.height - y
         clip: true
+        visible: !page.isPrompting
         boundsBehavior: Flickable.StopAtBounds
         model: Network.isEnabled ? Network.networks : []
 
@@ -116,14 +126,39 @@ Item {
     TypedText {
         x: 4
         y: list.y + 12
-        isShown: page.isShown && Network.isEnabled && Network.networks.length === 0
+        isShown: page.isShown && Network.isEnabled && Network.networks.length === 0 && !page.isPrompting
         characterInterval: Motion.type.quick
         untypeInterval: Motion.type.quickUntype
         target: "SCANNING"
         color: Appearance.color.textMuted
-        font.family: Appearance.font.mono
+        font.family: Appearance.font.sans
         font.pixelSize: Appearance.font.label
         font.letterSpacing: Appearance.font.labelSpacing
         font.bold: true
+    }
+
+    Loader {
+        y: list.y
+        width: parent.width
+        height: parent.height - y
+        active: page.isPrompting
+
+        sourceComponent: JoinPrompt {
+            ask: Network.prompt !== null ? Network.prompt.ask : page.isNamingHidden ? "name" : Network.asked
+            ssid: Network.prompt !== null ? Network.prompt.ssid : Network.joining
+            error: Network.joinResult === "wrong" ? Network.joinMessage : ""
+            isShown: page.isShown
+            onSubmitted: values => {
+                if (ask === "name") {
+                    page.isNamingHidden = false
+                    Network.connectTo(values[0], true)
+                } else
+                    Network.answer(values)
+            }
+            onCanceled: {
+                page.isNamingHidden = false
+                Network.cancelJoin()
+            }
+        }
     }
 }

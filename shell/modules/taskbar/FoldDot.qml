@@ -12,7 +12,7 @@ Item {
     readonly property string idleKey: "fold"
     readonly property real size: Appearance.taskbar.foldDot
     readonly property real circleX: (Appearance.taskbar.thickness - size) / 2
-    readonly property bool isShown: host.isRevealed && !host.isEaten && host.isCompact && room > 0.5
+    readonly property bool isShown: host.isRevealed && !host.isEaten && !host.swallows(origin.y + y, origin.y + y + height) && host.isCompact && room > 0.5
     readonly property real shellWidth: size + swell
     readonly property real reachRight: origin.x + x + circleX + shellWidth * popScale
     readonly property real popScale: mutate.pop

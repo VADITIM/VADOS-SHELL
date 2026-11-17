@@ -13,12 +13,14 @@ FocusScope {
     property string selectedKey: ""
     property string menuKey: ""
     property bool hasIcons: false
+    property string query: ""
+    property bool isTyping: false
     readonly property var look: Appearance.dashboard.task
     readonly property var columns: ProcessTable.columns[tab]
     readonly property var sort: sorts[tab]
     readonly property bool isHistory: tab === "history"
     readonly property var source: isHistory ? Processes.historyRows : Processes.groups
-    readonly property var rows: ProcessTable.sorted(source, sort)
+    readonly property var rows: ProcessTable.sorted(ProcessTable.matching(source, query), sort)
     readonly property real listWidth: width - look.padding * 2
     readonly property real nameWidth: listWidth - (columns.length - 1) * look.cell
     readonly property var menuRow: rows.find(row => row.key === menuKey) ?? null
@@ -45,6 +47,12 @@ FocusScope {
         }
 
     signal iconsToggled()
+    signal typingRequested(string text)
+
+    function clearQuery() {
+        query = ""
+        forceActiveFocus()
+    }
 
     function refill() {
         ProcessTable.sync(listModel, rows)
@@ -109,16 +117,27 @@ FocusScope {
     onRowsChanged: if (isShown) refill()
     onIsShownChanged: {
         closeMenu()
-        if (isShown)
+        if (isShown) {
             refill()
+            return
+        }
+        query = ""
+        focus = true
     }
 
     Keys.onPressed: event => {
         if (!isShown)
             return
         const isMenuOpen = menuKey.length > 0
+        const isPrintable = event.text.length > 0 && event.text.charCodeAt(0) >= 32 && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
         if (event.key === Qt.Key_Escape && isMenuOpen) {
             closeMenu()
+        } else if (event.key === Qt.Key_Escape && (isTyping || query.length > 0)) {
+            clearQuery()
+        } else if (isTyping && (event.key === Qt.Key_Left || event.key === Qt.Key_Right || event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace || isPrintable)) {
+            return
+        } else if (!isMenuOpen && isPrintable) {
+            typingRequested(event.text)
         } else if (isMenuOpen && (event.key === Qt.Key_Up || event.key === Qt.Key_Down)) {
             menu.moveHighlight(event.key === Qt.Key_Up ? -1 : 1)
         } else if (isMenuOpen && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter)) {

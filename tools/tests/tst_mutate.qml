@@ -6,6 +6,13 @@ import qs.components
 TestCase {
     name: "Mutate"
 
+    Turn {
+        id: slung
+        width: 20
+        height: 20
+        isSlung: true
+    }
+
     Mutate {
         id: first
         isShown: true
@@ -92,5 +99,13 @@ TestCase {
         plain.hasArrived = true
         compare(plain.pop, 1)
         compare(plain.isInnerShown, true)
+    }
+
+    function test_aSlungTurnReshownInItsOvershootSettlesBackToOne() {
+        slung.isShown = true
+        tryVerify(() => slung.presence > 1, 2000)
+        slung.isShown = false
+        slung.isShown = true
+        tryCompare(slung, "presence", 1, 2000)
     }
 }

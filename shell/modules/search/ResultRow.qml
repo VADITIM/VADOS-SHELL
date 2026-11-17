@@ -7,6 +7,7 @@ Item {
 
     property var app: null
     property bool isSelected: false
+    property bool isBest: false
     property bool isFavorite: false
     property bool isHidden: false
     property bool isShown: false
@@ -16,10 +17,12 @@ Item {
     property real fade: 1
 
     readonly property var look: Appearance.search
+    readonly property real raiseRoom: Math.max(look.rowInset, Math.ceil(Math.max(0, Motion.press.raise - 1) * width / 2))
 
     signal activated()
     signal menuRequested(point at)
     signal pointed()
+    signal released()
 
     height: look.row
     opacity: fade
@@ -28,9 +31,9 @@ Item {
 
     Turn {
         id: face
-        x: row.isMirrored ? row.width - width : 0
+        x: row.isMirrored ? row.width - width - row.raiseRoom : row.raiseRoom
         y: row.look.rowGap / 2
-        width: Math.max(height, Math.min(row.width, row.room))
+        width: Math.max(height, Math.min(row.width - row.raiseRoom * 2, row.room - row.raiseRoom))
         height: row.height - row.look.rowGap
         isShown: row.isShown
         enterDelay: row.enterDelay
@@ -41,7 +44,7 @@ Item {
         Press {
             target: face
             isPressed: area.pressed
-            isRaised: row.isSelected
+            isRaised: row.isSelected || area.containsMouse
             depth: Motion.press.card
         }
 
@@ -74,7 +77,7 @@ Item {
             elide: Text.ElideRight
             opacity: Math.max(0, row.fade * 2 - 1)
             text: row.app?.name ?? ""
-            color: row.isSelected ? Appearance.color.accent : row.isHidden ? Appearance.color.textFaint : Appearance.color.textBody
+            color: row.isSelected || row.isBest ? Appearance.color.accent : row.isHidden ? Appearance.color.textFaint : Appearance.color.textBody
             font.family: Appearance.font.sans
             font.pixelSize: Appearance.font.body
 
@@ -106,6 +109,7 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
         onPositionChanged: row.pointed()
+        onContainsMouseChanged: if (!containsMouse) row.released()
         onClicked: mouse => mouse.button === Qt.RightButton ? row.menuRequested(mapToItem(null, mouse.x, mouse.y)) : row.activated()
     }
 }

@@ -47,6 +47,13 @@ TestCase {
         verify(entries[0].isPinned, "it keeps its pin")
     }
 
+    function test_longTextSpansTwoSlots() {
+        const long = text("word ".repeat(30), 1)
+        const layout = Clipboard.layoutOf([text("short", 1), long, text("tail", 2)], 3, 40)
+        compare(layout.spans.join(","), "1,2,1", "text longer than a line takes two slots, short text one")
+        compare(Clipboard.layoutOf([long], 3).spans[0], 1, "without a line length nothing wraps")
+    }
+
     function test_kindsAreRecognised() {
         compare(text("hello there").kind, "text")
         compare(text("https://example.org/page").kind, "url")
@@ -122,5 +129,18 @@ TestCase {
         compare(Clipboard.mimeOf(files), "text/uri-list")
         compare(Clipboard.mimeOf(Clipboard.entryOf({ kind: "image", path: "/cache/shot.jpg" }, 0)), "image/jpeg")
         compare(Clipboard.mimeOf(text("plain")), "text/plain;charset=utf-8")
+    }
+
+    function test_imagesSpanSeveralSlots() {
+        const image = Clipboard.entryOf({ kind: "image", path: "/cache/shot.png" }, 1)
+        const layout = Clipboard.layoutOf([text("first"), image, text("last")], 3)
+        compare(layout.starts, [0, 1, 4])
+        compare(layout.spans, [1, 3, 1])
+        compare(layout.total, 5)
+        compare(Clipboard.indexAtSlot(layout, 0), 0)
+        compare(Clipboard.indexAtSlot(layout, 3), 1, "every slot of an image belongs to it")
+        compare(Clipboard.indexAtSlot(layout, 4), 2)
+        compare(Clipboard.indexAtSlot(layout, 5), -1)
+        compare(Clipboard.indexAtSlot(layout, -1), -1)
     }
 }

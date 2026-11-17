@@ -76,7 +76,7 @@ Item {
             untypeInterval: Motion.type.quickUntype
             leaveBudget: Motion.activity.faceLeave
             color: Appearance.color.textMuted
-            font.family: Appearance.font.mono
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.activity.expanded.label
             font.letterSpacing: Appearance.font.labelSpacing
             font.bold: true
@@ -136,7 +136,7 @@ Item {
                         anchors.centerIn: parent
                         text: (cell.modelData.title ?? cell.modelData.id ?? "?").charAt(0).toUpperCase()
                         color: cellArea.containsMouse ? Appearance.color.ground : Appearance.color.text
-                        font.family: Appearance.font.mono
+                        font.family: Appearance.font.sans
                         font.pixelSize: Appearance.activity.expanded.label
                         font.bold: true
                     }

@@ -24,7 +24,9 @@ Item {
     }
     readonly property bool isShown: isRevealed && livingCount > 0
     readonly property real fullLength: Math.max(thickness, column.height + Appearance.taskbar.padding * 2)
-    readonly property real shellLength: thickness + (fullLength - thickness) * spread
+    property real heldLength: thickness
+    readonly property real reachLength: isShown ? fullLength : heldLength
+    readonly property real shellLength: thickness + (reachLength - thickness) * spread
     readonly property real shellTop: y + (height - shellLength * popScale) / 2
     readonly property real shellBottom: shellTop + shellLength * popScale
     readonly property real ghostExtent: {
@@ -134,6 +136,8 @@ Item {
         bottomSlide.restart()
     }
 
+    onFullLengthChanged: if (isShown) heldLength = fullLength
+    onIsShownChanged: if (isShown) heldLength = fullLength
     onActiveTaskChanged: slideWash()
     onWashTargetTopChanged: slideWash()
 
@@ -146,7 +150,7 @@ Item {
         enterDelay: taskPill.enterDelay
         isHolding: taskPill.host.isHoldingParts
         leaveDelay: Motion.pill.slingLead
-        leaveSpreadDuration: taskPill.host.isGathering || taskPill.host.isShrinking ? Motion.pill.gatherRetract : Motion.pill.leaveSpread
+        leaveSpreadDuration: taskPill.host.isGathering || taskPill.host.isShrinking ? Motion.pill.gatherRetract : Motion.pill.taskShrink
         onDeparted: taskPill.departed()
     }
 

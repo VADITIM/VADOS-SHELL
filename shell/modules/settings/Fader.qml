@@ -1,56 +1,115 @@
 import QtQuick
 import qs.config
 import qs.components
-import "../../utils/Geometry.js" as Geometry
 
 Column {
     id: fader
 
     property string label
     property real value: 0
+    property real resetValue: 0
     property real trackWidth: 220
 
     signal moved(real value)
 
     spacing: Appearance.unit.small
 
-    Piece {
-        Text {
-            text: fader.label + "  " + Math.round(fader.value * 100) + "%"
-            color: Appearance.color.textMuted
-            font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.label
-            font.letterSpacing: Appearance.font.labelSpacing
+    Item {
+        width: fader.trackWidth
+        height: Math.max(name.implicitHeight, reset.height)
+
+        Piece {
+            role: "label"
+
+            Text {
+                id: name
+                text: fader.label
+                color: Appearance.color.textBody
+                font.family: Appearance.font.sans
+                font.pixelSize: Appearance.font.label
+                font.letterSpacing: Appearance.font.labelSpacing
+            }
+        }
+
+        Piece {
+            id: reset
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+
+            Action {
+                label: "RESET"
+                tint: Appearance.color.danger
+                isAvailable: Math.abs(fader.value - fader.resetValue) > 0.001
+                onClicked: fader.moved(fader.resetValue)
+            }
+        }
+
+        Piece {
+            role: "label"
+            anchors.right: parent.right
+
+            Text {
+                text: Math.round(fader.value * 100) + "%"
+                color: Appearance.color.accent
+                font.family: Appearance.font.sans
+                font.pixelSize: Appearance.font.label
+                font.letterSpacing: Appearance.font.labelSpacing
+                font.bold: true
+            }
         }
     }
 
-    Piece {
-        Item {
-            width: fader.trackWidth
-            height: Appearance.settings.slider + Appearance.settings.knob
+    Item {
+        width: fader.trackWidth
+        height: Math.max(less.height, slider.implicitHeight)
 
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
+        Piece {
+            id: less
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+
+            Action {
+                label: "−"
+                tint: Appearance.color.textMuted
+                isAvailable: fader.value > 0
+                onClicked: slider.nudge(-1)
+            }
+        }
+
+        Piece {
+            anchors.left: less.right
+            anchors.right: more.left
+            anchors.leftMargin: Appearance.unit.small
+            anchors.rightMargin: Appearance.unit.small
+            anchors.verticalCenter: parent.verticalCenter
+
+            Slider {
+                id: slider
                 width: parent.width
-                height: Appearance.settings.slider
-                radius: height / 2
-                color: Appearance.color.wash
+                value: fader.value
+                look: ({
+                    track: Appearance.settings.slider,
+                    grab: Appearance.settings.sliderGrab,
+                    step: Appearance.settings.sliderStep
+                })
+                pace: ({
+                    settle: Motion.settings.sliderSettle,
+                    thicken: Motion.settings.trackHeld
+                })
+                onMoved: value => fader.moved(value)
             }
+        }
 
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: Appearance.settings.knob
-                height: Appearance.settings.knob
-                radius: height / 2
-                color: Appearance.color.accent
-                x: fader.value * (parent.width - width)
-            }
+        Piece {
+            id: more
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
 
-            Gesture {
-                anchors.fill: parent
-                isVertical: false
-                onMoved: travelX => fader.moved(Geometry.clampUnit((pressPoint.x + travelX) / width))
-                onTapped: mouse => fader.moved(Geometry.clampUnit(mouse.x / width))
+            Action {
+                label: "+"
+                tint: Appearance.color.textMuted
+                isAvailable: fader.value < 1
+                onClicked: slider.nudge(1)
             }
         }
     }

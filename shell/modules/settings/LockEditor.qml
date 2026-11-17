@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.components
 import "../../utils/Lock.js" as Lock
 
 Column {
@@ -8,23 +9,43 @@ Column {
     property var layout: []
     property string picked: ""
     property string wallpaper: ""
+    property int blankAfter: 60
     property real areaWidth: 0
     property real areaHeight: 0
+    property real screenAspect: 0
     readonly property var look: Appearance.settings.lock
-    readonly property real gridHeight: Math.max(0, Math.min(areaHeight - look.footer, areaWidth * look.aspect))
-    readonly property real gridWidth: gridHeight / look.aspect
+    readonly property real gridWidth: screenAspect > 0 ? Math.max(0, Math.min(areaWidth, (areaHeight - look.footer) / screenAspect)) : areaWidth
+    readonly property real gridHeight: screenAspect > 0 ? gridWidth * screenAspect : Math.max(0, areaHeight - look.footer)
+    readonly property real barWidth: gridWidth * look.barShare
+    readonly property real barX: (gridWidth - barWidth) / 2
     readonly property real cellWidth: gridWidth / Lock.columns
     readonly property real cellHeight: gridHeight / Lock.rows
     readonly property var placements: Lock.parse(layout)
     readonly property var armed: Lock.moduleOf(picked)
+    readonly property var blankChoices: ({ "never": 0, "30 s": 30, "1 min": 60, "5 min": 300, "10 min": 600 })
 
     signal layoutRequested(var entries)
     signal pickRequested(string key)
     signal wallpaperRequested(string value)
+    signal blankAfterRequested(int seconds)
 
-    spacing: Appearance.unit.medium
+    spacing: Appearance.settings.section.rowGap
+    x: Math.round((areaWidth - gridWidth) / 2)
+    y: Math.max(0, Math.round((areaHeight - gridHeight) / 2 - options.height - spacing))
+
+    OptionGroup {
+        id: options
+        x: editor.barX
+        width: editor.barWidth
+        label: "SCREEN OFF AFTER"
+        options: Object.keys(editor.blankChoices)
+        current: Object.keys(editor.blankChoices).find(option => editor.blankChoices[option] === editor.blankAfter) ?? ""
+        onPicked: option => editor.blankAfterRequested(editor.blankChoices[option])
+    }
 
     Piece {
+        role: "surface"
+
         Item {
             id: frame
             width: editor.gridWidth
@@ -33,39 +54,51 @@ Column {
             Rectangle {
                 anchors.fill: parent
                 radius: Appearance.unit.small
-                color: Appearance.color.wash
+                color: Appearance.color.raised
+            }
+
+            Masked {
+                anchors.fill: parent
+                visible: editor.wallpaper.length > 0
+
+                mask: Rectangle {
+                    anchors.fill: parent
+                    radius: Appearance.unit.small
+                }
+
+                Image {
+                    anchors.fill: parent
+                    source: editor.wallpaper.length === 0 ? "" : editor.wallpaper.startsWith("/") ? "file://" + editor.wallpaper : editor.wallpaper
+                    sourceSize.width: Appearance.settings.wallpaper.previewWidth
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    opacity: editor.look.wallpaperShade
+                }
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                radius: Appearance.unit.small
+                color: "transparent"
                 border.width: 1
                 border.color: Qt.alpha(Appearance.color.text, editor.look.lineAlpha)
             }
 
-            Repeater {
-                model: Lock.columns - 1
-
-                Rectangle {
-                    required property int index
-                    x: (index + 1) * editor.cellWidth
-                    width: 1
-                    height: frame.height
-                    color: Qt.alpha(Appearance.color.text, editor.look.lineAlpha)
-                }
-            }
-
-            Repeater {
-                model: Lock.rows - 1
-
-                Rectangle {
-                    required property int index
-                    y: (index + 1) * editor.cellHeight
-                    width: frame.width
-                    height: 1
-                    color: Qt.alpha(Appearance.color.text, editor.look.lineAlpha)
-                }
+            Lattice {
+                anchors.fill: parent
+                columnLines: Lock.columns - 1
+                rowLines: Lock.rows - 1
+                firstX: editor.cellWidth
+                firstY: editor.cellHeight
+                stepX: editor.cellWidth
+                stepY: editor.cellHeight
+                ink: Qt.alpha(Appearance.color.text, editor.look.lineAlpha)
             }
 
             Repeater {
                 model: editor.placements
 
-                Rectangle {
+                Piece {
                     id: tile
 
                     required property var modelData
@@ -75,19 +108,24 @@ Column {
                     y: modelData.row * editor.cellHeight
                     width: modelData.columns * editor.cellWidth
                     height: modelData.rows * editor.cellHeight
-                    radius: Appearance.unit.small
-                    color: Qt.alpha(Appearance.color.accent, editor.look.tileAlpha)
-                    border.width: isPicked ? 2 : 1
-                    border.color: Appearance.color.accent
-                    opacity: isPicked ? 0.5 : 1
+                    isCentered: true
 
-                    Text {
-                        anchors.centerIn: parent
-                        text: Lock.moduleOf(tile.modelData.key).label
-                        color: Appearance.color.text
-                        font.family: Appearance.font.mono
-                        font.pixelSize: Appearance.font.label
-                        font.letterSpacing: Appearance.font.labelSpacing
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Appearance.unit.small
+                        color: Qt.alpha(Appearance.color.accent, editor.look.tileAlpha)
+                        border.width: tile.isPicked ? editor.look.outline : 1
+                        border.color: Appearance.color.accent
+                        opacity: tile.isPicked ? editor.look.pickedShade : 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: Lock.moduleOf(tile.modelData.key).label
+                            color: Appearance.color.text
+                            font.family: Appearance.font.sans
+                            font.pixelSize: Appearance.font.label
+                            font.letterSpacing: Appearance.font.labelSpacing
+                        }
                     }
                 }
             }
@@ -137,18 +175,11 @@ Column {
         }
     }
 
-    Piece {
-        Text {
-            text: editor.armed ? "CLICK A CELL TO PLACE " + editor.armed.label : "PICK A MODULE ON THE RIGHT, OR CLICK A PLACED ONE TO MOVE IT. RIGHT CLICK REMOVES A WIDGET"
-            color: Appearance.color.textFaint
-            font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.label
-            font.letterSpacing: Appearance.font.labelSpacing
-        }
-    }
-
     TextField {
-        label: "WALLPAPER (IMAGE PATH)"
+        label: "WALLPAPER"
+        x: editor.barX
+        fieldWidth: editor.barWidth
+        placeholder: "IMAGE PATH"
         value: editor.wallpaper
         onEdited: value => editor.wallpaperRequested(value)
     }

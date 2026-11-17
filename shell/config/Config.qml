@@ -92,6 +92,58 @@ Singleton {
         pendingWrite.restart()
     }
 
+    function setChoiceStyle(style) {
+        if (!accept("appearance.choice", style))
+            return
+        adapter.appearance.choice = style
+        file.writeAdapter()
+    }
+
+    function setChoiceOutline(color) {
+        if (!accept("appearance.choiceOutline", color))
+            return
+        adapter.appearance.choiceOutline = color
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setChoicePill(color) {
+        if (!accept("appearance.choicePill", color))
+            return
+        adapter.appearance.choicePill = color
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setWallpaper(path) {
+        if (!accept("wallpaper.path", path))
+            return
+        adapter.wallpaper.path = path
+        file.writeAdapter()
+    }
+
+    function setWallpaperFolder(folder) {
+        if (!accept("wallpaper.folder", folder))
+            return
+        adapter.wallpaper.folder = folder
+        pendingWrite.interval = Motion.settings.write
+        pendingWrite.restart()
+    }
+
+    function setWidgetsLayout(entries) {
+        if (!accept("widgets.layout", entries))
+            return
+        adapter.widgets.layout = Schema.listOf(entries)
+        file.writeAdapter()
+    }
+
+    function setSystemFont(family) {
+        if (!accept("appearance.systemFont", family))
+            return
+        adapter.appearance.systemFont = family
+        file.writeAdapter()
+    }
+
     function setWindowMode(mode) {
         if (!accept("desktop.mode", mode))
             return
@@ -174,7 +226,7 @@ Singleton {
     function setSendDevices(entries) {
         if (!accept("send.devices", entries))
             return
-        adapter.send.devices = entries
+        adapter.send.devices = Schema.listOf(entries)
         file.writeAdapter()
     }
 
@@ -262,6 +314,13 @@ Singleton {
         pendingWrite.restart()
     }
 
+    function setBatteryLimit(isLimited) {
+        if (!accept("battery.limit", isLimited))
+            return
+        adapter.battery.limit = isLimited
+        file.writeAdapter()
+    }
+
     function setMediaPlayer(value) {
         if (!accept("services.mediaPlayer", value))
             return
@@ -272,7 +331,7 @@ Singleton {
     function setLockLayout(entries) {
         if (!accept("lock.layout", entries))
             return
-        adapter.lock.layout = entries
+        adapter.lock.layout = Schema.listOf(entries)
         file.writeAdapter()
     }
 
@@ -282,6 +341,13 @@ Singleton {
         adapter.lock.wallpaper = value
         pendingWrite.interval = Motion.settings.write
         pendingWrite.restart()
+    }
+
+    function setLockBlankAfter(seconds) {
+        if (!accept("lock.blankAfter", seconds))
+            return
+        adapter.lock.blankAfter = seconds
+        file.writeAdapter()
     }
 
     function toggleFavorite(appId) {
@@ -329,6 +395,10 @@ Singleton {
             }
             property JsonObject appearance: JsonObject {
                 property string accent: "#ffffff"
+                property string systemFont: ""
+                property string choice: "outline"
+                property string choiceOutline: ""
+                property string choicePill: ""
             }
             property JsonObject desktop: JsonObject {
                 property string mode: "canvas"
@@ -354,9 +424,20 @@ Singleton {
             property JsonObject lock: JsonObject {
                 property var layout: ["clock:5:1", "profile:6:4", "login:5:8"]
                 property string wallpaper: ""
+                property int blankAfter: 60
+            }
+            property JsonObject wallpaper: JsonObject {
+                property string path: ""
+                property string folder: ""
+            }
+            property JsonObject widgets: JsonObject {
+                property var layout: []
             }
             property JsonObject weather: JsonObject {
                 property string location: ""
+            }
+            property JsonObject battery: JsonObject {
+                property bool limit: false
             }
             property JsonObject dashboard: JsonObject {
                 property bool taskIcons: false

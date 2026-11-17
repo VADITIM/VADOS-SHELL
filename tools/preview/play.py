@@ -19,7 +19,12 @@ QtObject {
             property bool compact: false
             property string gather: "merge"
         }
-        property QtObject appearance: QtObject { property string accent: "#ffffff" }
+        property QtObject appearance: QtObject {
+            property string accent: "#ffffff"
+            property string choice: "outline"
+            property string choiceOutline: ""
+            property string choicePill: ""
+        }
         property QtObject desktop: QtObject { property string mode: "canvas" }
         property QtObject search: QtObject { property var favorites: ["firefox.desktop", "kitty.desktop"]; property var hidden: [] }
         property QtObject weather: QtObject { property string location: "" }
@@ -45,13 +50,22 @@ QtObject {
         property QtObject lock: QtObject {
             property var layout: ["clock:5:1", "profile:6:4", "login:5:8"]
             property string wallpaper: ""
+            property int blankAfter: 60
         }
+        property QtObject wallpaper: QtObject { property string path: ""; property string folder: "" }
+        property QtObject widgets: QtObject { property var layout: [] }
     }
     function setTaskbarStyle(style) { data.taskbar.style = style }
     function setTaskbarSide(side) { data.taskbar.side = side }
     function setTaskbarCompact(isCompact) { data.taskbar.compact = isCompact }
     function setTaskbarGather(gather) { data.taskbar.gather = gather }
     function setAccent(color) { data.appearance.accent = color }
+    function setChoiceStyle(style) { data.appearance.choice = style }
+    function setChoiceOutline(color) { data.appearance.choiceOutline = color }
+    function setChoicePill(color) { data.appearance.choicePill = color }
+    function setWallpaper(path) { data.wallpaper.path = path }
+    function setWallpaperFolder(folder) { data.wallpaper.folder = folder }
+    function setWidgetsLayout(entries) { data.widgets.layout = entries }
     function setWindowMode(mode) { data.desktop.mode = mode }
     function setWeatherLocation(location) { data.weather.location = location }
     function setScreenshotFolder(folder) { data.capture.screenshots = folder }
@@ -74,6 +88,7 @@ QtObject {
     function setMediaPlayer(isOn) { data.services.mediaPlayer = isOn }
     function setLockLayout(entries) { data.lock.layout = entries }
     function setLockWallpaper(value) { data.lock.wallpaper = value }
+    function setLockBlankAfter(seconds) { data.lock.blankAfter = seconds }
     function toggleFavorite(appId) {
         const favorites = data.search.favorites.slice()
         const at = favorites.indexOf(appId)
@@ -143,7 +158,7 @@ def build():
     write_module("qs.config", tokens + [("Config.qml", CONFIG_MOCK)])
     write_module("qs.components", qml_files(os.path.join(SHELL, "components")))
     write_module("qs.state", qml_files(os.path.join(SHELL, "state")))
-    for module in ("taskbar", "alerts", "clipboard", "search", "settings", "dashboard", "notifications", "framedebug", "screenshot"):
+    for module in ("taskbar", "alerts", "clipboard", "search", "settings", "dashboard", "notifications", "framedebug", "screenshot", "wallpaper", "widgets", "lock", "calculator"):
         write_module("qs.modules." + module, qml_files(os.path.join(SHELL, "modules", module)))
     write_module("qs.services", mock_services())
     write_module("qs.windows", [(os.path.join(SHELL, "windows", "FrameTap.qml"), None)])

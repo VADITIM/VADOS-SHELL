@@ -1,7 +1,9 @@
 .pragma library
+.import "Placement.js" as Placement
 
 const columns = 16
 const rows = 16
+const grid = { columns: columns, rows: rows }
 
 const modules = [
     { key: "clock", label: "TIME / DATE", group: "CORE", columns: 6, rows: 3, isCore: true },
@@ -18,52 +20,36 @@ function moduleOf(key) {
 }
 
 function parse(entries) {
-    const result = []
-    for (const entry of entries || []) {
-        const parts = String(entry).split(":")
-        const found = moduleOf(parts[0])
-        const column = Number(parts[1])
-        const row = Number(parts[2])
-        if (found && Number.isInteger(column) && Number.isInteger(row))
-            result.push({ key: found.key, column: column, row: row, columns: found.columns, rows: found.rows })
-    }
-    return result
+    return Placement.parse(entries, modules)
 }
 
 function format(placement) {
-    return placement.key + ":" + placement.column + ":" + placement.row
+    return Placement.format(placement)
 }
 
 function isInside(found, column, row) {
-    return column >= 0 && row >= 0 && column + found.columns <= columns && row + found.rows <= rows
+    return Placement.isInside(grid, found, column, row)
 }
 
 function overlaps(placement, found, column, row) {
-    return placement.column < column + found.columns && column < placement.column + placement.columns
-        && placement.row < row + found.rows && row < placement.row + placement.rows
+    return Placement.overlaps(placement, found, column, row)
 }
 
 function fits(entries, key, column, row) {
-    const found = moduleOf(key)
-    if (!found || !isInside(found, column, row))
-        return false
-    return parse(entries).every(placement => placement.key === key || !overlaps(placement, found, column, row))
+    return Placement.fits(entries, modules, grid, key, column, row)
 }
 
 function place(entries, key, column, row) {
-    if (!fits(entries, key, column, row))
-        return entries
-    const kept = parse(entries).filter(placement => placement.key !== key).map(format)
-    return kept.concat([key + ":" + column + ":" + row])
+    return Placement.place(entries, modules, grid, key, column, row)
 }
 
 function remove(entries, key) {
     const found = moduleOf(key)
     if (!found || found.isCore)
         return entries
-    return parse(entries).filter(placement => placement.key !== key).map(format)
+    return Placement.remove(entries, modules, key)
 }
 
 function isPlaced(entries, key) {
-    return parse(entries).some(placement => placement.key === key)
+    return Placement.isPlaced(entries, modules, key)
 }

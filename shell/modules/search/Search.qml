@@ -11,6 +11,7 @@ FocusScope {
     property var favoriteIds: []
     property var hiddenIds: []
     property bool isShowingHidden: false
+    property bool isShowingNew: false
     property var menuApp: null
     property var pinnedOrder: []
     property string syncedQuery: ""
@@ -35,9 +36,11 @@ FocusScope {
 
     readonly property string query: input.text
     readonly property bool isSearching: query.trim().length > 0
-    readonly property var results: (isSearching ? Apps.search(query) : Apps.recent()).filter(app => isShowingHidden || !isHidden(app))
+    readonly property var freshIds: Apps.fresh.map(app => app.id)
+    readonly property var baseResults: isShowingNew ? (isSearching ? Apps.search(query).filter(app => freshIds.indexOf(app.id) >= 0) : Apps.fresh) : (isSearching ? Apps.search(query) : Apps.recent())
+    readonly property var results: baseResults.filter(app => isShowingHidden || !isHidden(app))
     readonly property var best: results.length > 0 ? results[0] : null
-    readonly property var listApps: isSearching ? results.slice(1) : pinnedFirst(results.slice(1))
+    readonly property var listApps: best === null ? [] : [best].concat(isSearching || isShowingNew ? results.slice(1) : pinnedFirst(results.slice(1)))
 
     readonly property var look: Appearance.search
     readonly property real rootX: Appearance.taskbar.margin
@@ -52,8 +55,7 @@ FocusScope {
     readonly property real foundCenterY: Math.round(height * look.foundShare)
 
     readonly property real presence: bud * Math.min(1, burst.wallShare)
-    readonly property var wallOutline: burst.wallOutline
-    readonly property real wallReach: wallOutline.length > 0 ? Math.max(...wallOutline.map(point => point.x)) : burst.formRight
+    readonly property real wallReach: burst.wallReach
     readonly property var settledWall: look.wall.map(point => Qt.point(foundCenterX + point[0] * foundRadius, point[1] * height))
     readonly property var wallBands: settledWall.slice(1).map((point, index) => Qt.rect(0, settledWall[index].y, Math.min(point.x, settledWall[index].x), point.y - settledWall[index].y))
     readonly property var profileLook: look.profile
@@ -181,6 +183,11 @@ FocusScope {
         closeRequested()
     }
 
+    function release(fromZone, index) {
+        if (zone === fromZone && cursor === index)
+            zone = ""
+    }
+
     function enter(nextZone) {
         const count = nextZone === "list" ? listApps.length : nextZone === "profile" ? profile.count : 1
         if (count > 0)
@@ -188,12 +195,18 @@ FocusScope {
     }
 
     function cycle(step) {
+        if (zone === "")
+            zone = "found"
         const order = ["list", "found", "profile"].filter(name => name !== "list" || listApps.length > 0)
         const at = order.indexOf(zone)
         select(order[(at + step + order.length) % order.length], 0)
     }
 
     function move(stepX, stepY) {
+        if (zone === "") {
+            select("found", 0)
+            return
+        }
         const towardFar = isMirrored ? -stepX : stepX
         if (zone === "found") {
             if (towardFar < 0 || stepY > 0)
@@ -244,6 +257,10 @@ FocusScope {
         return Math.round((localX - rootX) * Motion.search.ripple) + row * Motion.pill.elementStagger
     }
 
+    onFreshIdsChanged: {
+        if (freshIds.length === 0)
+            isShowingNew = false
+    }
     onQueryChanged: {
         pinnedOrder = (favoriteIds || []).slice()
         select("found", 0)
@@ -259,6 +276,7 @@ FocusScope {
         if (isOpen) {
             input.text = ""
             isShowingHidden = false
+            isShowingNew = false
             pinnedOrder = (favoriteIds || []).slice()
             syncList(true)
             select("found", 0)
@@ -354,11 +372,18 @@ FocusScope {
             }
 
             LiquidShape {
+                id: nameShape
+                transformOrigin: Item.Left
                 visible: burst.isActive && width > 0.5
                 x: search.wallReach + search.look.nameReach
                 y: search.foundCenterY - height / 2
                 width: foundCard.nameSpan
                 height: foundCard.nameThickness
+
+                Press {
+                    target: nameShape
+                    isRaised: foundCard.isRaised
+                }
             }
         }
     }
@@ -411,12 +436,14 @@ FocusScope {
                     app: entry
                     isShown: search.isContentShown && entry !== null
                     isSelected: search.zone === "list" && search.cursor === index
+                    isBest: index === 0
                     isFavorite: search.favoriteIds.indexOf(appId) >= 0
                     isHidden: (search.hiddenIds || []).indexOf(appId) >= 0
                     enterDelay: search.revealDelay(search.listX, index)
                     onActivated: search.launch(entry)
                     onMenuRequested: at => search.openMenu(entry, at)
                     onPointed: search.select("list", index)
+                    onReleased: search.release("list", index)
                 }
             }
 
@@ -473,6 +500,11 @@ FocusScope {
                                 if (event.key !== Qt.Key_Escape && event.key !== Qt.Key_Menu)
                                     return
                             }
+                            event.accepted = true
+                            return
+                        }
+                        if (event.key === Qt.Key_N && (event.modifiers & Qt.ControlModifier)) {
+                            search.isShowingNew = !search.isShowingNew
                             event.accepted = true
                             return
                         }
@@ -592,6 +624,42 @@ FocusScope {
                     onClicked: search.isShowingHidden = !search.isShowingHidden
                 }
             }
+
+            Turn {
+                id: newToggle
+                visible: search.freshIds.length > 0
+                x: search.edgeX(search.listX + search.look.fieldPadding + hiddenToggle.width + search.look.tabGap, width)
+                y: hiddenToggle.y
+                width: newLabel.implicitWidth
+                height: newLabel.implicitHeight
+                isShown: search.isContentShown && search.freshIds.length > 0
+                enterDelay: search.revealDelay(search.listX, 2)
+                leaveWindow: 0
+
+                Text {
+                    id: newLabel
+                    text: "NEW " + search.freshIds.length
+                    color: search.isShowingNew ? Appearance.color.accent : newArea.containsMouse ? Appearance.color.textMuted : Appearance.color.textFaint
+                    font.family: Appearance.font.mono
+                    font.pixelSize: Appearance.font.label
+                    font.letterSpacing: Appearance.font.labelSpacing
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.pace(Motion.hoverIn)
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: newArea
+                    anchors.fill: parent
+                    anchors.margins: -search.look.fieldPadding / 2
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: search.isShowingNew = !search.isShowingNew
+                }
+            }
         }
     }
 
@@ -609,6 +677,7 @@ FocusScope {
         onActivated: search.launch(app)
         onMenuRequested: at => search.openMenu(search.best, at)
         onPointed: search.select("found", 0)
+        onReleased: search.release("found", 0)
     }
 
     ProfileBlob {
@@ -630,6 +699,7 @@ FocusScope {
         picture: search.profilePicture
         selected: search.zone === "profile" ? search.cursor : -1
         onPointed: index => search.select("profile", index)
+        onReleased: index => search.release("profile", index)
         onProfileRequested: search.requestProfile()
     }
 

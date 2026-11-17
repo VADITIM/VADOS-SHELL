@@ -12,6 +12,7 @@ QtObject {
         "discord.desktop": { count: 12, last: Date.now() - 7200000 }
     })
     property string lastLaunched: ""
+    readonly property var fresh: all.filter(app => ["Blender", "Zed", "Krita"].indexOf(app.name) >= 0)
     readonly property var all: {
         const names = [["Firefox","Web Browser"],["Kitty","Terminal"],["Visual Studio Code","Code Editor"],["Spotify","Music Player"],["Discord","Chat"],["Files","File Manager"],["Blender","3D Creation"],["GIMP","Image Editor"],["Inkscape","Vector Graphics"],["Krita","Painting"],["Obsidian","Notes"],["Steam","Games"],["Thunderbird","Mail Client"],["VLC","Media Player"],["OBS Studio","Streaming"],["LibreOffice Writer","Word Processor"],["LibreOffice Calc","Spreadsheet"],["Signal","Messenger"],["Fire Dragon","Web Browser"],["Firewall Config","Network"],["Pavucontrol","Volume Control"],["Btop","System Monitor"],["Calculator","Utility"],["Godot","Game Engine"],["Zed","Code Editor"],["Neovim","Text Editor"]]
         const list = names.map(pair => ({ id: pair[0].toLowerCase().split(" ")[0] + (pair[0] === "Visual Studio Code" ? "" : "") + ".desktop", name: pair[0], genericName: pair[1], comment: "", keywords: "", icon: "" }))

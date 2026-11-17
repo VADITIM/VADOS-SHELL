@@ -520,4 +520,104 @@ TestCase {
         Activities.hasMedia = true
         ActivityState.lead = ""
     }
+
+    function test_theLockGridStaysClearOfTheModuleList() {
+        const settings = overlayModule("lockRows")
+        verify(settings !== null)
+        Overlays.open("settings", window.screenName)
+        tryVerify(() => settings.isOpen, 3000)
+        settings.tab = "customization"
+        settings.subTab = "lock"
+        tryVerify(() => settings.isLockShown, 10000)
+        const grid = findItem(settings, item => item.gridWidth !== undefined && item.placements !== undefined)
+        verify(grid !== null)
+        const gridRight = grid.mapToItem(settings, grid.gridWidth, 0).x
+        const bodyEdge = settings.rootX + settings.formWidth
+        verify(gridRight <= bodyEdge, "the grid ends at " + gridRight + ", past the body that ends at " + bodyEdge)
+        verify(settings.lockX >= bodyEdge, "the module pills start at " + settings.lockX + ", inside the body that ends at " + bodyEdge)
+        Overlays.close("settings")
+        tryVerify(() => !settings.isPresent, 10000)
+    }
+
+    function test_widgetAndDisplayOptionsSitInTheEdgePanel() {
+        const settings = overlayModule("lockRows")
+        verify(settings !== null)
+        Overlays.open("settings", window.screenName)
+        tryVerify(() => settings.isOpen, 3000)
+        const bodyEdge = settings.rootX + settings.formWidth
+        for (const [tab, subTab, marker] of [["customization", "widgets", "placements"], ["settings", "displays", "pickedOutput"]]) {
+            settings.tab = tab
+            settings.subTab = subTab
+            const editor = findItem(settings, item => item.sideHeight !== undefined && item[marker] !== undefined)
+            verify(editor !== null, subTab + " has its editor")
+            tryVerify(() => editor.sideHeight > 0 && editor.side !== null, 10000)
+            tryVerify(() => editor.side.mapToItem(settings, 0, 0).x >= bodyEdge, 10000, "the " + subTab + " options sit in the panel right of the body")
+            verify(editor.mapToItem(settings, editor.width, 0).x <= bodyEdge, "the " + subTab + " canvas ends inside the body")
+        }
+        Overlays.close("settings")
+        tryVerify(() => !settings.isPresent, 10000)
+    }
+
+    function test_wallpaperStepsApplyAndStopAtNone() {
+        const settings = overlayModule("lockRows")
+        Wallpapers.images = ["/a/one.jpg", "/a/two.jpg"]
+        Config.setWallpaper("/a/one.jpg")
+        Overlays.open("settings", window.screenName)
+        tryVerify(() => settings.isOpen, 3000)
+        settings.tab = "customization"
+        settings.subTab = "wallpaper"
+        const picker = findItem(settings, item => item.entries !== undefined && item.hitAt !== undefined)
+        verify(picker !== null)
+        tryCompare(picker, "isShown", true, 10000)
+        compare(picker.target, 1)
+        picker.step(1)
+        tryCompare(Config.data.wallpaper, "path", "/a/two.jpg", 2000)
+        picker.step(-5)
+        compare(picker.target, 0, "stepping past the first image stops at NONE")
+        tryCompare(Config.data.wallpaper, "path", "", 2000)
+        Overlays.close("settings")
+        tryVerify(() => !settings.isPresent, 10000)
+        Wallpapers.images = []
+    }
+
+    function test_displaysTabLoadsAndItsPiecesComeAndGo() {
+        const settings = overlayModule("lockRows")
+        Overlays.open("settings", window.screenName)
+        settings.tab = "settings"
+        compare(settings.subTabs.map(entry => entry.key), ["general", "displays"], "the second bar of SETTINGS holds the Displays tab")
+        settings.subTab = "displays"
+        const editor = findItem(settings, item => item.bodyNames !== undefined && item.rectOnCanvas !== undefined)
+        verify(editor !== null)
+        tryVerify(() => settings.isDisplaysShown, 10000)
+        verify(Compositor.isWatchingOutputs, "outputs are read only while the tab is shown")
+        compare(editor.bodyNames, Compositor.outputs.map(output => output.name))
+        const page = editor.parent.parent
+        const found = []
+        page.gather(page, found)
+        tryVerify(() => found.every(piece => !piece.isWanted || piece.presence >= 1), 3000, "every wanted piece enters")
+        editor.pickUp(editor.bodyNames[1], 0, 0)
+        editor.follow(0, 80)
+        editor.drop(0, 0)
+        verify(editor.canApply)
+        Compositor.isDriftwm = true
+        editor.apply()
+        tryVerify(() => editor.isTrying, 2000, "applying starts the keep-or-revert trial")
+        const keep = findItem(editor.side ?? editor, item => item.label === "KEEP")
+        verify(keep !== null)
+        tryVerify(() => keep.parent.parent.presence >= 1, 3000, "the countdown, KEEP and REVERT come in")
+        editor.revertRequested()
+        tryVerify(() => !editor.isTrying && !editor.isEdited, 2000)
+        tryVerify(() => keep.parent.parent.presence <= 0, 3000, "and leave once the trial is over")
+        compare(Compositor.outputs[1].y, 0, "a revert puts the old layout back")
+        Compositor.isDriftwm = false
+        const shown = []
+        page.gather(page, shown)
+        if (editor.side)
+            page.gather(editor.side, shown)
+        settings.subTab = "general"
+        tryVerify(() => shown.every(piece => piece.presence <= 0), Motion.settings.pageSwap + 200, "every piece leaves within the page swap")
+        tryVerify(() => !Compositor.isWatchingOutputs, 2000)
+        Overlays.close("settings")
+        tryVerify(() => !settings.isPresent, 10000)
+    }
 }

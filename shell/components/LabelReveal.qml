@@ -9,6 +9,8 @@ Item {
     property string label: "label"
     property real sweepWidth: width
     property int leaveDuration: Motion.sweep.leave
+    property int growDuration: Motion.sweep.grow
+    property int retractDuration: Motion.sweep.retract
     property color barColor: Appearance.color.accent
     property real openShare: 0
     property real barShare: 0
@@ -74,7 +76,7 @@ Item {
             property: "barShare"
             from: 0
             to: 1
-            duration: Motion.pace(Motion.sweep.grow)
+            duration: Motion.pace(reveal.growDuration)
             easing.type: Easing.InOutCubic
         }
         ScriptAction {
@@ -87,7 +89,7 @@ Item {
             target: reveal
             property: "barShare"
             to: 0
-            duration: Motion.pace(Motion.sweep.retract)
+            duration: Motion.pace(reveal.retractDuration)
             easing.type: Easing.InOutCubic
         }
     }

@@ -101,7 +101,7 @@ TestCase {
     }
 
     function test_toolsCycleAndEveryToolHasGlyph() {
-        compare(Ink.tools.map(tool => tool.key), ["select", "color", "paint", "erase", "shape", "text"])
+        compare(Ink.tools.map(tool => tool.key), ["select", "color", "paint", "erase", "shape", "arrow", "text"])
         for (const tool of Ink.tools)
             verify(tool.glyph.length > 0, tool.key)
         compare(Ink.nextOf(Ink.shapes, "arrow", 1), "box")

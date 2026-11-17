@@ -14,10 +14,11 @@ Column {
     spacing: Appearance.unit.small
 
     Piece {
+        role: "label"
         Text {
             text: field.label
-            color: Appearance.color.textMuted
-            font.family: Appearance.font.mono
+            color: Appearance.color.textBody
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.font.label
             font.letterSpacing: Appearance.font.labelSpacing
         }
@@ -28,9 +29,15 @@ Column {
             width: field.fieldWidth
             height: Appearance.settings.field
             radius: height / 2
-            color: Appearance.color.wash
-            border.width: 1
-            border.color: input.activeFocus ? Appearance.color.accent : "transparent"
+            color: Appearance.color.raised
+            border.width: Appearance.settings.action.ring
+            border.color: input.activeFocus ? Appearance.color.accent : Appearance.color.hairline
+
+            Behavior on border.color {
+                ColorAnimation {
+                    duration: Motion.pace(Motion.hoverIn)
+                }
+            }
 
             TextInput {
                 id: input
@@ -42,7 +49,7 @@ Column {
                 color: Appearance.color.text
                 selectionColor: Appearance.color.accent
                 selectedTextColor: Appearance.color.ground
-                font.family: Appearance.font.mono
+                font.family: Appearance.font.sans
                 font.pixelSize: Appearance.settings.hexText
                 onTextEdited: field.edited(text)
                 Keys.onEscapePressed: event => event.accepted = false
@@ -54,7 +61,7 @@ Column {
                 visible: input.text.length === 0
                 text: field.placeholder
                 color: Appearance.color.textFaint
-                font.family: Appearance.font.mono
+                font.family: Appearance.font.sans
                 font.pixelSize: Appearance.settings.hexText
             }
         }

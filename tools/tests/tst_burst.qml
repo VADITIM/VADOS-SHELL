@@ -114,7 +114,7 @@ Item {
             splitting.split = 1
             splitting.impact = 0.1
             let spread = 0.1
-            while (spread < 1 && Math.abs(splitting.waveHead(1) - 0.3) > 0.03) {
+            while (spread < 1 && Math.abs(splitting.waveHead(1) - 0.5) > 0.03) {
                 spread += 0.005
                 splitting.spread = spread
             }

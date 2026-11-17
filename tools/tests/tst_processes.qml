@@ -99,4 +99,14 @@ TestCase {
         compare(ProcessTable.step(rows, "b", -1), "a")
         compare(ProcessTable.step([], "a", 1), "")
     }
+
+    function test_matchesNameOrPathIgnoringCase() {
+        const rows = [{ key: "firefox", name: "firefox", path: "/usr/lib/firefox/firefox" }, { key: "kitty", name: "kitty", path: "/usr/bin/kitty" }, { key: "Xwayland", name: "Xwayland", path: "" }]
+        compare(ProcessTable.matching(rows, ""), rows, "an empty query keeps every row")
+        compare(ProcessTable.matching(rows, "  ").length, 3, "a blank query keeps every row")
+        compare(ProcessTable.matching(rows, "FIRE").map(row => row.key), ["firefox"])
+        compare(ProcessTable.matching(rows, "/usr/bin").map(row => row.key), ["kitty"], "the path matches too")
+        compare(ProcessTable.matching(rows, "xway").map(row => row.key), ["Xwayland"], "a row without a path still matches by name")
+        compare(ProcessTable.matching(rows, "zzz"), [])
+    }
 }

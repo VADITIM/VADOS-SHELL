@@ -14,17 +14,25 @@ ENGINE_TESTS = {
     "shell/state/Attention.qml": "tst_attention.qml",
     "shell/state/ActivityState.qml": "tst_activity.qml",
     "shell/components/Gesture.qml": "tst_gesture.qml",
+    "shell/components/Slider.qml": "tst_slider.qml",
+    "shell/modules/settings/Page.qml": "tst_pieces.qml",
     "shell/components/Burst.qml": "tst_burst.qml",
     "shell/services/StateFile.qml": "tst_statefile.qml",
     "shell/services/Confinement.qml": "tst_confinement.qml",
     "shell/utils/Phases.js": "tst_lifecycle.qml",
     "shell/components/Lifecycle.qml": "tst_lifecycle.qml",
     "shell/utils/Geometry.js": "tst_geometry.qml",
+    "shell/utils/Toml.js": "tst_toml.qml",
+    "shell/utils/Controls.js": "tst_controls.qml",
+    "shell/utils/Family.js": "tst_family.qml",
     "shell/utils/Variation.js": "tst_variation.qml",
     "shell/utils/Platform.js": "tst_platform.qml",
     "shell/utils/Schema.js": "tst_schema.qml",
     "shell/components/LiquidLayer.qml": "tst_rendering.qml",
     "shell/components/Masked.qml": "tst_rendering.qml",
+    "shell/components/Backdrop.qml": "tst_rendering.qml",
+    "shell/utils/Locking.js": "tst_locking.qml",
+    "shell/services/Lock.qml": "tst_lock.qml",
     "shell/config/Rendering.qml": "tst_rendering.qml",
     "shell/utils/Log.js": "tst_log.qml",
     "shell/utils/Backoff.js": "tst_supervisor.qml",
@@ -44,13 +52,18 @@ ENGINE_TESTS = {
     "shell/components/Roll.qml": "tst_roll.qml",
     "shell/utils/Capture.js": "tst_capture.qml",
     "shell/utils/Ink.js": "tst_capture.qml",
+    "shell/utils/Placement.js": "tst_placement.qml",
+    "shell/utils/Widgets.js": "tst_widgets.qml",
+    "shell/utils/Displays.js": "tst_displays.qml",
+    "shell/utils/Arithmetic.js": "tst_calculator.qml",
+    "shell/utils/Builtins.js": "tst_calculator.qml",
 }
 
 FEATURE_REGISTRY = "shell/utils/Features.js"
 
 FEATURE_WINDOWS = {"lock": "LockWindow", "desktop": "WidgetWindow"}
 
-RENDERING_COMPONENTS = {"shell/components/LiquidLayer.qml", "shell/components/Masked.qml"}
+RENDERING_COMPONENTS = {"shell/components/LiquidLayer.qml", "shell/components/Masked.qml", "shell/components/Backdrop.qml"}
 
 TIMERS_NOT_MOTION = {"Motion.reveal.dwell", "edgePull.pace.dwell"}
 
@@ -124,6 +137,28 @@ def module_folders():
     return sorted(name for name in os.listdir(modules) if os.path.isdir(os.path.join(modules, name)))
 
 
+def token_values(text, group):
+    for _, body in blocks(text, f"readonly property QtObject {group}: QtObject"):
+        return {name: literals[-1] for name, line in re.findall(r"^\s*readonly property \w+ (\w+): (.+)$", body, re.M)
+                if (literals := re.findall(r"\"[^\"]*\"|-?\d+(?:\.\d+)?", line))}
+    return {}
+
+
+def check_login_theme(flag):
+    tokens_path = os.path.join(ROOT, "sddm", "vados", "Tokens.qml")
+    if not os.path.exists(tokens_path):
+        return
+    tokens = open(tokens_path, encoding="utf-8").read()
+    appearance = open(os.path.join(SHELL, "config", "Appearance.qml"), encoding="utf-8").read()
+    for group in ("color", "font"):
+        shell_values = token_values(appearance, group)
+        for name, value in token_values(tokens, group).items():
+            if name not in shell_values:
+                flag("login", "sddm/vados/Tokens.qml", 1, f"`{group}.{name}` is not in shell/config/Appearance.qml; the login theme copies the shell's tokens, theme-only sizes go in its `login` group (roadmap contract 9)")
+            elif shell_values[name] != value:
+                flag("login", "sddm/vados/Tokens.qml", 1, f"`{group}.{name}` is {value} but {shell_values[name]} in shell/config/Appearance.qml; keep the login theme's copy in step (roadmap contract 9)")
+
+
 def check(files):
     found = []
 
@@ -154,16 +189,18 @@ def check(files):
             "colours come from Appearance.color (rules/frontend.md)", scope="shell/modules/")
     only_in("tokens", r"\"#[0-9a-fA-F]{3,8}\"", set(),
             "colours come from Appearance.color (rules/frontend.md)", scope="shell/components/")
-    only_in("overlays", r"WlrLayershell\.keyboardFocus", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml"},
-            "overlays are OverlayWindows registered in state/Overlays.qml (rules/interaction.md)")
-    only_in("overlays", r"WlrLayer\.Overlay", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml", "shell/windows/TaskbarWindow.qml"},
-            "overlays are OverlayWindows registered in state/Overlays.qml; the taskbar rises only for an alert over a fullscreen window (rules/interaction.md)")
+    only_in("overlays", r"WlrLayershell\.keyboardFocus", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml", "shell/windows/TaskbarWindow.qml", "shell/windows/WidgetWindow.qml"},
+            "overlays are OverlayWindows registered in state/Overlays.qml; the taskbar takes the keyboard only while an extension field asks for text, the desktop only while a text widget is pointed at or typed in (rules/interaction.md)")
+    only_in("overlays", r"WlrLayer\.Overlay", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml", "shell/windows/TaskbarWindow.qml", "shell/windows/ClipboardDismissWindow.qml"},
+            "overlays are OverlayWindows registered in state/Overlays.qml; the taskbar rises only for an alert over a fullscreen window and the clipboard panel over an open menu (rules/interaction.md)")
     only_in("lock", r"WlSessionLock", {"shell/windows/LockWindow.qml"},
             "the session lock lives only in windows/LockWindow.qml (rules/security.md)")
     only_in("lock", r"PamContext", {"shell/services/Lock.qml"},
             "authentication lives only in services/Lock.qml (rules/security.md)")
-    only_in("state", r"\.cache/|\.setText\(", {"shell/services/StateFile.qml"},
+    only_in("state", r"\.cache/", {"shell/services/StateFile.qml"},
             "runtime state is written through services/StateFile.qml (rules/state.md)")
+    only_in("state", r"\.setText\(", {"shell/services/StateFile.qml", "shell/services/Compositor.qml"},
+            "files are written through services/StateFile.qml; only services/Compositor.qml writes the compositor's config (rules/state.md)")
     only_in("state", r"writeAdapter\(", {"shell/config/Config.qml"},
             "user settings are written only by config/Config.qml (rules/architecture.md)")
     only_in("attention", r"function onReceived\(", {"shell/state/Attention.qml"},
@@ -278,6 +315,17 @@ def check(files):
             flag("testing", engine, 1, f"engine has no test tools/tests/{test} (rules/testing.md)")
 
     sources = dict(files)
+    lock_window = sources.get("shell/windows/LockWindow.qml", "")
+    if lock_window and re.findall(r"^\s*locked:.*$", lock_window, re.M) != ["        locked: Lock.isLocked"]:
+        flag("lock", "shell/windows/LockWindow.qml", 1, "the session lock follows Lock.isLocked and nothing else, so it locks only on an explicit request (rules/security.md)")
+    lock_service = sources.get("shell/services/Lock.qml", "")
+    if lock_service and not re.search(r"^    property bool isLocked: false$", lock_service, re.M):
+        flag("lock", "shell/services/Lock.qml", 1, "Lock.isLocked starts false, so a start or a reload never locks by itself (rules/security.md)")
+    for path, text in files:
+        for match in re.finditer(r"\bisLocked\s*=\s*true\b", text):
+            functions = re.findall(r"^    function (\w+)\(", text[:match.start()], re.M)
+            if path != "shell/services/Lock.qml" or not functions or functions[-1] != "lock":
+                flag("lock", path, line_of(text, match.start()), "only Lock.lock() sets isLocked, so every lock is an explicit request (rules/security.md)")
     rows = feature_rows(sources.get(FEATURE_REGISTRY, ""))
     folders = module_folders()
     if not rows:
@@ -297,7 +345,7 @@ def check(files):
             continue
         if f"shell/modules/{folder}/{root}.qml" not in sources:
             flag("features", FEATURE_REGISTRY, 1, f"`{key}` is built but its root shell/modules/{folder}/{root}.qml does not exist (rules/features.md)")
-        window = f"{root}Window" if surface == "overlay" else FEATURE_WINDOWS.get(surface)
+        window = f"{root}Window" if surface in ("overlay", "window") else FEATURE_WINDOWS.get(surface)
         if window and f"shell/windows/{window}.qml" not in sources:
             flag("features", FEATURE_REGISTRY, 1, f"`{key}` is built as {surface} but shell/windows/{window}.qml does not exist (rules/features.md)")
         if surface == "overlay":
@@ -307,6 +355,13 @@ def check(files):
                 flag("features", "shell/shell.qml", 1, f"`{key}` is built but shell.qml has no OverlaySlot with overlayKey \"{key}\" holding its {window} per screen; an overlay window exists only while wanted (rules/features.md)")
             if f'target: "{key}"' not in sources.get("shell/keybinds/Shortcuts.qml", ""):
                 flag("features", "shell/keybinds/Shortcuts.qml", 1, f"`{key}` is built but has no IPC target \"{key}\" (rules/features.md)")
+        if surface == "window":
+            if not re.search(r"^FloatingWindow \{", sources.get(f"shell/windows/{window}.qml", ""), re.M):
+                flag("features", f"shell/windows/{window}.qml", 1, f"the window of `{key}` is a FloatingWindow, an app window the compositor places (rules/features.md)")
+            if f'target: "{key}"' not in sources.get("shell/keybinds/Shortcuts.qml", ""):
+                flag("features", "shell/keybinds/Shortcuts.qml", 1, f"`{key}` is built but has no IPC target \"{key}\" (rules/features.md)")
+            if f'key: "{key}"' not in sources.get("shell/utils/Builtins.js", ""):
+                flag("features", "shell/utils/Builtins.js", 1, f"`{key}` is an app window but has no row in utils/Builtins.js, so the launcher cannot find it (rules/features.md)")
         if surface == "lock" and "shell/services/Lock.qml" not in sources:
             flag("features", FEATURE_REGISTRY, 1, f"`{key}` is built but shell/services/Lock.qml (authentication) does not exist (rules/security.md)")
     if "Features.overlayKinds()" not in sources.get("shell/state/Overlays.qml", ""):
@@ -337,6 +392,7 @@ def check(files):
             flag("settings", "shell/config/Config.qml", 1, f"`{key}` defaults to {defaults[key]} in the adapter but {fallbacks[key]} in utils/Schema.js (rules/state.md)")
     for key in sorted(assigned - accepted):
         flag("settings", "shell/config/Config.qml", 1, f"the setter for `{key}` does not check it with accept() against utils/Schema.js (rules/state.md)")
+    check_login_theme(flag)
     return found
 
 

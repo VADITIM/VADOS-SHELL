@@ -1,0 +1,3 @@
+module qs.modules.notifications
+NotificationMenu 1.0 NotificationMenu.qml
+NotificationRow 1.0 NotificationRow.qml

@@ -2,8 +2,8 @@
 
 - **The clipboard history, the 1.3 times expanded pill and the new leave are untested in Qt (2026-11-11).** This machine has no PySide6: `tst_clipboard`, `tst_gulp`, the new `tst_activity`, `tst_features` and `tst_preview` cases were written but not run; `utils/Clipboard.js` was checked with Node and `check-rules.py` passes. Nothing ran against a real `wl-paste` either (`quirks.md` § Clipboard history).
 - **Ready budgets cover four engines (2026-11-10, clipboard 2026-11-11).** `tst_features` measures `Burst`, `Mutate`, the alert's and the clipboard's `Reshape`; the activity pill's expanded views and the Wi-Fi `Extension` are not measured against `Motion.budget.ready`, and the measurement is offscreen script time plus the animation clock, not a real compositor frame.
-- **Planned surfaces have a row and a contract but no code** (`lock`, `widgets`, `canvas`); two points in `roadmap.md` § Still open wait for the user (the app manager's move action, keyboard focus for the V/AI widget).
-- **Catalogues are review-only.** Nothing checks that a `Lock.js` module, a settings tab or an activity key has its file; the `[features]` check stops at the surface.
+- **Planned surfaces have a row and a contract but no code** (`canvas`); two points in `roadmap.md` § Still open wait for the user (the app manager's move action, keyboard focus for the V/AI widget).
+- **Catalogues are review-only.** Nothing checks that a settings tab or an activity key has its file; the `[features]` check stops at the surface (`tst_locking` checks that every `Lock.js` module has its `<Key>Module.qml`).
 
 - **The capability contract is unverified on real compositors** (2026-11-07). `Platform.js` claims what the code paths implement; none was run against driftwm, Hyprland or a plain Wayland compositor here. Unchecked: whether `GlobalShortcut` warns or stays silent where the Hyprland protocol is missing, and whether driftwm offers that protocol.
 - **Generic Wayland has no focus tracking**: `Compositor.focusedScreen` stays on the first screen, so shortcuts, IPC overlays and notification peeks open there on multi-monitor setups. `ToplevelManager.activeToplevel.screens` could supply it; not built.
@@ -35,7 +35,7 @@
   - `JsonAdapter` persistence of `var` values
   - the dashboard's hardware probe, weather fetch and `vados-dashboard` blur rule
 - **Dashboard gaps**: no reading for Intel iGPUs and no choice between GPUs (the first card wins); disks on one filesystem (btrfs subvolumes) collapse into one row; weather is Celsius only, with no day names.
-- **Wi-Fi extension**: clicking a network runs `nmcli device wifi connect`, which only works for open networks and saved profiles; there is no password entry yet. The fused style has no `EdgeFuse` on the extension body. Not yet run on the Linux shell.
+- **Wi-Fi 802.1X sign-in is PEAP with MSCHAPv2 only** (2026-11-17): networks that need EAP-TTLS, EAP-TLS (certificates) or an anonymous outer identity cannot be set up from the page, and a wrong method reads as WRONG PASSWORD. No CA certificate is set, so the server's certificate is not checked. A hidden 802.1X network is not provisioned (the script cannot tell its type before joining). The NetworkManager path is untested (no `nmcli` on the dev machine).
 - **Tray in the activity pill (2026-11-10)**: at most `activity.tray.columns` items (8), no tooltip, no status (`NeedsAttention` does not wake the pill), and `display()` of a menu at the cell's window position is unverified on a real compositor, as is the item's `icon` source.
 - **Contract 1 is built except its checks on hardware (2026-11-10).** Built: the alert face, the source catalogue, swipe and tap, the bell and the tray inside the pill, `Activity` folded into `ActivityState`. `notifications.enabled` stays off by default (opt-in by `rules/security.md`, on by the roadmap; the user decides).
 - **Notifications menu gaps (2026-11-10)**: rows show no time and no actions besides open; no drag and drop of files onto a device; devices are edited only in `shell.json`, not in settings; no transfer progress (contract 2, later); `Rising` bubbles are not used; not yet run on the Linux shell, so Blip, the portal chooser and the split's look are unchecked (`roadmap.md` § 2 Left).
@@ -66,3 +66,50 @@
 - **The screenshot colour wheel and handles are unchecked on a real screen** (2026-11-11): the toolbar was seen live (black, vertical, at the pill), but the wheel, shape handles and drawing were only driven in the preview, which draws no liquid offscreen (`quirks.md`). An expanded activity pill is copied at its body size but without its expanded content.
 - **The screenshot text tool is untested end to end** (2026-11-11): `Ink.js` text logic has a test, but the preview test could not load (another session's unfinished `dashboard/TaskTabs.qml`), so typing, the editor focus and a tap with `Gesture` threshold 0 (which may cross before it taps) are unchecked. Text hit boxes use an estimated Space Mono advance (`Ink.textAdvance`), not measured widths.
 - **The search profile blob and the per-screen keyboard are unseen on a real screen** (2026-11-11): the blob's arc enter, splash, arc-and-slide leave and power column, the tinted best match and the app menu were checked only by the preview tests (which draw no liquid), and the keyboard hand-back when the pointer crosses monitors was not tried live. On Hyprland, whether `focusedMonitor` follows the pointer while an exclusive layer holds the keyboard is unverified. The larger type was not checked for overflow in every fixed-size row.
+- **The login theme is unseen in a real SDDM session** (2026-11-13): it loads in `sddm-greeter-qt6 --test-mode` without warnings and renders offscreen with a mocked greeter, but installing it, a real login, multi-screen layout and the keyring unlock are unchecked.
+- **Contract 5 additions are unseen** (2026-11-13): the new settings layout, the pop bar names, the per-level piece motion and both new tabs load without warnings (running shell and `tst_preview` `test_wholeShellLoadsWithoutWarnings`) but were not looked at. The font list is pointer only (Up and Down switch tabs), against the keyboard rule in `rules/interaction.md`. A right-hand taskbar mirrors the card and title direction through `Page.isMirrored`, unchecked.
+- **Extension pages at pill width are unseen** (2026-11-13): the pages now get the hovered pill's width (about 230 px instead of 300), so long device or network names elide earlier; spacing was tightened but not checked by eye.
+
+## Clearing the wallpaper leaves driftwm's background (2026-11-13)
+
+On driftwm the compositor draws the picked wallpaper (`[background]`) and the shell draws none (`ownBackground`). Clearing `wallpaper.path` leaves driftwm's background on the last picked image, and a change of image has no crossfade there.
+
+## One wallpaper for every screen (2026-11-13)
+
+`wallpaper.path` is one image for all monitors; the roadmap wants one per monitor. Needs a per-screen key (or map) and a screen picker in the Wallpaper tab.
+
+## The wallpaper folder is not searched recursively (2026-11-13)
+
+`services/Wallpapers.qml` lists only the images directly in `wallpaper.folder`; images in subfolders are not offered.
+
+## Settings choices are not reachable from the keyboard (2026-11-13)
+
+Up/Down/Tab switch tabs and Left/Right the second bar, but the `OptionGroup`s, fields and the selection wheel take only the pointer (`rules/interaction.md` wants every overlay usable from the keyboard). The Wallpaper tab steps with PageUp/PageDown.
+
+## Desktop widgets are only partly seen on a real session (2026-11-14)
+
+Seen in a nested driftwm (winit backend, the shell with its own home): all six widgets draw above driftwm's wallpaper and take their layout from `shell.json`. Not checked, because nothing could move the pointer there: a widget taking a drag on the bottom layer, a canvas pan and zoom around it, an unplug and replug, and a fullscreen window stopping the updates. Smaller gaps: removing the last widget of a screen destroys its window at once, so that widget's leave is not seen; a screen counts as covered only while its fullscreen window has focus (`Compositor.activeWindow`); the disk widget shows the first disk only and the battery widget says `AC` on a desktop; the Widgets tab is pointer only, like the other settings choices.
+
+## Displays tab (2026-11-15)
+
+- **Mirroring and the `"*"` fallback entry are not offered**; the tab writes one entry per listed monitor.
+- **Turning off the monitor that shows the settings reverts it** (2026-11-16): the overlay leaves with its screen, so KEEP is gone and the countdown puts the monitor back. Turn a monitor off from settings opened on another one.
+- **Turning off a monitor between two others leaves a gap** the tab refuses until the rest are dragged together.
+- **Upstream driftwm rejects `enabled`** (its `[[outputs]]` has `deny_unknown_fields`): on a driftwm without the local patch, turning a monitor off makes driftwm refuse the whole config until the countdown reverts it. The key is written only while a monitor is off.
+- **The canvas is narrow below about 1600 px of screen width** (the controls column keeps its 420 px); seen in the 1280 x 800 nested session.
+- **Arranging is pointer only**: Enter applies or keeps, but monitors cannot be moved and choices cannot be stepped from the keyboard (like the other settings choices).
+- **The contract's liquid bodies are squircles** (`decisions.md` § Displays tab): adjacent monitors do not neck into each other.
+- **The countdown shows only on the Displays tab**: with settings closed the layout still reverts at the deadline, but nothing on screen says so.
+- **Hyprland is unrun**, and its kept layout needs the `source` line from the README.
+
+## Lock screen (2026-11-14)
+
+- **Unlocking is not run yet.** Seen in a nested driftwm (2026-11-14): `lock lock` locks and draws the screen, killing the shell leaves the output black and locked, a restarted shell locks again from its marker, and PAM `login` asks for the password. Typing the password, a wrong one, blanking and a second monitor are unchecked.
+- **The leave starts from the main screen's layout, not from where the bodies were.** If the screen changed size during the lock, `LockLeave` computes the frames for the new size; the bodies jump less than a cell, unchecked on hardware.
+- **No auto-lock.** Idle only blanks the locked screen (`decisions.md` § Lock screen); locking the desktop after idle or before suspend (logind `PrepareForSleep`, `loginctl lock-session` from elsewhere) does nothing in the shell yet.
+- **The password field takes no cursor movement or input method.** Keys append, Backspace deletes, Escape and Ctrl+Backspace clear; dead keys and compose come through `event.text` but an input method popup is not supported on the lock surface.
+- **Fingerprint and other PAM modules that need no answer are unsupported**: the conversation starts only on Enter with a non-empty password, and a second question ends it with AUTHENTICATION FAILED.
+- **`Lattice.qml` does not load on Qt 6.12** (2026-11-15): `Final member top is overridden in class Lattice`, so `Settings` and `WidgetEditor` are unavailable and `tst_preview` and `tst_widgets` fail to compile (498 passed, 3 failed). The overridden `top` is not declared in `Lattice.qml`, `Piece.qml` or `Turn.qml`; not traced further.
+- **Row hover colour is not animated in Audio and Network rows.** Only the Power icon fades (`Behavior on color`); the others switch at once. Left as is.
+
+- The clipboard over an open menu has no liquid enter or leave (a flat panel, 2026-11-16), and the menu still owns the keyboard, so Escape may close the menu.

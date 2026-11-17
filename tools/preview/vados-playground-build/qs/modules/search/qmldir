@@ -1,0 +1,7 @@
+module qs.modules.search
+AppIcon 1.0 AppIcon.qml
+AppMenu 1.0 AppMenu.qml
+FoundCard 1.0 FoundCard.qml
+ProfileBlob 1.0 ProfileBlob.qml
+ResultRow 1.0 ResultRow.qml
+Search 1.0 Search.qml

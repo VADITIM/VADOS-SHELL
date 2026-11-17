@@ -11,6 +11,7 @@ Item {
     property bool isCovered: false
     property var hostWindow: null
     property bool isSummoned: false
+    property bool isEngaged: false
     property string expandedIdle: ""
     property string hoverOpenedKey: ""
     property Item hoveredIdle: null
@@ -40,6 +41,12 @@ Item {
     readonly property bool isVeiled: isAway && hasSlung && !isGathering
     property bool wasRevealed: false
     property bool isEaten: false
+    property string extensionKey: ""
+    property string heldExtensionKey: ""
+    readonly property Item extensionIdle: heldExtensionKey.length > 0 ? idleExtending(heldExtensionKey) : null
+    readonly property real clockTop: clock.y
+    readonly property rect extensionRect: extensionIdle ? extensionIdle.bodyRect() : Qt.rect(0, 0, 0, 0)
+    readonly property real extensionLift: extensionIdle ? extensionIdle.lift : 0
     property var visitor: null
     readonly property bool isArriving: visitor !== null && visitor.isReleasing === true && visitor.release > 0
     property string activityMode: "idle"
@@ -52,13 +59,13 @@ Item {
     signal compactRequested(bool isCompact)
     signal settingsRequested()
     signal dashboardRequested()
-    signal extensionRequested(string key, rect origin)
+    signal extensionRequested(string key)
     signal activityModeRequested(string mode)
     signal activityLeadRequested(int direction)
     signal clipboardCloseRequested()
 
     readonly property bool isRevealed: (!isCovered || isSummoned) && !isAway
-    readonly property bool isHeld: rootHover.hovered || carried.isActive || taskPointer.pressed
+    readonly property bool isHeld: rootHover.hovered || carried.isActive || taskPointer.pressed || isEngaged
     readonly property Item liquidShapes: liquid.shapes
     readonly property Arrangement arrangement: Arrangement {}
     readonly property real pitch: Appearance.taskbar.item + Appearance.taskbar.itemGap
@@ -68,7 +75,9 @@ Item {
     readonly property bool isAlertShown: activityPill.isAlertShown
     readonly property rect clipboardRect: activityPill.spreadRect
     readonly property bool isClipboardShown: activityPill.isClipboardShown
-    readonly property bool isClipboardBumpHovered: activityPill.isBumpHovered
+    readonly property bool isSwallowing: activityPill.isClipboardBody && clipboardSize.height > 0
+    readonly property real swallowTop: activityCenter - clipboardSize.height / 2 - Appearance.taskbar.pillGap
+    readonly property real swallowBottom: activityCenter + clipboardSize.height / 2 + Appearance.taskbar.pillGap
     readonly property var activityPlace: ({
         spineX: inset + Appearance.taskbar.thickness / 2,
         centerY: activityCenter,
@@ -95,6 +104,10 @@ Item {
         return Geometry.clampUnit(1 - Math.hypot(awayX, awayY) / Appearance.taskbar.visitReach)
     }
 
+    function swallows(top, bottom) {
+        return (isSwallowing && bottom > swallowTop && top < swallowBottom) 
+    }
+
     function hasArrivedAt(centerY) {
         if (!isArriving)
             return true
@@ -104,6 +117,13 @@ Item {
                 nearest = part
         }
         return nearest === null || visitor.release >= nearest.arrival
+    }
+
+    function originPoints() {
+        const size = powerIdle.size
+        return {
+            power: Qt.point(idleColumn.x + powerIdle.x + powerIdle.circleX + size / 2, idleColumn.y + powerIdle.y + powerIdle.height / 2)
+        }
     }
 
     function liquidParts() {
@@ -192,6 +212,21 @@ Item {
         return null
     }
 
+    function idleExtending(extensionKey) {
+        const idles = idleColumn.children
+        for (let position = 0; position < idles.length; position++) {
+            if (idles[position].extensionKey === extensionKey)
+                return idles[position]
+        }
+        return null
+    }
+
+    function isUnderExtension(idle, top, bottom) {
+        if (extensionIdle === null || extensionIdle === idle || extensionLift < 0.001)
+            return false
+        return bottom > extensionRect.y && top < extensionRect.y + extensionRect.height
+    }
+
     function closeHoverOpened() {
         hoverClose.stop()
         hoverGrace.stop()
@@ -215,7 +250,7 @@ Item {
         if (!idle)
             return
         const body = idle.bodyRect()
-        const slack = Appearance.taskbar.hoverSlack
+        const slack = shell.height * Appearance.taskbar.hoverSlackShare
         const isInside = point.x >= body.x - slack && point.x <= body.x + body.width + slack
             && point.y >= body.y - slack && point.y <= body.y + body.height + slack
         if (isInside) {
@@ -372,15 +407,26 @@ Item {
     }
 
     onIsCoveredChanged: {
-        if (!isCovered)
+        if (!isCovered && !isEngaged)
             isSummoned = false
-        else if (rootHover.hovered)
+        else if (isCovered && rootHover.hovered)
             isSummoned = true
     }
     onIsRevealedChanged: {
         if (!isRevealed) {
             expandedIdle = ""
             collapseActivity()
+            if (extensionKey.length > 0)
+                extensionRequested("")
+        }
+    }
+    onExtensionKeyChanged: {
+        if (extensionKey.length > 0) {
+            heldExtensionKey = extensionKey
+            hoverOpen.stop()
+            closeHoverOpened()
+            expandedIdle = ""
+            hoveredTask = null
         }
     }
     onIsEatenChanged: {
@@ -514,6 +560,10 @@ Item {
     HoverHandler {
         id: rootHover
         onPointChanged: shell.followPointer(point.position)
+        onHoveredChanged: {
+            if (!hovered && shell.hoverOpenedKey !== "" && !hoverClose.running)
+                hoverClose.start()
+        }
     }
 
     Rectangle {
@@ -669,7 +719,7 @@ Item {
             required property int index
             tasks: shell.arrangement.modelFor(pillKey)
             host: shell
-            isRevealed: shell.isRevealed && !shell.isEaten
+            isRevealed: shell.isRevealed && !shell.isEaten && !shell.swallows(y, y + height)
             enterDelay: (Math.max(0, index) + 1) * Motion.reveal.stagger
             x: shell.inset
             y: shell.stackTop(index)
@@ -685,7 +735,7 @@ Item {
         pillKey: "main"
         tasks: shell.arrangement.mainTasks
         host: shell
-        isRevealed: shell.isRevealed && !shell.isEaten
+        isRevealed: shell.isRevealed && !shell.isEaten && !shell.swallows(y, y + height)
         x: shell.inset
         y: Appearance.taskbar.margin
     }
@@ -702,6 +752,7 @@ Item {
         clipboardSize: shell.clipboardSize
         x: shell.inset
         y: shell.activityCenter
+        z: activityPill.isSpreadBody ? 1 : 0
         onModeRequested: mode => shell.activityModeRequested(mode)
         onLeadRequested: direction => shell.activityLeadRequested(direction)
     }
@@ -750,6 +801,7 @@ Item {
         }
 
         PowerIdle {
+            id: powerIdle
             host: shell
             origin: idleColumn
             order: 6
@@ -762,7 +814,7 @@ Item {
         x: Appearance.taskbar.margin + 2
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Appearance.taskbar.margin
-        isShown: (shell.isRevealed || (shell.isAway && shell.wasRevealed)) && !shell.isEaten
+        isShown: (shell.isRevealed || (shell.isAway && shell.wasRevealed)) && !shell.isEaten && !shell.swallows(y, y + height) && !shell.isUnderExtension(null, y, y + height)
         transform: Upright {
             isMirrored: shell.isMirrored
             axis: clock.width / 2

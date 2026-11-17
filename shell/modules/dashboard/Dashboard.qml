@@ -34,7 +34,7 @@ FocusScope {
     readonly property var task: look.task
     readonly property real taskBodyFar: rootX + look.width + (Battery.isPresent ? Appearance.burst.stepSide : 0)
     readonly property real taskWidth: Math.min(task.width, width - taskBodyFar - task.bodyGap)
-    readonly property real taskHeight: Math.min(task.height, height - task.edgeGap * 2)
+    readonly property real taskHeight: Math.min(task.height, height - (task.edgeGap + task.search + task.searchGap) * 2)
     readonly property real taskTop: Math.round((height - taskHeight) / 2)
     readonly property real taskLeft: isMirrored ? 0 : width - taskWidth
     readonly property real shotY: centerY
@@ -177,7 +177,7 @@ FocusScope {
                 onLanded: dashboard.landed()
             }
 
-            TaskShape {
+            EdgeShot {
                 id: taskShape
                 anchors.fill: parent
                 shotStart: dashboard.shotStart
@@ -517,8 +517,24 @@ FocusScope {
             focus: true
             hasIcons: dashboard.hasTaskIcons
             isShown: taskBurst.isOpened
+            isTyping: taskSearch.isTyping
             onIconsToggled: dashboard.taskIconsToggled()
+            onTypingRequested: text => taskSearch.begin(text)
         }
+    }
+
+    TaskSearch {
+        id: taskSearch
+        anchors.fill: parent
+        shapes: tabShapes
+        isMirrored: dashboard.isMirrored
+        isShown: taskManager.isShown
+        target: taskManager
+        query: taskManager.query
+        fromX: dashboard.width - dashboard.taskWidth
+        toX: dashboard.width
+        floorY: dashboard.taskTop - dashboard.task.searchGap
+        onEdited: text => taskManager.query = text
     }
 
     TaskTabs {

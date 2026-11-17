@@ -1,0 +1,15 @@
+module qs.modules.dashboard
+Charge 1.0 Charge.qml
+Crescent 1.0 Crescent.qml
+Dashboard 1.0 Dashboard.qml
+Drive 1.0 Drive.qml
+Forecast 1.0 Forecast.qml
+Gauge 1.0 Gauge.qml
+LevelBar 1.0 LevelBar.qml
+Ring 1.0 Ring.qml
+TaskManager 1.0 TaskManager.qml
+TaskMenu 1.0 TaskMenu.qml
+TaskRow 1.0 TaskRow.qml
+TaskSearch 1.0 TaskSearch.qml
+TaskTabs 1.0 TaskTabs.qml
+Throughput 1.0 Throughput.qml

@@ -103,7 +103,7 @@ Item {
         untypeInterval: tip.isRetyping ? Motion.tip.retypeUntype : Motion.tip.untype
         opacity: tip.presence
         color: Appearance.color.text
-        font.family: Appearance.font.mono
+        font.family: Appearance.font.sans
         font.pixelSize: Appearance.font.body
         transform: Upright {
             isMirrored: tip.host.isMirrored

@@ -17,6 +17,28 @@ TestCase {
         verify(middle.x > 50 && middle.y > 100, "it bows toward the control, not along the straight line")
     }
 
+    function test_surgeLaunchesFastSlowsAtTheTurnAndSpeedsUpAgain() {
+        compare(Geometry.surge(0, 0.8, 0.4), 0)
+        fuzzyCompare(Geometry.surge(1, 0.8, 0.4), 1, 0.0001)
+        fuzzyCompare(Geometry.surge(0.4, 0.8, 0.4), 0.4, 0.0001)
+        const speedAt = time => (Geometry.surge(time + 0.01, 0.8, 0.4) - Geometry.surge(time, 0.8, 0.4)) / 0.01
+        verify(speedAt(0) > 1.6, "it launches above the mean speed, " + speedAt(0))
+        verify(speedAt(0.395) < 0.3, "it loses speed at the turn, " + speedAt(0.395))
+        verify(speedAt(0.98) > 1.6, "it gains speed again after the turn, " + speedAt(0.98))
+        let last = 0
+        for (let step = 1; step <= 100; step++) {
+            const share = Geometry.surge(step / 100, 0.8, 0.4)
+            verify(share >= last, "it never runs backwards")
+            last = share
+        }
+    }
+
+    function test_stretchFollowsSpeedUpToItsLimit() {
+        compare(Geometry.stretchOf(0, 0.12, 0.4), 0)
+        fuzzyCompare(Geometry.stretchOf(2, 0.12, 0.4), 0.24, 0.0001)
+        compare(Geometry.stretchOf(50, 0.12, 0.4), 0.4)
+    }
+
     function test_clampAndSmooth() {
         compare(Geometry.clampUnit(-2), 0)
         compare(Geometry.clampUnit(3), 1)
@@ -40,6 +62,37 @@ TestCase {
         fuzzyCompare(outline[24].x, 50, 0.001)
         fuzzyCompare(outline[24].y, 60, 0.001)
         fuzzyCompare(outline[48].x, 0, 0.001)
+    }
+
+    function test_squircleCornersKeepTheirSizeOnAnyShape() {
+        const wide = Geometry.squircle(400, 100, 30, 4, 96)
+        const tall = Geometry.squircle(100, 400, 30, 4, 96)
+        compare(wide.length, 96)
+        fuzzyCompare(wide[0].x, 400, 0.001)
+        fuzzyCompare(wide[24].y, 100, 0.001)
+        const bendOf = outline => {
+            let width = 0
+            let height = 0
+            for (const point of outline) {
+                width = Math.max(width, point.x)
+                height = Math.max(height, point.y)
+            }
+            const corner = outline[12]
+            return { x: width - corner.x, y: height - corner.y }
+        }
+        fuzzyCompare(bendOf(wide).x, bendOf(wide).y, 0.001)
+        fuzzyCompare(bendOf(wide).x, bendOf(tall).x, 0.001)
+        fuzzyCompare(bendOf(wide).y, bendOf(tall).y, 0.001)
+        const stretched = Geometry.superellipse(400, 100, 4, 96)
+        verify(Math.abs((400 - stretched[12].x) - (100 - stretched[12].y)) > 10, "the plain superellipse stretches its corner")
+        const whole = Geometry.squircle(100, 100, 500, 4, 96)
+        const plain = Geometry.superellipse(100, 100, 4, 96)
+        for (let index = 0; index < 96; index++) {
+            fuzzyCompare(whole[index].x, plain[index].x, 0.001)
+            fuzzyCompare(whole[index].y, plain[index].y, 0.001)
+        }
+        const edge = wide.filter(point => Math.abs(point.y - 100) < 0.001)
+        verify(edge.length >= 1)
     }
 
     function test_splinePassesThroughItsPoints() {

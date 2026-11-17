@@ -11,6 +11,9 @@ Item {
     property bool isShown: false
     property bool isSettled: false
     readonly property bool isActive: modelData.isActive
+    readonly property bool isKnown: Network.known.indexOf(modelData.ssid) >= 0
+    readonly property bool isJoining: Network.joining === modelData.ssid
+    property bool isForgetting: false
 
     width: ListView.view.width
     height: Appearance.extension.row + Appearance.extension.rowGap
@@ -36,18 +39,15 @@ Item {
             id: face
             anchors.fill: parent
 
-            Rectangle {
+            Sweep {
                 anchors.fill: parent
-                radius: height / 2
-                color: Appearance.color.wash
-                opacity: area.containsMouse || row.isActive ? 1 : 0
+                isOn: rowHover.hovered
+                fill: Appearance.extension.hoverWash
+            }
 
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: Motion.pace(area.containsMouse ? Motion.hoverIn : Motion.hoverOut)
-                        easing.type: Easing.OutQuad
-                    }
-                }
+            Sweep {
+                anchors.fill: parent
+                isOn: row.isActive
             }
 
             Glyph {
@@ -57,7 +57,7 @@ Item {
                 height: Appearance.extension.glyph
                 name: "wifi"
                 level: row.modelData.strength
-                color: row.isActive ? Appearance.color.accent : Appearance.color.textBody
+                color: row.isActive || row.isJoining ? Appearance.color.accent : rowHover.hovered ? Appearance.color.text : Appearance.color.textBody
             }
 
             Text {
@@ -66,8 +66,8 @@ Item {
                 width: parent.width - x - Appearance.extension.rowPadding * 2 - Appearance.extension.lock
                 elide: Text.ElideRight
                 text: row.modelData.ssid.toUpperCase()
-                color: row.isActive ? Appearance.color.text : Appearance.color.textBody
-                font.family: Appearance.font.mono
+                color: row.isActive || rowHover.hovered ? Appearance.color.text : Appearance.color.textBody
+                font.family: Appearance.font.sans
                 font.pixelSize: Appearance.font.label
                 font.letterSpacing: Appearance.font.labelSpacing
                 font.bold: true
@@ -79,7 +79,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 width: Appearance.extension.lock
                 height: Appearance.extension.lock
-                visible: row.modelData.isSecured
+                visible: row.modelData.isSecured && !row.isForgetting
                 name: "lock"
                 color: Appearance.color.textMuted
             }
@@ -89,7 +89,41 @@ Item {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: Network.connectTo(row.modelData.ssid)
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: mouse => {
+                    if (mouse.button === Qt.RightButton)
+                        row.isForgetting = row.isKnown && !row.isForgetting
+                    else
+                        Network.connectTo(row.modelData.ssid, false)
+                }
+            }
+
+            HoverHandler {
+                id: rowHover
+                onHoveredChanged: {
+                    if (!hovered)
+                        row.isForgetting = false
+                }
+            }
+
+            Turn {
+                anchors.right: parent.right
+                anchors.rightMargin: Appearance.extension.rowPadding / 2
+                anchors.verticalCenter: parent.verticalCenter
+                visible: presence > 0
+                isShown: row.isForgetting
+                enterDuration: Motion.stateDuration
+                enterEasing: Easing.OutBack
+                leaveWindow: 0
+
+                GlyphButton {
+                    label: "FORGET"
+                    isArmed: true
+                    onClicked: {
+                        row.isForgetting = false
+                        Network.forget(row.modelData.ssid)
+                    }
+                }
             }
         }
     }

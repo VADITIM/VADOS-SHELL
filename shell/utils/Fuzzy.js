@@ -76,3 +76,21 @@ function recent(apps, usage) {
     const launched = apps.filter(app => used[app.id]).sort((first, second) => used[second.id].last - used[first.id].last)
     return launched.concat(apps.filter(app => !used[app.id]))
 }
+
+function noteSeen(apps, seen, now) {
+    const isFirstRun = seen === undefined || seen === null
+    const known = isFirstRun ? {} : seen
+    const missing = apps.filter(app => known[app.id] === undefined)
+    if (missing.length === 0 && !isFirstRun)
+        return known
+    const next = Object.assign({}, known)
+    for (const app of missing)
+        next[app.id] = isFirstRun ? 0 : now
+    return next
+}
+
+function fresh(apps, seen, usage, now, window) {
+    const noted = seen || {}
+    const used = usage || {}
+    return apps.filter(app => !used[app.id] && noted[app.id] > 0 && now - noted[app.id] < window).sort((first, second) => noted[second.id] - noted[first.id])
+}

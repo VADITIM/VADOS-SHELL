@@ -69,7 +69,7 @@ Item {
             characterInterval: Motion.type.quick
             untypeInterval: Motion.type.quickUntype
             color: Capture.isPaused ? Appearance.color.textMuted : Appearance.capture.tint
-            font.family: Appearance.font.mono
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.activity.expanded.label
             font.letterSpacing: Appearance.font.labelSpacing
             font.bold: true
@@ -82,7 +82,7 @@ Item {
             characterInterval: Motion.type.quick
             untypeInterval: Motion.type.quickUntype
             color: Appearance.color.text
-            font.family: Appearance.font.mono
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.activity.expanded.body
             font.bold: true
         }

@@ -563,6 +563,15 @@ FocusScope {
                 color: bubble.isActive ? Appearance.color.accent : "transparent"
                 border.width: bubble.isSelected || bubbleArea.containsMouse ? menu.look.ring : 0
                 border.color: Appearance.color.accent
+
+                scale: bubbleArea.containsMouse ? Motion.notifications.hoverScale : 1
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Motion.pace(Motion.stateDuration)
+                        easing.type: Easing.OutBack
+                    }
+                }
             }
 
             Glyph {
@@ -572,6 +581,15 @@ FocusScope {
                 opacity: bubble.presence
                 name: bubble.modelData.glyph
                 color: bubble.isActive ? Appearance.color.ground : bubbleArea.containsMouse && bubble.modelData.key === "clear" ? Appearance.color.danger : Appearance.color.text
+
+                scale: bubbleArea.containsMouse ? Motion.notifications.hoverScale : 1
+
+                Behavior on scale {
+                    NumberAnimation {
+                        duration: Motion.pace(Motion.stateDuration)
+                        easing.type: Easing.OutBack
+                    }
+                }
             }
 
             TypedText {

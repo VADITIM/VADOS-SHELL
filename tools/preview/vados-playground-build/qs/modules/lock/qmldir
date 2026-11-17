@@ -1,0 +1,11 @@
+module qs.modules.lock
+ClockModule 1.0 ClockModule.qml
+DashboardModule 1.0 DashboardModule.qml
+LockLeave 1.0 LockLeave.qml
+LockPreviews 1.0 LockPreviews.qml
+LockScreen 1.0 LockScreen.qml
+LoginModule 1.0 LoginModule.qml
+MusicModule 1.0 MusicModule.qml
+NotificationsModule 1.0 NotificationsModule.qml
+ProfileModule 1.0 ProfileModule.qml
+WeatherModule 1.0 WeatherModule.qml

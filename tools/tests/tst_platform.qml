@@ -46,6 +46,41 @@ TestCase {
         }
     }
 
+    function test_onlyDriftwmDrawsItsOwnBackground() {
+        verify(Platform.capabilitiesOf("driftwm").ownBackground, "driftwm paints over the background layer, so widgets sit on the bottom layer")
+        verify(!Platform.capabilitiesOf("hyprland").ownBackground)
+        verify(!Platform.capabilitiesOf("generic").ownBackground)
+    }
+
+    function test_theLockNeedsTheSessionLockProtocol() {
+        verify(Platform.capabilitiesOf("driftwm").sessionLock)
+        verify(Platform.capabilitiesOf("hyprland").sessionLock)
+        verify(!Platform.capabilitiesOf("generic").sessionLock, "an unknown compositor never gets a plain overlay as a lock")
+        const before = Compositor.powered.length
+        Compositor.powerDisplays(false)
+        compare(Compositor.powered.length, before, "no display power command without the capability")
+        Compositor.isDriftwm = true
+        Compositor.powerDisplays(false)
+        compare(Compositor.powered.length, before + 1)
+    }
+
+    function test_outputLayoutsNeedOutputConfiguration() {
+        verify(Platform.capabilitiesOf("driftwm").outputConfiguration, "driftwm takes [[outputs]] from its config and reloads it live")
+        verify(Platform.capabilitiesOf("hyprland").outputConfiguration)
+        verify(!Platform.capabilitiesOf("generic").outputConfiguration, "an unknown compositor gets no Displays tab")
+        const layout = Compositor.outputs
+        const before = Compositor.appliedOutputs.length
+        verify(!Compositor.applyOutputs(layout), "nothing is applied without the capability")
+        compare(Compositor.appliedOutputs.length, before)
+        Compositor.isDriftwm = true
+        verify(Compositor.applyOutputs(layout))
+        compare(Compositor.appliedOutputs.length, before + 1)
+        compare(Compositor.outputTrial.phase, "trying", "an applied layout is on trial")
+        Compositor.revertOutputs()
+        compare(Compositor.outputTrial.phase, "idle")
+        compare(Compositor.outputs, layout, "a revert puts the previous layout back")
+    }
+
     function test_windowAbilitiesNeedWindowControl() {
         for (const backend of backendNames) {
             const capabilities = Platform.capabilitiesOf(backend)

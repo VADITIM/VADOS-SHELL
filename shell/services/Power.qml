@@ -4,7 +4,8 @@ import Quickshell
 
 Singleton {
     function lock() {
-        Quickshell.execDetached(["loginctl", "lock-session"])
+        if (!Lock.lock())
+            Quickshell.execDetached(["loginctl", "lock-session"])
     }
 
     function suspend() {

@@ -1,8 +1,10 @@
 import QtQuick
+import Quickshell
 import qs.config
 import qs.state
 import qs.services
 import qs.modules.settings
+import qs.modules.lock
 
 OverlayWindow {
     id: window
@@ -22,10 +24,21 @@ OverlayWindow {
         window.requestClose()
     }
 
+    Binding {
+        target: Compositor
+        property: "isWatchingOutputs"
+        value: settings.isDisplaysShown
+    }
+
+    LockPreviews {
+        id: lockPreviews
+    }
+
     Settings {
         id: settings
         anchors.fill: parent
         isOpen: window.isOpen
+        widgetPreviews: lockPreviews.byKey
         openingTab: Overlays.pageOf("settings")
         parts: window.parts
         shouldStream: window.shouldStream
@@ -44,6 +57,8 @@ OverlayWindow {
         isReducedMotion: Config.data.motion.reduced
         burstStyle: Config.data.motion.burst
         isQuiet: Config.data.attention.doNotDisturb
+        canLimitCharge: Battery.canLimit
+        isChargeLimited: Config.data.battery.limit
         screenshotFolder: Config.data.capture.screenshots
         recordingFolder: Config.data.capture.recordings
         defaultScreenshots: Capture.defaultScreenshots
@@ -60,8 +75,37 @@ OverlayWindow {
         isNotificationsOn: Config.data.notifications.enabled
         lockLayout: Config.data.lock.layout
         lockWallpaper: Config.data.lock.wallpaper
+        lockBlankAfter: Config.data.lock.blankAfter
+        wallpaper: Config.data.wallpaper.path
+        wallpaperFolder: Config.data.wallpaper.folder
+        widgetsLayout: Config.data.widgets.layout
+        widgetScreens: Array.from(Quickshell.screens, screen => ({ name: screen.name, width: screen.width, height: screen.height }))
+        widgetScreen: window.screenName
+        onWidgetsLayoutRequested: entries => Config.setWidgetsLayout(entries)
+        canConfigureDisplays: Compositor.capabilities.outputConfiguration
+        outputs: Compositor.outputs
+        outputTrial: Compositor.outputTrial
+        outputTrialLeft: Compositor.outputTrialLeft
+        onOutputsRequested: layout => Compositor.applyOutputs(layout)
+        onOutputsKept: Compositor.keepOutputs()
+        onOutputsReverted: Compositor.revertOutputs()
+        onWallpaperRequested: path => {
+            Config.setWallpaper(path)
+            Compositor.setBackground(path)
+        }
+        onWallpaperFolderRequested: folder => Config.setWallpaperFolder(folder)
+        onChoiceStyleRequested: style => Config.setChoiceStyle(style)
+        onChoiceColorRequested: (style, value) => style === "pill" ? Config.setChoicePill(value) : Config.setChoiceOutline(value)
         onLockLayoutRequested: entries => Config.setLockLayout(entries)
         onLockWallpaperRequested: value => Config.setLockWallpaper(value)
+        onLockBlankAfterRequested: seconds => Config.setLockBlankAfter(seconds)
+        onFontRequested: family => {
+            Config.setSystemFont(family)
+            if (family.length > 0)
+                SystemFont.apply(family)
+            else
+                SystemFont.restore()
+        }
         onProfileRequested: (field, value) => ({
             name: Config.setProfileName,
             secondName: Config.setProfileSecondName,
@@ -86,5 +130,6 @@ OverlayWindow {
         onReducedMotionRequested: isReduced => Config.setReducedMotion(isReduced)
         onBurstStyleRequested: style => Config.setBurstStyle(style)
         onQuietRequested: isQuiet => Config.setDoNotDisturb(isQuiet)
+        onChargeLimitRequested: isLimited => Config.setBatteryLimit(isLimited)
     }
 }

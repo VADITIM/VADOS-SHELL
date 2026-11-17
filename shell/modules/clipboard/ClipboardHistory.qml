@@ -10,7 +10,6 @@ Item {
     property var entries: []
     property rect body: Qt.rect(0, 0, 0, 0)
     property bool isBodyShown: false
-    property bool isBumpHovered: false
     property int first: 0
     property real shift: 0
     property real dragBase: 0
@@ -26,12 +25,15 @@ Item {
     readonly property size bodySize: Qt.size(look.width, look.height)
     readonly property var ordered: Entries.shown(entries, entries.length)
     readonly property real pitch: look.row + look.rowGap
-    readonly property int lastFirst: Math.max(0, ordered.length - look.rows)
+    readonly property var layout: Entries.layoutOf(ordered, look.imageSpan, look.lineChars)
+    readonly property int poolSize: look.rows + 2
+    readonly property int lastFirst: Math.max(0, layout.total - look.rows)
+    readonly property int leadIndex: first > 0 ? Math.max(0, Entries.indexAtSlot(layout, first - 1)) : 0
     readonly property bool isContentShown: isBodyShown
     readonly property bool hasLoose: entries.some(entry => !entry.isPinned)
-    readonly property int hoveredSlot: hover.hovered && hover.point.position.y >= list.y
-        ? Math.floor((hover.point.position.y - list.y - shift) / pitch)
-        : -2
+    readonly property var hoveredEntry: hover.hovered && hover.point.position.y >= list.y
+        ? entryAt(slotAt(hover.point.position.y - list.y))
+        : null
 
     signal pickRequested(var entry)
     signal pinRequested(var entry)
@@ -45,7 +47,7 @@ Item {
     }
 
     function entryAt(slot) {
-        return ordered[first + slot] ?? null
+        return ordered[Entries.indexAtSlot(layout, first + slot)] ?? null
     }
 
     function slotAt(y) {
@@ -91,12 +93,6 @@ Item {
         hasVisited = false
         linger.stop()
     }
-    onIsBumpHoveredChanged: {
-        if (isBumpHovered)
-            linger.stop()
-        else if (hasVisited && !hover.hovered)
-            linger.restart()
-    }
 
     Behavior on shift {
         enabled: !history.isScrolling && !history.isJumping
@@ -120,7 +116,7 @@ Item {
         id: linger
         interval: Motion.clipboard.linger
         onTriggered: {
-            if (!hover.hovered && !history.isBumpHovered)
+            if (!hover.hovered)
                 history.closeRequested()
         }
     }
@@ -147,7 +143,7 @@ Item {
                 if (hovered) {
                     history.hasVisited = true
                     linger.stop()
-                } else if (history.hasVisited && !history.isBumpHovered) {
+                } else if (history.hasVisited) {
                     linger.restart()
                 }
             }
@@ -167,10 +163,13 @@ Item {
                 width: history.look.badge
                 height: history.look.badge
                 isShown: history.isContentShown
-                enterDuration: Motion.clipboard.faceEnter
                 leaveDuration: Motion.clipboard.faceLeave
                 leaveDelay: Motion.clipboard.leaveStagger * history.look.rows
                 leaveWindow: 0
+                flipAngle: 0
+                spinAngle: Motion.clipboard.iconSpin
+                enterDuration: Motion.clipboard.iconEnter
+                enterEasing: Easing.OutBack
 
                 Rectangle {
                     width: history.look.badge
@@ -188,70 +187,68 @@ Item {
                 }
             }
 
-            Turn {
+            LabelReveal {
                 anchors.verticalCenter: parent.verticalCenter
-                width: title.width
-                height: title.height
+                width: title.implicitWidth
+                height: title.implicitHeight
+                label: "clipboard title"
                 isShown: history.isContentShown
-                enterDelay: Motion.clipboard.stagger
-                enterDuration: Motion.clipboard.faceEnter
                 leaveDuration: Motion.clipboard.faceLeave
-                leaveWindow: 0
+                barColor: Appearance.color.accent
 
-                TypedText {
+                Text {
                     id: title
-                    target: "CLIPBOARD"
-                    holdsWidth: true
-                    isShown: history.isContentShown
-                    characterInterval: Motion.type.quick
-                    untypeInterval: Motion.type.quickUntype
-                    leaveBudget: Motion.clipboard.faceLeave
+                    text: "CLIPBOARD"
                     color: Appearance.color.textMuted
-                    font.family: Appearance.font.mono
+                    font.family: Appearance.font.sans
                     font.pixelSize: history.look.label
                     font.letterSpacing: Appearance.font.labelSpacing
                     font.bold: true
                 }
             }
+        }
 
-            Turn {
-                anchors.verticalCenter: parent.verticalCenter
-                width: count.implicitWidth
-                height: count.implicitHeight
-                isShown: history.isContentShown
-                enterDelay: Motion.clipboard.stagger * 2
-                enterDuration: Motion.clipboard.faceEnter
-                leaveDuration: Motion.clipboard.faceLeave
-                leaveWindow: 0
+        Turn {
+            anchors.right: trash.left
+            anchors.rightMargin: history.look.iconGap
+            y: history.look.padding + (history.look.header - height) / 2
+            width: count.implicitWidth
+            height: count.implicitHeight
+            isShown: history.isContentShown
+            enterDelay: Motion.clipboard.stagger * 2
+            enterDuration: Motion.clipboard.faceEnter
+            leaveDuration: Motion.clipboard.faceLeave
+            leaveWindow: 0
 
-                Text {
-                    id: count
-                    text: history.entries.length
-                    color: Appearance.color.textFaint
-                    font.family: Appearance.font.mono
-                    font.pixelSize: history.look.label
-                    font.bold: true
-                }
+            Text {
+                id: count
+                text: history.entries.length
+                color: Appearance.color.textFaint
+                font.family: Appearance.font.sans
+                font.pixelSize: history.look.label
+                font.bold: true
             }
+        }
 
-            Turn {
-                id: trash
-                anchors.verticalCenter: parent.verticalCenter
-                width: history.look.action
-                height: history.look.action
-                isShown: history.isContentShown && history.hasLoose
-                enterDelay: Motion.clipboard.stagger * 3
-                enterDuration: Motion.clipboard.faceEnter
-                leaveDuration: Motion.clipboard.faceLeave
-                leaveWindow: 0
+        Turn {
+            id: trash
+            anchors.right: parent.right
+            anchors.rightMargin: history.look.trashInset
+            y: history.look.padding + (history.look.header - height) / 2
+            width: history.look.action
+            height: history.look.action
+            isShown: history.isContentShown && history.hasLoose
+            enterDelay: Motion.clipboard.stagger * 3
+            enterDuration: Motion.clipboard.faceEnter
+            leaveDuration: Motion.clipboard.faceLeave
+            leaveWindow: 0
 
-                GlyphButton {
-                    anchors.fill: parent
-                    glyphName: "trash"
-                    glyphSize: history.look.actionGlyph
-                    enabled: history.isContentShown && history.hasLoose
-                    onClicked: history.clearRequested()
-                }
+            GlyphButton {
+                anchors.fill: parent
+                glyphName: "trash"
+                glyphSize: history.look.actionGlyph
+                enabled: history.isContentShown && history.hasLoose
+                onClicked: history.clearRequested()
             }
         }
 
@@ -313,19 +310,21 @@ Item {
             }
 
             Repeater {
-                model: history.look.rows + 2
+                model: history.poolSize
 
                 ClipboardRow {
                     required property int index
-                    readonly property int slotIndex: index - 1
+                    readonly property int entryIndex: history.leadIndex + (index - history.leadIndex % history.poolSize + history.poolSize) % history.poolSize
+                    readonly property int startSlot: history.layout.starts[entryIndex] ?? history.layout.total
+                    readonly property int span: history.layout.spans[entryIndex] ?? 1
                     width: list.width
-                    height: history.look.row
-                    y: slotIndex * history.pitch + history.shift
-                    slot: slotIndex
-                    entry: history.entryAt(slotIndex)
+                    height: span * history.pitch - history.look.rowGap
+                    y: (startSlot - history.first) * history.pitch + history.shift
+                    order: entryIndex - history.leadIndex
+                    entry: history.ordered[entryIndex] ?? null
                     isShown: history.isContentShown
                     isMirrored: history.isMirrored
-                    isHovered: history.hoveredSlot === slotIndex && history.isContentShown
+                    isHovered: entry !== null && history.hoveredEntry !== null && history.hoveredEntry.key === entry.key && history.isContentShown
                     slide: entry && entry.key === history.swipedKey ? history.slide : 0
                     onPinRequested: history.pinRequested(entry)
                 }

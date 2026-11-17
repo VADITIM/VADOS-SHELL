@@ -35,7 +35,7 @@ IdlePill {
                     untypeInterval: Motion.type.quickUntype
                     target: device.modelData.label
                     color: Appearance.color.text
-                    font.family: Appearance.font.mono
+                    font.family: Appearance.font.sans
                     font.pixelSize: Appearance.font.label
                     font.letterSpacing: Appearance.font.labelSpacing
                     font.bold: true

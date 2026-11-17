@@ -8,6 +8,9 @@ Singleton {
     id: hardware
 
     property bool isActive: false
+    property bool isOnDesktop: false
+    property bool isOnLock: false
+    readonly property bool isPolling: isActive || isOnDesktop || isOnLock
 
     property real cpuLoad: 0
     property real cpuTemperature: 0
@@ -150,11 +153,11 @@ Singleton {
         hasGpu = false
     }
 
-    onIsActiveChanged: if (isActive) refresh()
+    onIsPollingChanged: if (isPolling) refresh()
 
     Timer {
         interval: Motion.dashboard.poll
-        running: hardware.isActive
+        running: hardware.isPolling
         repeat: true
         onTriggered: hardware.refresh()
     }

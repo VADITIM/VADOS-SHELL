@@ -7,6 +7,7 @@ IdlePill {
     id: networkIdle
 
     idleKey: "network"
+    extensionKey: "network"
     glyphName: Network.isWired || Network.isConnected ? "wifi" : Network.isEnabled ? "wifi-error" : "wifi-off"
     glyphLevel: Network.isWired ? 1 : Network.isEnabled && Network.isConnected ? Math.max(0.1, Network.strength) : 0
 
@@ -23,7 +24,7 @@ IdlePill {
             untypeInterval: Motion.type.quickUntype
             target: Network.isWired ? "WIRED" : Network.isConnected ? Network.ssid.toUpperCase() : Network.isEnabled ? "NO NETWORK" : "WIFI OFF"
             color: nameArea.containsMouse ? Appearance.color.accent : Network.isConnected ? Appearance.color.text : Appearance.color.textMuted
-            font.family: Appearance.font.mono
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.font.label
             font.letterSpacing: Appearance.font.labelSpacing
             font.bold: true
@@ -34,21 +35,7 @@ IdlePill {
                 enabled: networkIdle.isUnfolded && Network.isEnabled
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: networkIdle.host.extensionRequested("network", networkIdle.bodyRect())
-            }
-        }
-
-        Turn {
-            anchors.verticalCenter: parent.verticalCenter
-            isShown: networkIdle.isUnfolded
-            enterDelay: Motion.pill.elementStagger
-            enterDuration: Motion.stateDuration
-            enterEasing: Easing.OutBack
-            leaveWindow: 0
-
-            GlyphButton {
-                label: Network.isEnabled ? "OFF" : "ON"
-                onClicked: Network.toggle()
+                onClicked: networkIdle.extend()
             }
         }
     }

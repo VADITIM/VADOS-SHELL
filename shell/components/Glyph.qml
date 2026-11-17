@@ -184,6 +184,7 @@ Item {
         ShapePath {
             strokeColor: "transparent"
             fillColor: glyph.color
+            fillRule: Icons.isWinding(glyph.icon) ? ShapePath.WindingFill : ShapePath.OddEvenFill
             PathSvg { path: Icons.fillOf(glyph.icon) }
         }
     }

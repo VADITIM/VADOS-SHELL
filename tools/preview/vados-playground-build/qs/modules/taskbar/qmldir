@@ -1,0 +1,25 @@
+module qs.modules.taskbar
+ActivityBars 1.0 ActivityBars.qml
+ActivityCall 1.0 ActivityCall.qml
+ActivityGlance 1.0 ActivityGlance.qml
+ActivityMedia 1.0 ActivityMedia.qml
+ActivityPill 1.0 ActivityPill.qml
+ActivityRecording 1.0 ActivityRecording.qml
+ActivityTray 1.0 ActivityTray.qml
+Arrangement 1.0 Arrangement.qml
+AudioIdle 1.0 AudioIdle.qml
+BatteryIdle 1.0 BatteryIdle.qml
+Carried 1.0 Carried.qml
+Clock 1.0 Clock.qml
+FoldDot 1.0 FoldDot.qml
+FoldDrag 1.0 FoldDrag.qml
+IdlePill 1.0 IdlePill.qml
+NetworkIdle 1.0 NetworkIdle.qml
+PowerIdle 1.0 PowerIdle.qml
+RecordDot 1.0 RecordDot.qml
+SettingsIdle 1.0 SettingsIdle.qml
+TaskItem 1.0 TaskItem.qml
+TaskPill 1.0 TaskPill.qml
+Taskbar 1.0 Taskbar.qml
+TitleTip 1.0 TitleTip.qml
+UsbIdle 1.0 UsbIdle.qml

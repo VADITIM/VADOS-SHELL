@@ -48,16 +48,9 @@ Item {
     readonly property real satellitePitch: Appearance.activity.satellite + Appearance.activity.satelliteGap
     readonly property bool areSatellitesShown: face === "active" && isShown
     readonly property real extent: Appearance.activity.length / 2 + satellites.length * satellitePitch
-    readonly property bool hasBump: liveKeys.includes(leadKey)
-    readonly property real bumpSize: Appearance.clipboard.bump * bumpPop.pop * popScale
-    readonly property real bumpRestX: expandedLeft + bodyWidth - Appearance.clipboard.bumpOverlap + Appearance.clipboard.bump / 2
-    readonly property real bumpCenterX: bumpRestX + bumpReach
-    readonly property real bumpCenterY: -bodyHeight / 2 + Appearance.clipboard.padding + Appearance.clipboard.header / 2
-    property real bumpReach: bumpArea.containsMouse ? Appearance.clipboard.bumpReach : 0
-    readonly property bool isBumpHovered: bumpArea.containsMouse
     readonly property bool isRecordingLead: leadKey === "recording"
     property bool hasHoveredRecording: false
-    readonly property real reachRight: x + bodyLeft + Math.max(bodyWidth, Appearance.activity.media.head * Math.min(1, expansion), bumpSize > 0.5 ? bumpCenterX - bodyLeft + bumpSize / 2 : 0) * popScale + Appearance.taskbar.idleGap
+    readonly property real reachRight: x + bodyLeft + Math.max(bodyWidth, Appearance.activity.media.head * Math.min(1, expansion)) * popScale + Appearance.taskbar.idleGap
 
     signal modeRequested(string mode)
     signal leadRequested(int direction)
@@ -74,13 +67,6 @@ Item {
             isAlertBody = true
         if (face === "clipboard")
             isClipboardBody = true
-    }
-
-    Behavior on bumpReach {
-        NumberAnimation {
-            duration: Motion.pace(Motion.clipboard.bump)
-            easing.type: Easing.OutBack
-        }
     }
 
     function bodyRect() {
@@ -191,24 +177,6 @@ Item {
         }
     }
 
-    LiquidShape {
-        parent: pill.host.liquidShapes
-        visible: pill.bumpSize > 0.5
-        width: pill.bumpSize
-        height: pill.bumpSize
-        x: pill.x + pill.bumpCenterX - width / 2
-        y: pill.y + pill.bumpCenterY - height / 2
-    }
-
-    Mutate {
-        id: bumpPop
-        label: "clipboard bump"
-        isShown: pill.isClipboardShown && pill.hasBump
-        hasSpread: false
-        leaveDelay: 0
-        popDuration: Motion.clipboard.bump
-    }
-
     MouseArea {
         id: area
         x: pill.bodyLeft
@@ -260,51 +228,6 @@ Item {
         interval: Motion.capture.linger
         running: pill.isRecordingLead && pill.face === "expanded" && pill.hasHoveredRecording && !bodyHover.hovered
         onTriggered: pill.modeRequested("active")
-    }
-
-    MouseArea {
-        id: bumpArea
-        x: pill.bumpRestX - Appearance.clipboard.bump / 2
-        y: pill.bumpCenterY - height / 2
-        width: Appearance.clipboard.bump + Appearance.clipboard.bumpReach
-        height: Appearance.clipboard.bump
-        enabled: pill.isClipboardShown && pill.hasBump
-        hoverEnabled: true
-        cursorShape: Qt.PointingHandCursor
-        onClicked: pill.modeRequested("expanded")
-        onWheel: wheel => {
-            if (wheel.angleDelta.y !== 0)
-                pill.leadRequested(wheel.angleDelta.y > 0 ? -1 : 1)
-        }
-    }
-
-    Turn {
-        id: bumpFace
-        x: pill.bumpCenterX - width / 2
-        y: pill.bumpCenterY - height / 2
-        width: Appearance.clipboard.bumpGlyph
-        height: Appearance.clipboard.bumpGlyph
-        isShown: pill.isClipboardShown && pill.hasBump
-        enterDelay: Motion.clipboard.stagger
-        isSlung: true
-        leaveWindow: 0
-
-        Press {
-            target: bumpFace
-            isPressed: bumpArea.pressed
-            depth: Motion.press.glyph
-        }
-
-        Glyph {
-            width: Appearance.clipboard.bumpGlyph
-            height: width
-            name: Appearance.activity.glyphs[pill.leadKey] ?? "music"
-            color: bumpArea.containsMouse ? Appearance.color.accent : Appearance.color.textBody
-            transform: Upright {
-                isMirrored: pill.host.isMirrored
-                axis: Appearance.clipboard.bumpGlyph / 2
-            }
-        }
     }
 
     Turn {

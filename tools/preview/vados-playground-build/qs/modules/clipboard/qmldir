@@ -1,0 +1,3 @@
+module qs.modules.clipboard
+ClipboardHistory 1.0 ClipboardHistory.qml
+ClipboardRow 1.0 ClipboardRow.qml

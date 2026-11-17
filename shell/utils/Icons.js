@@ -26,6 +26,10 @@ function has(name) {
     return Object.prototype.hasOwnProperty.call(paths, name)
 }
 
+function isWinding(name) {
+    return has(name) && paths[name].rule === "winding"
+}
+
 function strokeOf(name) {
     return has(name) ? paths[name].stroke : ""
 }

@@ -16,6 +16,8 @@ TestCase {
     }
 
     function cleanup() {
+        Overlays.releaseTaskbar("A")
+        Overlays.releaseTaskbar("B")
         for (const key of Overlays.stack.slice())
             Overlays.close(key)
         Overlays.returnTaskbar("A")
@@ -23,6 +25,33 @@ TestCase {
         Overlays.phases = {}
         Overlays.swaps = {}
         gathers = 0
+    }
+
+    function test_heldTaskbarWaitsForItsRelease() {
+        Overlays.open("dashboard", "A")
+        Overlays.holdTaskbar("A")
+        compare(gathers, 1, "a taskbar already away is not gathered again")
+        Overlays.holdTaskbar("B")
+        verify(Overlays.isTaskbarAway("B"))
+        compare(gathers, 2)
+        Overlays.close("dashboard")
+        Overlays.reportPhase("dashboard", "A", "idle")
+        verify(Overlays.isTaskbarAway("A"), "an overlay landing under the lock never brings the taskbar back")
+        Overlays.placeVisitor("dashboard", "A", { isReleasing: true, release: 1 })
+        verify(Overlays.isTaskbarAway("A"))
+        Overlays.releaseTaskbar("A")
+        verify(!Overlays.isTaskbarAway("A"))
+        verify(Overlays.isTaskbarAway("B"), "each screen is released on its own")
+        Overlays.placeVisitor("dashboard", "A", null)
+    }
+
+    function test_heldScreenThatGoesAwayLeavesNothing() {
+        Overlays.holdTaskbar("B")
+        Overlays.placeTaskbarOrigins("B", { power: Qt.point(26, 800) })
+        compare(Overlays.taskbarOrigins["B"].power.y, 800)
+        Overlays.keepScreens(["A"])
+        verify(!Overlays.isHeld("B"))
+        compare(Overlays.taskbarOrigins["B"], undefined)
     }
 
     function test_openCarriesThePageItWasAskedFor() {

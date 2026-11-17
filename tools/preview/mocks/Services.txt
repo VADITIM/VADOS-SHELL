@@ -10,8 +10,38 @@ QtObject {
     property bool isReady: true
     property real volume: 0.64
     property bool isMuted: false
+    property var outputs: [
+        { key: "1", node: null, label: "Speakers", volume: 0.64, isMuted: false, isDefault: true },
+        { key: "2", node: null, label: "Headphones", volume: 0.4, isMuted: false, isDefault: false }
+    ]
+    property var inputs: [{ key: "3", node: null, label: "Microphone", volume: 0.8, isMuted: false, isDefault: true }]
+    property var streams: [
+        { key: "4", node: null, label: "Spotify", volume: 0.7, isMuted: false, isDefault: false },
+        { key: "5", node: null, label: "Discord", volume: 1, isMuted: false, isDefault: false }
+    ]
+    property var routed: []
     function setVolume(value) { isMuted = false; volume = Math.max(0, Math.min(1, value)) }
+    function setRowVolume(row, value) {}
     function toggleMute() { isMuted = !isMuted }
+    function makeDefault(row) { outputs = outputs.map(output => Object.assign({}, output, { isDefault: output.key === row.key })) }
+    function route(stream, output) { routed = routed.concat([stream.label + ">" + output.label]) }
+}
+Profiles|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isWatching: false
+    property var keys: ["performance", "balanced", "power-saver"]
+    property string active: "balanced"
+    readonly property bool isAvailable: keys.length > 0
+    function set(key) { active = key }
+}
+Brightness|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isWatching: false
+    property bool isAvailable: true
+    property real level: 0.6
+    function setLevel(value) { level = Math.max(0.01, Math.min(1, value)) }
 }
 Battery|pragma Singleton
 import QtQuick
@@ -20,6 +50,9 @@ QtObject {
     property real level: 0.62
     property bool isCharging: false
     property real secondsLeft: 7600
+    property bool canLimit: true
+    property bool isLimited: false
+    property real cap: -1
 }
 Network|pragma Singleton
 import QtQuick
@@ -28,7 +61,35 @@ QtObject {
     property bool isWired: false
     property string ssid: "VADOS-NET"
     property real strength: 0.8
+    property bool isWatching: false
+    property var networks: [{ ssid: "VADOS-NET", strength: 0.8, isSecured: true, isActive: true }, { ssid: "Cafe Free", strength: 0.5, isSecured: false, isActive: false }, { ssid: "Campus", strength: 0.6, isSecured: true, isEnterprise: true, isActive: false }]
+    property var known: ["VADOS-NET"]
+    property string asked: "passphrase"
+    property var prompt: null
+    property string joining: ""
+    property string joinResult: ""
+    readonly property bool isJoining: joining.length > 0
+    readonly property string joinMessage: joinResult === "wrong" ? "WRONG PASSWORD" : joinResult === "missing" ? "NETWORK NOT FOUND" : joinResult === "error" ? "COULD NOT CONNECT" : ""
     readonly property bool isConnected: isEnabled && ssid.length > 0
+    function connectTo(name, isHidden) {
+        const entry = networks.find(candidate => candidate.ssid === name)
+        joinResult = ""
+        if (entry && !entry.isSecured || known.indexOf(name) >= 0) { ssid = name; return }
+        joining = name
+        asked = entry && entry.isEnterprise ? "identity" : "passphrase"
+        prompt = { ssid: name, ask: asked }
+    }
+    function answer(values) {
+        prompt = null
+        if (values[0] === "wrong") { joinResult = "wrong"; prompt = { ssid: joining, ask: asked }; return }
+        ssid = joining
+        known = known.concat([joining])
+        joining = ""
+        joinResult = "connected"
+    }
+    function cancelJoin() { prompt = null; joining = ""; joinResult = "" }
+    function settleJoin() { if (prompt !== null) cancelJoin(); else joinResult = "" }
+    function forget(name) { known = known.filter(candidate => candidate !== name) }
     function toggle() { isEnabled = !isEnabled }
 }
 Removable|pragma Singleton
@@ -48,10 +109,43 @@ QtObject {
 Power|pragma Singleton
 import QtQuick
 QtObject {
-    function lock() { console.log("power: lock") }
+    function lock() { Lock.lock() }
     function suspend() { console.log("power: suspend") }
     function restart() { console.log("power: restart") }
     function shutdown() { console.log("power: shutdown") }
+}
+Lock|pragma Singleton
+import QtQuick
+QtObject {
+    readonly property bool canLock: true
+    property bool isLocked: false
+    property bool isSecure: isLocked
+    property bool isChecking: false
+    property string screenName: "play"
+    property string message: ""
+    property bool isMessageError: false
+    property int failures: 0
+    property bool isBlank: false
+    readonly property int blankAfter: 60
+    readonly property string status: !isLocked ? "unlocked" : isBlank ? "blank" : "locked"
+    signal unlocked()
+    function lock() { isLocked = true; return true }
+    function submit(password) {
+        if (!isLocked || password.length === 0)
+            return
+        if (password === "vados") {
+            isLocked = false
+            failures = 0
+            message = ""
+            unlocked()
+            return
+        }
+        failures++
+        message = "WRONG PASSWORD"
+        isMessageError = true
+    }
+    function reportSecure(isConfirmed) {}
+    function reportLost() { isLocked = false }
 }
 DateTime|pragma Singleton
 import QtQuick
@@ -65,6 +159,9 @@ Hardware|pragma Singleton
 import QtQuick
 QtObject {
     property bool isActive: false
+    property bool isOnDesktop: false
+    property bool isOnLock: false
+    readonly property bool isPolling: isActive || isOnDesktop || isOnLock
     property real cpuLoad: 0.3
     property real cpuTemperature: 40
     property string cpuName: "Ryzen 7 5800X"
@@ -134,6 +231,9 @@ Weather|pragma Singleton
 import QtQuick
 QtObject {
     property bool isActive: false
+    property bool isOnDesktop: false
+    property bool isOnLock: false
+    readonly property bool isPolling: isActive || isOnDesktop || isOnLock
     property bool isReady: true
     property real temperature: 28
     property real rainChance: 0
@@ -260,7 +360,9 @@ QtObject {
 }
 Compositor|pragma Singleton
 import QtQuick
+import qs.config
 import "../utils/Platform.js" as Platform
+import "../utils/Displays.js" as Displays
 QtObject {
     property bool isHyprland: false
     property bool isDriftwm: false
@@ -277,6 +379,36 @@ QtObject {
     function viewports() { return [] }
     function send(argumentsList) { sent = sent.concat([argumentsList.join(" ")]) }
     function action(spec) {}
+    property var powered: []
+    function powerDisplays(isOn) { if (capabilities.displayPower) powered = powered.concat([isOn]) }
+    function setBackground(path) {}
+    property bool isWatchingOutputs: false
+    property var outputs: [
+        { name: "eDP-1", description: "Built-in panel", make: "", model: "", x: 0, y: 0, scale: 1, transform: "normal", mode: { width: 1920, height: 1080, refresh: 144000 }, modes: [{ width: 1920, height: 1080, refresh: 144000, isPreferred: true }, { width: 1920, height: 1080, refresh: 60000, isPreferred: false }, { width: 1280, height: 720, refresh: 60000, isPreferred: false }] },
+        { name: "DP-2", description: "Desk monitor", make: "", model: "", x: 1920, y: 0, scale: 1, transform: "normal", mode: { width: 2560, height: 1440, refresh: 60000 }, modes: [{ width: 2560, height: 1440, refresh: 60000, isPreferred: true }, { width: 1920, height: 1080, refresh: 60000, isPreferred: false }] }
+    ]
+    property var outputTrial: Displays.idle()
+    property real trialNow: 0
+    readonly property int outputTrialLeft: Displays.remaining(outputTrial, trialNow)
+    property var appliedOutputs: []
+    function readOutputs() {}
+    function applyOutputs(layout) {
+        if (!capabilities.outputConfiguration || Displays.problemOf(layout).length > 0)
+            return false
+        const applied = Displays.normalized(layout)
+        appliedOutputs = appliedOutputs.concat([applied])
+        trialNow = Date.now()
+        outputTrial = Displays.begun(outputTrial, outputs, applied, trialNow, Motion.displays.keep, "", "")
+        outputs = applied.map(entry => Object.assign({}, outputs.find(output => output.name === entry.name), entry))
+        return true
+    }
+    function keepOutputs() { outputTrial = Displays.idle() }
+    function revertOutputs() {
+        if (outputTrial.phase !== "trying")
+            return
+        outputs = outputTrial.previous
+        outputTrial = Displays.idle()
+    }
 }
 Confinement|pragma Singleton
 import QtQuick
@@ -343,4 +475,56 @@ QtObject {
         interval: 1000; repeat: true; running: isRecording && !isPaused
         onTriggered: seconds++
     }
+}
+Family|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isWatching: false
+    property var defaulted: []
+    property var opened: []
+    readonly property var rows: [
+        { key: "files", label: "FILES", role: "FILE MANAGER", isInstalled: true, canBeDefault: true, isDefault: defaulted.indexOf("files") >= 0, icon: "" },
+        { key: "gallery", label: "GALLERY", role: "IMAGES AND VIDEO", isInstalled: true, canBeDefault: true, isDefault: true, icon: "" },
+        { key: "notes", label: "NOTES", role: "NOTES AND TEXT", isInstalled: false, canBeDefault: false, isDefault: false, icon: "" },
+        { key: "terminal", label: "TERMINAL", role: "TERMINAL", isInstalled: false, canBeDefault: false, isDefault: false, icon: "" }
+    ]
+    function refresh() {}
+    function makeDefault(key) { defaulted = defaulted.concat([key]) }
+    function openReleases(key) { opened = opened.concat([key]) }
+}
+SystemFont|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isWatching: false
+    property var families: ["DejaVu Sans", "Inter", "Noto Sans", "Space Mono"]
+    property string applied: ""
+    readonly property bool isApplied: applied.length > 0
+    property bool isBusy: false
+    function refresh() {}
+    function apply(family) { applied = family }
+    function restore() { applied = "" }
+}
+Wallpapers|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isWatching: false
+    property var images: []
+    readonly property string folder: "/home/user/Pictures/Wallpapers"
+}
+Notes|pragma Singleton
+import QtQuick
+QtObject {
+    property string text: "Buy milk\nCall the landlord about the heating"
+    property bool isLoaded: true
+    function write(next) { text = String(next) }
+}
+Builtins|pragma Singleton
+import QtQuick
+QtObject {
+    property var opened: []
+    readonly property var apps: [{ key: "calculator", id: "vados-calculator", name: "Calculator", genericName: "VAD/OS calculator", comment: "", keywords: "math", icon: "calculator.svg" }]
+    function isOpen(key) { return opened.indexOf(key) >= 0 }
+    function open(key) { if (opened.indexOf(key) < 0) opened = opened.concat([key]) }
+    function close(key) { opened = opened.filter(open => open !== key) }
+    function toggle(key) { if (isOpen(key)) close(key); else open(key) }
 }

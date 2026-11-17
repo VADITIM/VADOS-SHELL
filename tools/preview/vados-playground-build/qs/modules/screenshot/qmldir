@@ -1,0 +1,5 @@
+module qs.modules.screenshot
+InkCanvas 1.0 InkCanvas.qml
+InkText 1.0 InkText.qml
+Screenshot 1.0 Screenshot.qml
+Toolbar 1.0 Toolbar.qml

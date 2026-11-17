@@ -121,6 +121,14 @@ TestCase {
         verify(!ActivityState.isClipboardOn("screen"), "the same key closes it")
     }
 
+    function test_clipboardStaysClosedInAMenu() {
+        quiet()
+        Overlays.open("notifications", "screen")
+        ActivityState.toggleClipboard("screen")
+        verify(!ActivityState.isClipboardOn("screen"), "no clipboard while a menu holds the screen")
+        Overlays.close("notifications")
+    }
+
     function test_clipboardAndExpandedTakeTurns() {
         quiet()
         Activities.hasMedia = true
@@ -130,7 +138,7 @@ TestCase {
         verify(ActivityState.isClipboardOn("screen"))
         compare(ActivityState.mode, "active", "opening the clipboard folds the expanded activity")
         ActivityState.set("screen", "expanded")
-        verify(!ActivityState.isClipboardOn("screen"), "expanding an activity (the bump) closes the clipboard")
+        verify(!ActivityState.isClipboardOn("screen"), "expanding an activity closes the clipboard")
         compare(ActivityState.mode, "expanded")
     }
 

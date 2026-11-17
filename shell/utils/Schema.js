@@ -9,6 +9,10 @@ const settings = {
     "taskbar.compact": { type: "boolean", fallback: false },
     "taskbar.gather": { type: "string", fallback: "merge", choices: ["merge", "shrink"] },
     "appearance.accent": { type: "colour", fallback: "#ffffff" },
+    "appearance.systemFont": { type: "string", fallback: "" },
+    "appearance.choice": { type: "string", fallback: "outline", choices: ["outline", "pill"] },
+    "appearance.choiceOutline": { type: "tint", fallback: "" },
+    "appearance.choicePill": { type: "tint", fallback: "" },
     "desktop.mode": { type: "string", fallback: "canvas", choices: ["canvas", "desktop"] },
     "search.favorites": { type: "names", fallback: [] },
     "search.hidden": { type: "names", fallback: [] },
@@ -19,6 +23,7 @@ const settings = {
     "pills.opacity": { type: "fraction", fallback: 0.94 },
     "pills.blur": { type: "fraction", fallback: 1 },
     "pills.color": { type: "tint", fallback: "" },
+    "battery.limit": { type: "boolean", fallback: false },
     "services.mediaPlayer": { type: "boolean", fallback: true },
     "weather.location": { type: "string", fallback: "" },
     "dashboard.taskIcons": { type: "boolean", fallback: false },
@@ -36,6 +41,10 @@ const settings = {
     "attention.doNotDisturb": { type: "boolean", fallback: false },
     "lock.layout": { type: "names", fallback: ["clock:5:1", "profile:6:4", "login:5:8"] },
     "lock.wallpaper": { type: "string", fallback: "" },
+    "lock.blankAfter": { type: "seconds", fallback: 60 },
+    "wallpaper.path": { type: "string", fallback: "" },
+    "wallpaper.folder": { type: "string", fallback: "" },
+    "widgets.layout": { type: "names", fallback: [] },
     "rendering.quality": { type: "string", fallback: "full", choices: ["full", "lite"] }
 }
 
@@ -44,6 +53,7 @@ const migrations = [
 ]
 
 const countLimit = 1000
+const secondsLimit = 86400
 const colourPattern = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
 function describe(value) {
@@ -79,11 +89,25 @@ function findProblem(key, value) {
         return `is ${describe(value)}, expected "" or a hex colour like "#121212"`
     if (rule.type === "count" && !(Number.isInteger(value) && value >= 0 && value <= countLimit))
         return `is ${describe(value)}, expected a whole number from 0 to ${countLimit}`
-    if (rule.type === "names" && !(Array.isArray(value) && value.every(entry => typeof entry === "string")))
+    if (rule.type === "seconds" && !(Number.isInteger(value) && value >= 0 && value <= secondsLimit))
+        return `is ${describe(value)}, expected whole seconds from 0 to ${secondsLimit}`
+    if (rule.type === "names" && !(listOf(value) !== null && listOf(value).every(entry => typeof entry === "string")))
         return `is ${describe(value)}, expected a list of names in quotes`
     if (rule.choices && rule.choices.indexOf(value) < 0)
         return `is ${describe(value)}, expected one of ${rule.choices.map(describe).join(", ")}`
     return ""
+}
+
+function listOf(value) {
+    if (Array.isArray(value))
+        return value
+    if (value === null || typeof value !== "object" || typeof value.length !== "number")
+        return null
+    return Array.from(value)
+}
+
+function fallbackOf(key) {
+    return copyOf(settings[key]?.fallback)
 }
 
 function createDefaults() {

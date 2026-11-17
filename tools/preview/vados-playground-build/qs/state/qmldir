@@ -1,0 +1,5 @@
+module qs.state
+singleton ActivityState 1.0 ActivityState.qml
+singleton Attention 1.0 Attention.qml
+singleton FrameDebug 1.0 FrameDebug.qml
+singleton Overlays 1.0 Overlays.qml

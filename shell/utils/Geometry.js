@@ -26,6 +26,22 @@ function superellipse(width, height, exponent, count) {
     return points
 }
 
+function squircle(width, height, corner, exponent, count) {
+    const reach = Math.max(0, Math.min(corner, width / 2, height / 2))
+    const spanX = width / 2 - reach
+    const spanY = height / 2 - reach
+    const points = []
+    for (let index = 0; index < count; index++) {
+        const angle = index / count * 2 * Math.PI
+        const cosine = Math.cos(angle)
+        const sine = Math.sin(angle)
+        const reachX = Math.sign(cosine) * Math.pow(Math.abs(cosine), 2 / exponent)
+        const reachY = Math.sign(sine) * Math.pow(Math.abs(sine), 2 / exponent)
+        points.push(Qt.point(width / 2 + Math.sign(reachX) * spanX + reach * reachX, height / 2 + Math.sign(reachY) * spanY + reach * reachY))
+    }
+    return points
+}
+
 function mix(from, to, share) {
     return from + (to - from) * share
 }
@@ -33,6 +49,16 @@ function mix(from, to, share) {
 function arcAt(from, control, to, share) {
     const inverse = 1 - share
     return Qt.point(inverse * inverse * from.x + 2 * inverse * share * control.x + share * share * to.x, inverse * inverse * from.y + 2 * inverse * share * control.y + share * share * to.y)
+}
+
+function surge(time, depth, turn) {
+    const phase = time < turn ? 0.5 * time / turn : 0.5 + 0.5 * (time - turn) / (1 - turn)
+    const eased = phase + depth * Math.sin(2 * Math.PI * phase) / (2 * Math.PI)
+    return eased < 0.5 ? 2 * turn * eased : turn + 2 * (1 - turn) * (eased - 0.5)
+}
+
+function stretchOf(speed, gain, limit) {
+    return Math.min(limit, speed * gain)
 }
 
 function centerOf(rectangle) {
@@ -55,7 +81,7 @@ function samplesFor(length, step) {
 function traceSpline(points, step, slack) {
     if (points.length === 0)
         return []
-    const outline = [points[0]]
+    const outline = [{ x: points[0].x, y: points[0].y }]
     for (let index = 0; index < points.length - 1; index++) {
         const before = points[Math.max(0, index - 1)]
         const from = points[index]
@@ -64,7 +90,7 @@ function traceSpline(points, step, slack) {
         const samples = samplesFor(Math.hypot(to.x - from.x, to.y - from.y) * slack, step)
         for (let sample = 1; sample <= samples; sample++) {
             const time = sample / samples
-            outline.push(Qt.point(splineAt(before.x, from.x, to.x, after.x, time), splineAt(before.y, from.y, to.y, after.y, time)))
+            outline.push({ x: splineAt(before.x, from.x, to.x, after.x, time), y: splineAt(before.y, from.y, to.y, after.y, time) })
         }
     }
     return outline

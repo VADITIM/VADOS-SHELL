@@ -18,6 +18,7 @@ Singleton {
     readonly property bool canClipboard: Clipboard.isEnabled
     readonly property bool isRecording: Capture.isRecording
     property var places: ({})
+    property var clipboardZones: ({})
 
     function place(name, where) {
         const next = Object.assign({}, places)
@@ -27,6 +28,16 @@ Singleton {
 
     function placeOn(name) {
         return places[name] ?? null
+    }
+
+    function placeClipboard(name, zone) {
+        const next = Object.assign({}, clipboardZones)
+        next[name] = zone
+        clipboardZones = next
+    }
+
+    function clipboardZoneOn(name) {
+        return clipboardZones[name] ?? Qt.rect(0, 0, 0, 0)
     }
 
     function copiedNotice(path) {

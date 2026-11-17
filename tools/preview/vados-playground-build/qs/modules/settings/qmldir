@@ -1,0 +1,21 @@
+module qs.modules.settings
+Action 1.0 Action.qml
+AsciiBackground 1.0 AsciiBackground.qml
+DisplayEditor 1.0 DisplayEditor.qml
+Fader 1.0 Fader.qml
+FamilyPage 1.0 FamilyPage.qml
+FontPage 1.0 FontPage.qml
+Hint 1.0 Hint.qml
+Lattice 1.0 Lattice.qml
+LockEditor 1.0 LockEditor.qml
+OptionGroup 1.0 OptionGroup.qml
+Page 1.0 Page.qml
+Piece 1.0 Piece.qml
+ProfileEditor 1.0 ProfileEditor.qml
+Section 1.0 Section.qml
+SelectionPanel 1.0 SelectionPanel.qml
+Settings 1.0 Settings.qml
+TabBar 1.0 TabBar.qml
+TextField 1.0 TextField.qml
+WallpaperPage 1.0 WallpaperPage.qml
+WidgetEditor 1.0 WidgetEditor.qml

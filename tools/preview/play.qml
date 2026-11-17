@@ -12,8 +12,12 @@ import qs.modules.dashboard
 import qs.modules.notifications
 import qs.modules.framedebug
 import qs.modules.screenshot
+import qs.modules.widgets
+import qs.modules.lock
 import qs.windows
 import QtCore as Core
+import "../../shell/utils/Widgets.js" as Widgets
+import "../../shell/utils/Locking.js" as Locking
 
 Window {
     id: root
@@ -89,6 +93,12 @@ Window {
             }
         }
 
+        WidgetLayer {
+            anchors.fill: parent
+            layout: Widgets.layoutOn(Config.data.widgets.layout, root.screenName)
+            onLayoutRequested: entries => Config.setWidgetsLayout(Widgets.withLayout(Config.data.widgets.layout, root.screenName, entries))
+        }
+
         Repeater {
             model: [
                 { x: 380, y: 110, width: 720, height: 440, color: "#e6e6e6" },
@@ -159,7 +169,6 @@ Window {
             entries: Clipboard.entries
             body: taskbar.clipboardRect
             isBodyShown: taskbar.isClipboardShown
-            isBumpHovered: taskbar.isClipboardBumpHovered
             onPickRequested: entry => {
                 Clipboard.pick(entry)
                 ActivityState.closeClipboard()
@@ -190,11 +199,16 @@ Window {
             onHiddenToggled: appId => Config.toggleHidden(appId)
         }
 
+        LockPreviews {
+            id: lockPreviews
+        }
+
         Settings {
             id: settings
             anchors.fill: parent
             visible: isPresent
             isOpen: root.isOverlayOpen("settings")
+            widgetPreviews: lockPreviews.byKey
             parts: Overlays.taskbarParts[root.screenName] ?? []
             isMirrored: root.isRight
             canHandOff: Config.data.taskbar.style !== "bare"
@@ -207,6 +221,14 @@ Window {
             barStyle: Config.data.taskbar.style
             windowMode: Config.data.desktop.mode
             canSwitchMode: true
+            canConfigureDisplays: true
+            outputs: Compositor.outputs
+            outputTrial: Compositor.outputTrial
+            outputTrialLeft: Compositor.outputTrialLeft
+            onIsDisplaysShownChanged: Compositor.isWatchingOutputs = isDisplaysShown
+            onOutputsRequested: layout => Compositor.applyOutputs(layout)
+            onOutputsKept: Compositor.keepOutputs()
+            onOutputsReverted: Compositor.revertOutputs()
             onCloseRequested: Overlays.close("settings")
             onLanded: root.landOverlay()
             onAccentRequested: value => Config.setAccent(value.toString())
@@ -230,8 +252,20 @@ Window {
             isNotificationsOn: Config.data.notifications.enabled
             lockLayout: Config.data.lock.layout
             lockWallpaper: Config.data.lock.wallpaper
+            lockBlankAfter: Config.data.lock.blankAfter
+            wallpaper: Config.data.wallpaper.path
+            wallpaperFolder: Config.data.wallpaper.folder
+            widgetsLayout: Config.data.widgets.layout
+            widgetScreens: [{ name: root.screenName, width: root.width, height: root.height }]
+            widgetScreen: root.screenName
+            onWidgetsLayoutRequested: entries => Config.setWidgetsLayout(entries)
+            onWallpaperRequested: path => Config.setWallpaper(path)
+            onWallpaperFolderRequested: folder => Config.setWallpaperFolder(folder)
+            onChoiceStyleRequested: style => Config.setChoiceStyle(style)
+            onChoiceColorRequested: (style, value) => style === "pill" ? Config.setChoicePill(value) : Config.setChoiceOutline(value)
             onLockLayoutRequested: entries => Config.setLockLayout(entries)
             onLockWallpaperRequested: value => Config.setLockWallpaper(value)
+            onLockBlankAfterRequested: seconds => Config.setLockBlankAfter(seconds)
             onProfileRequested: (field, value) => ({
                 name: Config.setProfileName,
                 secondName: Config.setProfileSecondName,
@@ -331,6 +365,79 @@ Window {
             if (screenName !== root.screenName)
                 return
             Overlays.placeTaskbarParts(root.screenName, taskbar.liquidParts())
+            Overlays.placeTaskbarOrigins(root.screenName, taskbar.originPoints())
+        }
+    }
+
+    Item {
+        id: lockPreview
+
+        property string draft: ""
+        property bool isLeaving: false
+
+        anchors.fill: parent
+        visible: Lock.isLocked || isLeaving
+        Keys.onShortcutOverride: event => event.accepted = Lock.isLocked
+        Keys.onPressed: event => {
+            event.accepted = true
+            if (Lock.isChecking)
+                return
+            const typed = Locking.typeInto(draft, event.key, event.text, event.modifiers)
+            draft = typed.draft
+            if (typed.password.length > 0)
+                Lock.submit(typed.password)
+        }
+
+        Connections {
+            target: Lock
+
+            function onIsLockedChanged() {
+                if (!Lock.isLocked)
+                    return
+                lockPreview.isLeaving = false
+                Overlays.holdTaskbar(root.screenName)
+                lockPreview.forceActiveFocus()
+            }
+
+            function onUnlocked() {
+                lockPreview.draft = ""
+                lockPreview.isLeaving = true
+                root.contentItem.forceActiveFocus()
+            }
+        }
+
+        Loader {
+            anchors.fill: parent
+            active: Lock.isLocked
+
+            sourceComponent: LockScreen {
+                isLocked: Lock.isLocked
+                layout: Config.data.lock.layout
+                wallpaper: Config.data.lock.wallpaper.length > 0 ? Config.data.lock.wallpaper : Config.data.wallpaper.path
+                parts: Overlays.taskbarParts[root.screenName] ?? []
+                origin: Overlays.taskbarOrigins[root.screenName]?.power ?? null
+                isMirrored: root.isRight
+                passwordLength: lockPreview.draft.length
+                isChecking: Lock.isChecking
+                message: Lock.message
+                isMessageError: Lock.isMessageError
+                isBlank: Lock.isBlank
+                profileName: Config.data.profile.name
+                profilePicture: Config.data.profile.picture
+            }
+        }
+
+        Loader {
+            anchors.fill: parent
+            active: lockPreview.isLeaving
+
+            sourceComponent: LockLeave {
+                layout: Config.data.lock.layout
+                parts: Overlays.taskbarParts[root.screenName] ?? []
+                isMirrored: root.isRight
+                onSpilled: Overlays.releaseTaskbar(root.screenName)
+                onLanded: lockPreview.isLeaving = false
+            }
         }
     }
 
@@ -441,6 +548,13 @@ Window {
         enabled: !Overlays.isOpen("search", root.screenName)
         context: Qt.ApplicationShortcut
         onActivated: Activities.hasMedia = !Activities.hasMedia
+    }
+
+    Shortcut {
+        sequence: "L"
+        enabled: !Overlays.isAnyOpen() && !Lock.isLocked
+        context: Qt.ApplicationShortcut
+        onActivated: Power.lock()
     }
 
     Shortcut {

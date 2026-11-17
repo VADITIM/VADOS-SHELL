@@ -19,14 +19,16 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 | Extension (Wi-Fi) | `extension` | mutation | an idle pill | focus | built |
 | Search | `search` | overlay | the taskbar column | focus | built; phase 2 finishes it |
 | Dashboard | `dashboard` | overlay | the taskbar column | focus | built |
-| Settings | `settings` | overlay | the taskbar column | takeover | built; tabs to add (contract 5) |
+| Settings | `settings` | overlay | the taskbar column | takeover | built; System font, Link to VAD/OS, Wallpaper and Displays (2026-11-15, SETTINGS / DISPLAYS, with `outputConfiguration`) added; Apps, V/AI to add (contract 5) |
 | Frame debugger | `framedebug` | debug | none | ambient | built |
 | Alerts | `alerts` | mutation | the activity pill | glance | built: the alert face, the bell and the tray in the pill (2026-11-10); hardware checks left |
 | Notifications menu | `notifications` | overlay | the taskbar column | focus | built (2026-11-10): history and send tray, `SUPER + N`; hardware checks left |
 | Screenshot | `screenshot` | overlay (keeps the taskbar) | the activity pill | focus | built (2026-11-11): frozen frame, select, move and resize, the toolbar as a copy of the activity pill (select, colour wheel, paint, erase, editable shapes), ink on the whole screen, Ctrl+C with COPIED, Esc; the wheel and handles still to check on a real screen |
-| Clipboard history | `clipboard` | mutation | the activity pill | focus | built (2026-11-11): six rows, pins, kinds, secrets, the bump, `SUPER + V`; checks on a real session left |
-| Lock screen | `lock` | lock | the power pill | takeover | planned (contract 6); its layout editor is built |
-| Widgets | `widgets` | desktop | none | ambient | planned (contract 7) |
+| Clipboard history | `clipboard` | mutation | the activity pill | focus | built (2026-11-11): six rows, pins, kinds, secrets, `SUPER + V`; checks on a real session left |
+| Lock screen | `lock` | lock | the power pill | takeover | built (2026-11-14): ext-session-lock, PAM, the enter from the power pill and the leave into the taskbar, seven modules, blanking, crash recovery; checks on a real lock left |
+| Wallpaper | `wallpaper` | desktop | none | ambient | built (2026-11-13): `WidgetWindow` per screen while `wallpaper.path` is set, crossfade, the picker in Customization |
+| Widgets | `widgets` | desktop | none | ambient | built (2026-11-14): six widgets in `WidgetWindow` per monitor, the NOTES widget (2026-11-16), `widgets.layout` per monitor name, drag on the desktop, the Widgets tab; checks on a real session left |
+| Calculator | `calculator` | window | none | focus | built (2026-11-16): an in-shell `FloatingWindow`, found in the search (`utils/Builtins.js`), `ipc call calculator`; checks on a real session left |
 | Canvas tooling | `canvas` | bar | the screen edge | ambient | planned (§ Next 6); needs `freeCanvas` |
 
 ## Phase 1: engine integrity (done in the preview)
@@ -91,6 +93,10 @@ Note: `Clipboard History.md`. The activity pill mutates into a wider, taller pil
 
 ### 4. System controls: audio routing and power profiles
 
+**Changed (2026-11-13)**: the extension is the idle pill itself grown in height, not a second body (`decisions.md`).
+
+**Built (2026-11-13)**: `AudioPage`, `PowerPage`, `Track`, `services/Profiles.qml`, `services/Brightness.qml`, `utils/Controls.js` with `tst_controls`, a tap on the pill icon, preview mocks. Left: check on a real session (stream routing in `quirks.md`), a drag to route, and the optional tint by profile.
+
 Proposed in `Additional.md` and taken as good suggestions (§ Decided 9); both are in `direction.md` phase 3 ("audio and brightness controls", "network and battery").
 
 - **Audio routing**: the audio idle pill grows an `Extension` page (like the Wi-Fi page): output and input devices, per-stream volume, dragging a stream onto a device. Built on `services/Audio.qml` (PipeWire is already bound for volume and for Discord's streams) and `modules/extension`. To build: `modules/extension/AudioPage.qml`, stream and device lists in `Audio`.
@@ -99,18 +105,22 @@ Proposed in `Additional.md` and taken as good suggestions (§ Decided 9); both a
 
 ### 5. Settings: the remaining tabs
 
+**Layout (2026-11-13, from the user's sketches)**: flat `Section`s with a large title and a hairline (no cards), choices as `FULL | REDUCED` with the chosen one ringed or filled, explicit columns, the selection colour wheel on the right of the Settings tab, the clock in the bottom-left corner, a typed heading and a quieter second pop bar with hover names (`decisions.md`). Left after this: Apps, V/AI (contract 8).
+
 Note: `Settings.md`. The sweep, the accent navigation pop bar, the second pop bar, User, Pills, Taskbar and the lock layout editor are built (2026-11-09). Left, each a tab added through `Settings.tabs` / `subTabsByTab` and a `Page` of `Piece`s:
 
-- **System font** (Customization): changes the font of the whole system, not only the shell. To build: a font list (fontconfig), a service that writes the user's fontconfig, GTK and Qt font settings and can put the previous ones back. Opt-in and reversible: it takes over a system role (`rules/security.md`). Key `appearance.systemFont`.
-- **Link to VAD/OS** (Advanced): detect installed VAD/OS apps from their desktop entries. Installed: offer to make them the default apps (through `xdg-mime`), one confirm per app. Not installed: their icons and GitHub release links. Opening a link uses the browser; the shell itself fetches nothing.
+- **System font** (Customization), **built 2026-11-13** (`FontPage`, `services/SystemFont.qml`, `scripts/system-font.py`; Qt platform themes are not written, `quirks.md`): changes the font of the whole system, not only the shell. To build: a font list (fontconfig), a service that writes the user's fontconfig, GTK and Qt font settings and can put the previous ones back. Opt-in and reversible: it takes over a system role (`rules/security.md`). Key `appearance.systemFont`.
+- **Link to VAD/OS** (Advanced), **built 2026-11-13** (`FamilyPage`, `services/Family.qml`, `utils/Family.js` with `tst_family`; icons only for installed apps): detect installed VAD/OS apps from their desktop entries. Installed: offer to make them the default apps (through `xdg-mime`), one confirm per app. Not installed: their icons and GitHub release links. Opening a link uses the browser; the shell itself fetches nothing.
 - **Services** (Advanced): Media Player is built; Blip joins with contract 2.
-- **Backgrounds** (Customization): the wallpaper per monitor. Needs a background layer window, which the widgets layer (contract 7) is the sibling of; build them together.
-- **Displays** (note `Native Monitor-Screen configurator.md`): arrange, scale, rotate, set resolution and refresh rate, so no AUR tool (wdisplays, nwg-displays) is needed. The shell finds out by itself how to apply and persist it per compositor. To build: `Compositor.outputs` and `Compositor.applyOutputs(layout)` (the only place that talks to the compositor: driftwm's config, Hyprland's `monitor` rules, `wlr-output-management` elsewhere), a new capability `outputConfiguration` in `utils/Platform.js` and the README table, `modules/settings/DisplayEditor.qml` (monitors as draggable liquid bodies on a canvas, `Gesture`), a keep-or-revert countdown after applying so a bad mode never strands the user. **To verify**: driftwm's output configuration syntax and whether it reloads live.
+- **Wallpaper** (Customization, first sub tab), **built 2026-11-13** (`WallpaperPage`, `services/Wallpapers.qml`, `modules/wallpaper`, `windows/WidgetWindow.qml`; keys `wallpaper.path`, `wallpaper.folder`): one image on every screen; per monitor is left (`known-issues.md`).
+- **Displays** (note `Native Monitor-Screen configurator.md`), **built 2026-11-15** (SETTINGS / DISPLAYS; `DisplayEditor`, `utils/Displays.js` with `tst_displays`, `scripts/outputs.py`, `Compositor.outputs`, `applyOutputs`, `keepOutputs`, `revertOutputs`, capability `outputConfiguration`; `architecture.md` § Displays, `decisions.md` § Displays tab): arrange, scale, rotate, set resolution and refresh rate, so no AUR tool (wdisplays, nwg-displays) is needed. driftwm: read through wlr-output-management, written as `[[outputs]]` in `config.toml`; Hyprland: `hyprctl -j monitors all` and `keyword monitor`, kept in `hypr/vados-displays.conf`; other compositors: no tab. A 15 s keep-or-revert countdown follows every apply and survives a shell restart. **Verified**: driftwm's `[[outputs]]` syntax (`config.reference.toml`, its parser, `driftwm --check-config`) and its live reload (its source and its own `config_reload` tests, run; the apply, revert, keep and restart paths run end to end in a nested session on a scratch config; `quirks.md` § driftwm outputs). **Left**: a mode, scale or rotation change on real hardware and a second monitor, Hyprland unrun, enabling or disabling monitors, keyboard arranging, liquid bodies (`known-issues.md` § Displays tab).
 - **Apps** (note `App Manager Tab.md`): three groups, top to bottom: launchable apps, AUR packages, dependencies. Per entry: open its folder in the file manager, move it, delete the program with all its files. To build: `services/Packages.qml` (reads `pacman` only while the tab is shown; mock for the preview), `modules/settings/AppManager.qml`. **Decided**: delete is `pacman -Rns` of the chosen package, after one confirm, through the system's own authentication prompt (§ Decided 5). **Open**: what "move it" means (§ Still open 1).
 - **V/AI** (note `Widget.md`): the tab that connects the agent widget; contract 8.
 - **Decided**: Displays, Apps and V/AI are the second bar of the existing `SETTINGS` tab (§ Decided 6).
 
 ### 6. Lock screen (`lock`)
+
+**State**: built 2026-11-14 (`services/Lock.qml`, `windows/LockWindow.qml`, `modules/lock/`, `components/Backdrop.qml`, `utils/Locking.js`; decisions in `decisions.md` § Lock screen). Verified: driftwm implements ext-session-lock (its source: `src/state/session_lock.rs`, the dead-client takeover in `src/handlers/mod.rs`), ext-idle-notify and wlr-output-power-management (`src/protocols/output_power.rs`); the live shell loads the lock unlocked and answers `ipc call lock status`; the lock service runs against PAM and idle fakes (`tst_lock`, `tst_lockrecovery`), the module under rapid input, reduced motion and blanking (`tst_lockscreen`), the enter inside `ready.takeover` (`tst_features`). Left for the done line, on a real session: lock and unlock from the power pill, `SUPER + L` and IPC; a wrong password through the real PAM; killing the shell while locked and restarting it; blanking and waking through `wlopm` and the idle notification on driftwm; a hotplug while locked.
 
 Note: `Lock Screen.md`. Everything on the taskbar merges at the power pill and slings to the screen centre; there the pill fills with liquid, expands and pops into the lock screen's modules and widgets, each slung to its place with a very small stagger in random order, however many there are. The desktop is covered by the chosen lock background, heavily blurred. On unlock every pill moves to the centre of the taskbar and bursts out towards its edges, the leftover liquid evaporates and the taskbar is back. Layout on a grid; three required modules (User Profile, Login Window, Time / Date) and optional widgets (weather, music player, mini dashboard, notifications, more to come). On the lock screen the activity pill is horizontal, a small bump above the user icon. After a time without input the screen turns off; that time is a setting, not hardcoded (user: 1 minute by default).
 
@@ -128,11 +138,14 @@ Note: `Widget.md`. A mix of how macOS handles widgets and how the shell draws: p
 
 - **Enter and leave**: each widget pops in on its own (`Mutate` / `Turn`); the layer itself is ambient and never enters on request. Idle motion stops under reduced motion and while a fullscreen window covers the monitor (`rules/performance.md`: idle costs nothing).
 - **Built on**: the grid placement of `utils/Lock.js` (shared once widgets use it: move the placement maths into its own utility then, with a line in `decisions.md`), `Gesture` for moving a widget, `Squircle`, the dashboard's readouts as the first widgets.
-- **To build**: `utils/Widgets.js` (the catalogue: key, label, size) with a test; `windows/WidgetWindow.qml` (one per monitor, the layer below app windows); `modules/widgets/WidgetLayer.qml` (root) and one file per widget; a Widgets tab in settings to place them.
+- **To build**: `utils/Widgets.js` (the catalogue: key, label, size) with a test; widgets inside `windows/WidgetWindow.qml` (built for the wallpaper: one per monitor on the background layer, click-through; widgets need input, so their own regions join its mask); `modules/widgets/WidgetLayer.qml` (root) and one file per widget; a Widgets tab in settings to place them.
 - **Settings**: `widgets.layout` per monitor name.
 - **Multi-monitor** (also raised in `Additional.md`): layouts are stored per monitor; a monitor that comes back gets its layout back, a new one starts empty, and a changed resolution or scale re-places widgets inside the screen.
 - **Decided**: a widget is fixed to its monitor wherever the canvas camera is (§ Decided 7).
 - **Done when**: widgets survive a canvas pan, a monitor unplug and replug, and a shell restart; none is ever above an app window.
+- **Built (2026-11-14)**: `utils/Placement.js` (the grid maths moved out of `utils/Lock.js`, which keeps its interface on top of it; `tst_placement`), `utils/Widgets.js` (the catalogue: `clock`, `system`, `weather`, `network`, `battery`, `disk`, each with its size in cells and the polled `sources` it needs; per-monitor layouts, add, remove, move, which sources are shown; `tst_widgets`), `modules/widgets/WidgetLayer.qml` (root: a fixed 88 px cell grid centred in each screen, one `Turn` per widget that pops in on its own, one `Gesture` that carries a widget and snaps it to the nearest free cell, `zones` for the input mask) with `Dial` and one face per widget, `WidgetWindow` hosting it above the wallpaper with the zones as its `Region`s, built per screen while a wallpaper is set or that screen has widgets; `Hardware` and `Weather` poll while `isActive` (dashboard) or `isOnDesktop` (set once from `shell.qml` for widgets on uncovered screens); the key `widgets.layout` (`"monitor:widget:column:row"`, schema type `names`, no version bump); Customization / Widgets (`WidgetEditor`: monitor choice, the screen's grid with drag, ON/OFF per widget). Not built: the V/AI agent (contract 8 adds its row to the catalogue). `architecture.md` § Desktop widgets, `decisions.md` § Desktop widgets.
+- **Seen** (2026-11-14, a nested driftwm): the six widgets draw on the bottom layer above driftwm's own wallpaper.
+- **Left**: check on a real session: a widget takes the pointer on driftwm's bottom layer while the rest of the desktop still pans the canvas, a canvas pan and zoom leave widgets in place, an unplug and replug brings a monitor's widgets back, a fullscreen window stops their updates, and the drag across a real pointer grab (`quirks.md` § Desktop widgets).
 
 ### 8. V/AI agent widget
 
@@ -143,8 +156,22 @@ Note: `Widget.md` § AI Agent Widget. A small agent buddy, animated with express
 - **To build**: `services/Agent.qml` (one interface over three backends; the process starts on first use and stops after `agent.idleAfter`), `modules/widgets/AgentWidget.qml` (buddy, expressions, the conversation), the V/AI tab.
 - **Settings**: `agent.enabled` (opt-in, off), `agent.backend` (`subscription`, `key`, `local`), `agent.idleAfter` (seconds, default 300), `agent.localAddress`.
 - **Security** (`rules/security.md`): a secret never touches disk through the shell, so the API key is not a `shell.json` key and not a `StateFile`; the README Network section lists `services/Agent.qml` with each host it reaches, and it reaches them only while the widget is in use.
-- **Decided**: the API key lives in the system keyring and the subscription is reached through the user's own Claude client (§ Decided 4). **Open**: typing into a widget needs keyboard focus on the desktop layer (§ Still open 3).
+- **Decided**: the API key lives in the system keyring and the subscription is reached through the user's own Claude client (§ Decided 4). Typing into the widget borrows the keyboard while its field is open (§ Decided 10).
 - **Done when**: a question typed into the buddy is answered through the chosen backend, the backend process is gone after the idle time and back on the next question, and no credential is in `shell.json` or `~/.cache/vados`.
+
+### 9. Login screen (custom SDDM theme)
+
+**State**: built 2026-11-13 (`sddm/vados`, `sddm/install.py`, `[login]` in `check-rules.py`; decisions in `decisions.md` § Login screen). Verified: SDDM here is 0.21 with `sddm-greeter-qt6`; the theme loads in test mode with no warnings, and an offscreen render with a mocked greeter shows the layout and a failed login. Left for the done line: installing it, a real login, and the keyring unlocked after it. Added 2026-11-13: PREVIOUS (SDDM's built-in theme for one login), more motion, and the 0.2 s failure answer through `pam_unix nodelay` in `/etc/pam.d/sddm`.
+
+Agreed 2026-11-12. The login screen before the session matches the shell. SDDM stays the login manager, so the keyring auto-unlock (`pam_gnome_keyring`) keeps working; the theme is plain QML installed as `/usr/share/sddm/themes/vados/` (`Main.qml`, `theme.conf`) and chosen by `[Theme] Current=vados` in `/etc/sddm.conf.d/theme.conf`. It is not a surface of the running shell (no `Features.js` row, no overlay): SDDM runs it before the shell exists, so it lives outside `shell/`.
+
+- **Routes weighed**: a custom theme (chosen); `sddm-astronaut-theme` as a recoloured starting point (rejected: never matches the shell without heavy edits); `greetd` with a Quickshell greeter (rejected for now: needs `pam_gnome_keyring` added to `/etc/pam.d/greetd` by hand and a broken greeter strands the user without a graphical login).
+- **Built on**: the shell's tokens (`Appearance` colours, Space Mono, the accent), its liquid look and the lock screen's modules (contract 6: profile, login window, time and date), so the two read as one system. The theme cannot import `qs.*`, so it carries a small copy of the tokens; a check that the copy matches `Appearance.qml` keeps them from drifting.
+- **To build**: `sddm/vados/Main.qml`, `theme.conf` and its assets in the repo; an install script that prints the `sudo` commands, never runs them; the preview with `sddm-greeter-qt6 --test-mode --theme sddm/vados`, so nothing system-wide changes until the user installs it.
+- **Security**: authentication stays in SDDM's own PAM stack; the theme never reads or stores a password beyond the field SDDM gives it. Failed logins are shown.
+- **Reduced motion and quality**: the same two switches as the shell, as `theme.conf` keys, since the theme cannot read `shell.json`.
+- **To verify**: that the installed SDDM is Qt 6 and which greeter QML API it exposes (`sddm` context object, `userModel`, `sessionModel`); whether the accent and profile picture can be read from `shell.json` at install time.
+- **Done when**: the theme runs in test mode with no warnings, logs in, shows a wrong password, offers the session and user choice, and the keyring is unlocked after login.
 
 ## Phase 3, continued: agreed before the notes
 
@@ -162,7 +189,7 @@ Note: `Widget.md` § AI Agent Widget. A small agent buddy, animated with express
 
 ## Phase 4: compositor support
 
-Complete the driftwm adapter and the other backends on `Compositor.capabilities` (the contract and the README "Compositor support" table shipped 2026-11-07). Left: test each backend for real, focus tracking on generic Wayland, and the capabilities the contracts above add (`sessionLock`, `outputConfiguration`).
+Complete the driftwm adapter and the other backends on `Compositor.capabilities` (the contract and the README "Compositor support" table shipped 2026-11-07). Left: test each backend for real, focus tracking on generic Wayland, and the capabilities the contracts above add (`outputConfiguration`; `sessionLock` and `displayPower` shipped with the lock, 2026-11-14).
 
 ## Phase 5: productization
 
@@ -195,9 +222,10 @@ Settled by the user on 2026-11-10; the contracts above are built on these.
 7. **Widgets are fixed to their monitor** wherever the canvas camera is. The older idea of driftwm `widget = true` windows that follow the camera is dropped.
 8. **The ready budgets stay** (`Motion.budget.ready`: glance 250 ms, focus 500 ms, takeover 500 ms).
 9. **`Additional.md`: good suggestions are taken, the rest is replaced.** Taken: audio routing, power profiles and brightness (contract 4), display hotplug handling (contracts 6 and 7), restart after a crash as a systemd user unit (phase 5). Kept for later: the text action pill. Replaced: its `/tmp` state dump before each burst, by `StateFile` (`rules/state.md`).
+10. **The V/AI widget borrows the keyboard while typing** (user, 2026-11-15). Clicking the widget's field makes `WidgetWindow` take the keyboard only while the field is open, like the taskbar's Wi-Fi password field (`Extension.isTyping`); Escape or a click elsewhere gives it back. The engine change is made when contract 8 is built.
 
 ## Still open
 
 1. **"Move it" in the app manager.** `pacman` cannot move an installed package; the tab is built without a move action until the user says what it should do.
-2. **Keyboard focus for the V/AI widget.** Typing into a widget needs focus on the desktop layer, which the `desktop` surface kind does not grant; an engine change to decide when contract 8 is built.
+2. ~~Keyboard focus for the V/AI widget.~~ Decided 2026-11-15 (§ Decided 10).
 3. **The notification daemon by default.** Contract 1 says `notifications.enabled` turns on once alerts draw them; `rules/security.md` says every system role is opt-in and starts off. It stays off until the user picks one.

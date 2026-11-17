@@ -5,9 +5,11 @@ import VadosTest
 QtObject {
     readonly property string home: "HOME_DIRECTORY"
     property var screens: [{ name: "play", width: 1600, height: 900 }]
+    property var environment: ({})
+    property bool watchFiles: true
 
     function env(name) {
-        return name === "HOME" ? home : ""
+        return name === "HOME" ? home : (environment[name] ?? "")
     }
 
     function readFile(path) {

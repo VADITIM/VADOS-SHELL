@@ -1,21 +1,46 @@
 pragma Singleton
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Pipewire
+import "../utils/Controls.js" as Controls
 
 Singleton {
     id: audio
 
     readonly property PwNode sink: Pipewire.defaultAudioSink
+    readonly property PwNode source: Pipewire.defaultAudioSource
     readonly property bool isReady: sink?.ready ?? false
     readonly property real volume: sink?.audio?.volume ?? 0
     readonly property bool isMuted: sink?.audio?.muted ?? false
+    readonly property var nodes: Pipewire.nodes.values.filter(node => node.audio)
+    readonly property var outputNodes: nodes.filter(node => node.isSink && !node.isStream)
+    readonly property var inputNodes: nodes.filter(node => !node.isSink && !node.isStream)
+    readonly property var streamNodes: nodes.filter(node => node.isSink && node.isStream)
+    readonly property var outputs: outputNodes.map(node => rowOf(node, node === sink))
+    readonly property var inputs: inputNodes.map(node => rowOf(node, node === source))
+    readonly property var streams: streamNodes.map(node => rowOf(node, false))
+
+    function rowOf(node, isDefault) {
+        return {
+            key: String(node.id),
+            node: node,
+            label: node.isStream ? Controls.streamLabel(node.properties, node.description, node.name) : Controls.deviceLabel(node.description, node.nickname, node.name),
+            volume: node.audio.volume,
+            isMuted: node.audio.muted,
+            isDefault: isDefault
+        }
+    }
 
     function setVolume(value) {
-        if (!sink?.audio)
+        setRowVolume({ node: sink }, value)
+    }
+
+    function setRowVolume(row, value) {
+        if (!row.node?.audio)
             return
-        sink.audio.muted = false
-        sink.audio.volume = Math.max(0, Math.min(1, value))
+        row.node.audio.muted = false
+        row.node.audio.volume = Math.max(0, Math.min(1, value))
     }
 
     function toggleMute() {
@@ -23,7 +48,18 @@ Singleton {
             sink.audio.muted = !sink.audio.muted
     }
 
+    function makeDefault(row) {
+        if (row.node.isSink)
+            Pipewire.preferredDefaultAudioSink = row.node
+        else
+            Pipewire.preferredDefaultAudioSource = row.node
+    }
+
+    function route(stream, output) {
+        Quickshell.execDetached(["pw-metadata", String(stream.node.id), "target.node", String(output.node.id), "Spa:Id"])
+    }
+
     PwObjectTracker {
-        objects: [audio.sink]
+        objects: audio.nodes.concat([audio.sink, audio.source])
     }
 }

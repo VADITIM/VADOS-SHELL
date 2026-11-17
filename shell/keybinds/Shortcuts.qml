@@ -14,6 +14,14 @@ Scope {
     readonly property string notificationStatus: Notifications.status
     readonly property bool isQuiet: Attention.isQuiet
 
+    function toggleSearch() {
+        const screenName = Compositor.focusedScreen
+        if (ActivityState.isClipboardOn(screenName))
+            ActivityState.closeClipboard()
+        else
+            Overlays.toggle("search", screenName)
+    }
+
     function shoot() {
         const screenName = Compositor.focusedScreen
         if (!Overlays.isWanted("screenshot", screenName))
@@ -24,7 +32,7 @@ Scope {
         appid: "vados"
         name: "search"
         description: "Open or close the app search"
-        onPressed: Overlays.toggle("search", Compositor.focusedScreen)
+        onPressed: shortcuts.toggleSearch()
     }
 
     GlobalShortcut {
@@ -88,6 +96,25 @@ Scope {
         name: "record"
         description: "Start or stop recording the screen"
         onPressed: Capture.toggleRecording(Compositor.focusedScreen)
+    }
+
+    GlobalShortcut {
+        appid: "vados"
+        name: "lock"
+        description: "Lock the session"
+        onPressed: Power.lock()
+    }
+
+    IpcHandler {
+        target: "lock"
+
+        function lock(): void {
+            Power.lock()
+        }
+
+        function status(): string {
+            return Lock.status
+        }
     }
 
     Connections {
@@ -230,7 +257,7 @@ Scope {
         target: "search"
 
         function toggle(): void {
-            Overlays.toggle("search", Compositor.focusedScreen)
+            shortcuts.toggleSearch()
         }
 
         function close(): void {
@@ -320,6 +347,22 @@ Scope {
 
         function report(): string {
             return Diagnostics.report(Compositor, Overlays, Supervision.supervisors, Log.recent())
+        }
+    }
+
+    IpcHandler {
+        target: "calculator"
+
+        function open(): void {
+            Builtins.open("calculator")
+        }
+
+        function close(): void {
+            Builtins.close("calculator")
+        }
+
+        function toggle(): void {
+            Builtins.toggle("calculator")
         }
     }
 

@@ -1,5 +1,8 @@
 .pragma library
 
+const lumaWeights = { red: 0.299, green: 0.587, blue: 0.114 }
+const lightLuma = 0.6
+
 function shadeOf(red, green, blue) {
     const highest = Math.max(red, green, blue)
     const lowest = Math.min(red, green, blue)
@@ -75,4 +78,8 @@ function nudge(hex, amount) {
     const shade = shadeOf(color.r, color.g, color.b)
     shade.lightness = Math.max(0, Math.min(1, shade.lightness + (shade.lightness > 0.5 ? -amount : amount)))
     return hexOf(colorOf(shade))
+}
+
+function isLight(color) {
+    return color.r * lumaWeights.red + color.g * lumaWeights.green + color.b * lumaWeights.blue > lightLuma
 }

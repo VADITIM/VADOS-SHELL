@@ -36,7 +36,7 @@ Item {
     readonly property real pixelRatio: frameImage.implicitWidth > 0 && width > 0 ? frameImage.implicitWidth / width : 1
     readonly property point pointer: pointerHover.hovered ? pointerHover.point.position : Qt.point(-1, -1)
     readonly property bool isPointerInside: hasSelection && Ink.contains(selection, pointer)
-    readonly property bool isEditing: tool === "select" || tool === "shape"
+    readonly property bool isEditing: tool === "select" || tool === "shape" || tool === "arrow"
     readonly property bool canCarry: isEditing || tool === "text"
     readonly property var handles: isEditing ? Ink.handlesOf(strokes) : []
     readonly property var selectionHandles: tool === "select" && hasSelection ? Ink.cornersOfRect(selection) : []
@@ -181,7 +181,7 @@ Item {
             heldSelection = selection
         } else if (Ink.isDrawing(tool)) {
             dragMode = "draw"
-            drawing = Ink.strokeOf(tool === "shape" ? shapeKind : "paint", inkColor.toString(), look.stroke, point)
+            drawing = Ink.strokeOf(tool === "shape" ? shapeKind : tool === "arrow" ? "arrow" : "paint", inkColor.toString(), look.stroke, point)
         } else if (tool === "text") {
             dragMode = "idle"
         } else if (tool === "erase") {
@@ -315,7 +315,13 @@ Item {
             shot.selectAll()
         else if (isControl && event.key === Qt.Key_Z)
             shot.undo()
-        else if (event.key === Qt.Key_Tab)
+        else if (!isControl && event.text.length === 1 && Ink.toolOfHotkey(event.text) !== null) {
+            const key = Ink.toolOfHotkey(event.text).key
+            if (key === "color" || key === "shape")
+                shot.toggleMenu(key)
+            else
+                shot.pick(key)
+        } else if (event.key === Qt.Key_Tab)
             shot.pick(Ink.nextOf(shot.cycle, shot.tool, 1))
         else if (event.key === Qt.Key_Backtab)
             shot.pick(Ink.nextOf(shot.cycle, shot.tool, -1))

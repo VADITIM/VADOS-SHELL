@@ -59,8 +59,10 @@ def build(root):
         shell = handle.read().replace("HOME_DIRECTORY", home.replace(os.sep, "/"))
     play.write_module("Quickshell", [fake("Singleton.qml"), fake("Scope.qml"), ("Quickshell.qml", shell)])
     play.write_module("Quickshell.Io", [fake("FileView.qml"), fake("Process.qml")])
+    play.write_module("Quickshell.Wayland", [fake("IdleMonitor.qml")])
+    play.write_module("Quickshell.Services.Pam", [fake("PamContext.qml"), fake("PamResult.qml"), fake("PamError.qml")])
     services = os.path.join(play.BUILD, "qs", "services")
-    for name in ("StateFile.qml", "Confinement.qml", "Supervisor.qml", "Supervision.qml", "Occupancy.qml"):
+    for name in ("StateFile.qml", "Confinement.qml", "Supervisor.qml", "Supervision.qml", "Occupancy.qml", "Lock.qml"):
         shutil.copy(os.path.join(play.SHELL, "services", name), services)
     with open(os.path.join(services, "qmldir"), "a", encoding="utf-8", newline="\n") as handle:
         handle.write("StateFile 1.0 StateFile.qml\nSupervisor 1.0 Supervisor.qml\n")

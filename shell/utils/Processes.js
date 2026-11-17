@@ -185,6 +185,13 @@ function sorted(rows, sort) {
     return rows.slice().sort((first, second) => direction * compare(first, second, sort.key) || compare(first, second, "name"))
 }
 
+function matching(rows, query) {
+    const needle = query.trim().toLowerCase()
+    if (needle.length === 0)
+        return rows
+    return rows.filter(row => row.name.toLowerCase().includes(needle) || (row.path ?? "").toLowerCase().includes(needle))
+}
+
 function nextSort(sort, key) {
     if (sort.key === key)
         return { key: key, isDescending: !sort.isDescending }

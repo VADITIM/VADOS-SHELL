@@ -130,6 +130,8 @@ Item {
         : isLeaving ? leaveFlare * (1 - Geometry.smooth(Geometry.clampUnit(exit / pace.flareRetract)))
         : Geometry.smooth(Geometry.clampUnit((opening - pace.flareStart) / (1 - pace.flareStart)))
     property var wallOutline: []
+    property real wallFar: 0
+    readonly property real wallReach: wallOutline.length > 0 ? wallFar : formRight
     readonly property bool hasTracks: isSplashing || hasWall
     property var topTrack: null
     property var bottomTrack: null
@@ -337,18 +339,22 @@ Item {
 
     function wallSegments(side, alongX) {
         const ordered = side < 0 ? wallOutline : wallOutline.slice().reverse()
+        const middle = form.y
         const segments = [lineSegment(alongX, form.height / 2, Math.max(alongX, ordered[0].x), form.height / 2)]
-        for (let index = 0; index < ordered.length - 1; index++) {
-            const from = ordered[index]
-            const to = ordered[index + 1]
-            const fromDepth = depthOf(side, from)
-            const toDepth = depthOf(side, to)
+        let fromX = ordered[0].x
+        let fromDepth = side * (ordered[0].y - middle)
+        for (let index = 1; index < ordered.length; index++) {
+            const to = ordered[index]
+            const toX = to.x
+            const toDepth = side * (to.y - middle)
             if (toDepth <= 0) {
                 const share = fromDepth / Math.max(0.001, fromDepth - toDepth)
-                segments.push(lineSegment(from.x, fromDepth, from.x + (to.x - from.x) * share, 0))
+                segments.push(lineSegment(fromX, fromDepth, fromX + (toX - fromX) * share, 0))
                 break
             }
-            segments.push(lineSegment(from.x, fromDepth, to.x, toDepth))
+            segments.push(lineSegment(fromX, fromDepth, toX, toDepth))
+            fromX = toX
+            fromDepth = toDepth
         }
         return segments
     }
@@ -407,15 +413,25 @@ Item {
     }
 
     function seamShare(toEnd, context) {
+        if (toEnd >= context.seamBlend)
+            return 1
         return Geometry.smooth(Geometry.clampUnit(toEnd / context.seamBlend))
     }
 
     function freeShare(point, context) {
         const gap = Math.min(point.x, point.y, context.screenHeight - point.y)
+        if (gap >= context.edgeHold + context.edgeFade)
+            return 1
+        if (gap <= context.edgeHold)
+            return 0
         return Geometry.smooth(Geometry.clampUnit((gap - context.edgeHold) / context.edgeFade))
     }
 
     function normalAt(segment, side, remaining, toEnd, context) {
+        return normalWith(segment, side, remaining, seamShare(toEnd, context))
+    }
+
+    function normalWith(segment, side, remaining, seam) {
         let x = segment.normalX
         let y = segment.normalDepth
         if (segment.isArc) {
@@ -424,7 +440,7 @@ Item {
             y = Math.sin(angle)
         }
         y *= side
-        const blend = 1 - seamShare(toEnd, context)
+        const blend = 1 - seam
         if (blend <= 0)
             return { x: x, y: y }
         const blendedX = x + ((x >= 0 ? 1 : -1) - x) * blend
@@ -446,11 +462,31 @@ Item {
         const base = basePoint(segment, side, remaining, context)
         if (depth === 0)
             return Qt.point(base.x, base.y)
-        const offset = depth * seamShare(toEnd, context) * freeShare(base, context)
+        const seam = seamShare(toEnd, context)
+        const offset = depth * seam * freeShare(base, context)
         if (offset === 0)
             return Qt.point(base.x, base.y)
-        const normal = normalAt(segment, side, remaining, toEnd, context)
+        const normal = normalWith(segment, side, remaining, seam)
         return Qt.point(base.x + normal.x * offset, base.y + normal.y * offset)
+    }
+
+    function rimPoints(segment, side, remaining, outerDepth, innerDepth, toEnd, context) {
+        const base = basePoint(segment, side, remaining, context)
+        const seam = seamShare(toEnd, context)
+        const share = seam * freeShare(base, context)
+        if (share === 0)
+            return [Qt.point(base.x, base.y), Qt.point(base.x, base.y)]
+        const normal = normalWith(segment, side, remaining, seam)
+        return [
+            Qt.point(base.x + normal.x * outerDepth * share, base.y + normal.y * outerDepth * share),
+            Qt.point(base.x + normal.x * innerDepth * share, base.y + normal.y * innerDepth * share)
+        ]
+    }
+
+    function isBent(from, to, depth) {
+        if (from.isArc || to.isArc)
+            return true
+        return Math.abs(from.normalX * to.normalDepth - from.normalDepth * to.normalX) * Math.abs(depth) >= look.joinSlack
     }
 
     function joinPoints(from, to, side, depth, toEnd, context) {
@@ -482,7 +518,12 @@ Item {
     }
 
     function trace() {
-        wallOutline = hasWall ? Geometry.traceSpline(wallPoints(), look.curveStep, look.curveSlack) : []
+        const outline = hasWall ? Geometry.traceSpline(wallPoints(), look.curveStep, look.curveSlack) : []
+        let far = -Infinity
+        for (let index = 0; index < outline.length; index++)
+            far = Math.max(far, outline[index].x)
+        wallFar = outline.length > 0 ? far : 0
+        wallOutline = outline
         farFront = wallOutline.length > 0 ? wallXAt(form.y) : formRight
         if (!hasTracks) {
             topTrack = null
@@ -598,15 +639,19 @@ Item {
             const segment = segments[index]
             const end = passed + segment.length
             const depth = troughDepth(passed, head, scale, context)
-            if (before && depth !== 0)
+            if (before && depth !== 0 && isBent(before, segment, depth))
                 points.push(...joinPoints(before, segment, side, depth, total - passed, context))
-            points.push(segmentPoint(segment, side, 0, depth, total - passed, context))
+            if (depth === 0 && !segment.isArc)
+                points.push(Qt.point(segment.x, context.top + side * segment.depth))
+            else
+                points.push(segmentPoint(segment, side, 0, depth, total - passed, context))
             const isTroughed = scale > 0 && to > passed && from < end
             if (isTroughed || segment.isArc) {
                 const first = isTroughed ? Math.max(passed, from) : passed
                 const last = isTroughed ? Math.min(end, to) : end
-                const count = Geometry.samplesFor(last - first, segment.isArc ? context.curveStep : context.troughStep)
-                for (let sample = 0; sample <= count; sample++) {
+                const count = segment.isArc ? Geometry.samplesFor(last - first, context.curveStep) : Math.max(1, Math.ceil((last - first) / context.troughStep))
+                const lastSample = last < end ? count : count - 1
+                for (let sample = first > passed ? 0 : 1; sample <= lastSample; sample++) {
                     const distance = first + (last - first) * sample / count
                     points.push(segmentPoint(segment, side, distance - passed, troughDepth(distance, head, scale, context), total - distance, context))
                 }
@@ -647,11 +692,13 @@ Item {
                 if (passed <= from)
                     continue
                 const joint = Math.cos(Math.PI * (passed - head) / context.crestLength)
-                outer.push(...joinPoints(segments[index - 1], segments[index], side, height * joint * joint, total - passed, context))
+                if (isBent(segments[index - 1], segments[index], height * joint * joint))
+                    outer.push(...joinPoints(segments[index - 1], segments[index], side, height * joint * joint, total - passed, context))
             }
             const bump = Math.cos(Math.PI * (distance - head) / context.crestLength)
-            outer.push(segmentPoint(segments[index], side, distance - passed, height * bump * bump, total - distance, context))
-            inner.push(segmentPoint(segments[index], side, distance - passed, -context.crestInset, total - distance, context))
+            const rim = rimPoints(segments[index], side, distance - passed, height * bump * bump, -context.crestInset, total - distance, context)
+            outer.push(rim[0])
+            inner.push(rim[1])
         }
         return outer.concat(inner.reverse(), [outer[0]])
     }

@@ -10,14 +10,62 @@ Item {
     property bool isShown: false
     property color fill: Appearance.color.accent
     property color ink: Appearance.color.ground
+    property color labelFill: fill
+    property bool isMirrored: false
+    property var shownTabs: []
+    property bool isSwapping: false
+    property real glyphFlip: -90
+    property real glyphSpin: 0
     readonly property var look: Appearance.settings.navigation
-    readonly property int currentIndex: tabs.findIndex(tab => tab.key === currentKey)
+    readonly property int currentIndex: shownTabs.findIndex(tab => tab.key === currentKey)
     readonly property bool hasCurrent: currentIndex >= 0
 
     signal picked(string key)
 
+    function keysOf(list) {
+        return list.map(tab => tab.key).join("\n")
+    }
+
+    function mutate() {
+        if (tabs.length === 0)
+            return
+        if (keysOf(tabs) === keysOf(shownTabs)) {
+            shownTabs = tabs
+            return
+        }
+        if (barTurn.presence <= 0 || shownTabs.length === 0) {
+            swap.stop()
+            isSwapping = false
+            shownTabs = tabs
+            return
+        }
+        isSwapping = true
+        swap.restart()
+    }
+
     width: look.width
-    height: tabs.length * look.item + Math.max(0, tabs.length - 1) * look.itemGap + look.padding * 2
+    height: shownTabs.length * look.item + Math.max(0, shownTabs.length - 1) * look.itemGap + look.padding * 2
+
+    onTabsChanged: mutate()
+    Component.onCompleted: shownTabs = tabs
+
+    Behavior on height {
+        enabled: barTurn.presence > 0
+        NumberAnimation {
+            duration: Motion.pace(Motion.settings.subReshape)
+            easing.type: Easing.OutBack
+        }
+    }
+
+    Timer {
+        id: swap
+        interval: Motion.pace(Motion.settings.subLeave)
+        onTriggered: {
+            if (bar.tabs.length > 0)
+                bar.shownTabs = bar.tabs
+            bar.isSwapping = false
+        }
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -52,14 +100,14 @@ Item {
 
         Turn {
             id: highlightTurn
-            isShown: bar.isShown && bar.hasCurrent
-            enterDelay: bar.tabs.length * Motion.pill.elementStagger
+            isShown: bar.isShown && bar.hasCurrent && !bar.isSwapping
+            enterDelay: bar.shownTabs.length * Motion.pill.elementStagger
             leaveWindow: 0
         }
     }
 
     Repeater {
-        model: bar.tabs
+        model: bar.shownTabs
 
         Item {
             id: entry
@@ -70,6 +118,7 @@ Item {
 
             x: (bar.width - bar.look.item) / 2
             y: bar.look.padding + index * (bar.look.item + bar.look.itemGap)
+            z: area.containsMouse ? 1 : 0
             width: bar.look.item
             height: bar.look.item
 
@@ -79,9 +128,13 @@ Item {
                 y: (entry.height - height) / 2
                 width: bar.look.glyph
                 height: bar.look.glyph
-                isShown: bar.isShown
+                isShown: bar.isShown && !bar.isSwapping
                 enterDelay: entry.index * Motion.pill.elementStagger
                 enterEasing: Easing.OutBack
+                flipAngle: bar.glyphFlip
+                spinAngle: bar.glyphSpin
+                leaveWindow: 0
+                leaveDuration: Motion.settings.subLeave
 
                 Press {
                     target: tabGlyph
@@ -102,10 +155,38 @@ Item {
                 }
             }
 
+            Turn {
+                id: tip
+                x: bar.isMirrored ? -width - bar.look.labelGap : entry.width + bar.look.labelGap
+                y: (entry.height - height) / 2
+                width: tipText.implicitWidth + bar.look.labelPadding * 2
+                height: bar.look.label
+                isShown: bar.isShown && area.containsMouse
+                enterEasing: Easing.OutBack
+                leaveWindow: 0
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: height / 2
+                    color: bar.labelFill
+                }
+
+                Text {
+                    id: tipText
+                    anchors.centerIn: parent
+                    text: entry.modelData.label
+                    color: bar.ink
+                    font.family: Appearance.font.mono
+                    font.pixelSize: Appearance.font.label
+                    font.letterSpacing: Appearance.font.labelSpacing
+                    font.bold: true
+                }
+            }
+
             MouseArea {
                 id: area
                 anchors.fill: parent
-                enabled: bar.isShown
+                enabled: bar.isShown && !bar.isSwapping
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: bar.picked(entry.modelData.key)

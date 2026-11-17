@@ -6,23 +6,24 @@ Item {
     id: extension
 
     required property bool isMirrored
-    required property real inset
     property string extensionKey: ""
     property string heldKey: ""
-    property rect origin: Qt.rect(0, 0, 0, 0)
-    property real growth: isOpen ? 1 : 0
+    property rect body: Qt.rect(0, 0, 0, 0)
+    property real lift: 0
+    property bool isBatteryProtected: false
     readonly property bool isOpen: extensionKey.length > 0
-    readonly property bool isHolding: isOpen || growth > Motion.extension.handBack
-    readonly property bool isContentShown: isOpen && growth > Motion.extension.contentShare
-    readonly property real targetWidth: Math.max(origin.width, Appearance.extension.width)
-    readonly property real targetHeight: height - Appearance.taskbar.margin * 2
-    readonly property real bodyLeft: origin.x + (inset - origin.x) * growth
-    readonly property real bodyTop: origin.y + (Appearance.taskbar.margin - origin.y) * growth
-    readonly property real bodyWidth: origin.width + (targetWidth - origin.width) * growth
-    readonly property real bodyHeight: origin.height + (targetHeight - origin.height) * growth
-    readonly property real inputWidth: growth > 0.01 ? bodyLeft + bodyWidth + Appearance.taskbar.tipGap : 0
+    readonly property bool isHeld: lift > 0.001
+    readonly property bool isContentShown: isOpen && lift > Motion.extension.contentShare
+    readonly property real safeX: Appearance.extension.safeReach
+    readonly property real safeY: Appearance.extension.safeReach
+    readonly property real inputWidth: isHeld ? body.x + body.width + safeX : 0
+    readonly property real inputTop: Math.max(0, body.y - safeY)
+    readonly property real inputHeight: Math.min(height, body.y + body.height + safeY) - inputTop
+    property bool hasEntered: false
+    readonly property bool isTyping: isOpen && loader.item !== null && loader.item.isTyping === true
 
     signal closeRequested()
+    signal batteryProtectRequested(bool isProtected)
 
     transform: Upright {
         isMirrored: extension.isMirrored
@@ -32,53 +33,49 @@ Item {
     onExtensionKeyChanged: {
         if (extensionKey.length > 0)
             heldKey = extensionKey
-    }
-
-    Behavior on growth {
-        NumberAnimation {
-            duration: Motion.pace(extension.isOpen ? Motion.extension.grow : Motion.extension.shrink)
-            easing.type: Easing.InOutCubic
-        }
+        hasEntered = false
     }
 
     Timer {
-        interval: Motion.extension.linger
-        running: extension.isOpen && !hover.hovered
+        interval: extension.hasEntered ? Motion.extension.linger : Motion.extension.grace
+        running: extension.isOpen && !hover.hovered && !bodyHover.hovered && !extension.isTyping
         onTriggered: extension.closeRequested()
     }
 
-    LiquidLayer {
-        id: liquid
-        anchors.fill: parent
-        fill: Appearance.color.panel
-        rim: Appearance.color.hairline
-        fillAlpha: Appearance.color.panelAlpha
-        melt: Appearance.extension.melt
-        isShown: extension.growth > 0.001
+    Item {
+        y: extension.body.y - extension.safeY
+        width: extension.body.x + extension.body.width + extension.safeX
+        height: extension.body.height + extension.safeY * 2
+        visible: extension.isHeld
 
-        LiquidShape {
-            parent: liquid.shapes
-            x: extension.bodyLeft
-            y: extension.bodyTop
-            width: extension.bodyWidth
-            height: extension.bodyHeight
-            radius: Math.min(Math.min(width, height) / 2, Appearance.extension.radius)
+        HoverHandler {
+            id: hover
+            onHoveredChanged: {
+                if (hovered)
+                    extension.hasEntered = true
+            }
         }
     }
 
     Item {
-        x: extension.bodyLeft
-        y: extension.bodyTop
-        width: extension.bodyWidth
-        height: extension.bodyHeight
-        visible: extension.growth > 0.001
-
-        HoverHandler {
-            id: hover
-        }
+        x: extension.body.x
+        y: extension.body.y
+        width: extension.body.width
+        height: extension.body.height
+        visible: extension.isHeld
+        clip: true
 
         MouseArea {
             anchors.fill: parent
+            hoverEnabled: true
+        }
+
+        HoverHandler {
+            id: bodyHover
+            onHoveredChanged: {
+                if (hovered)
+                    extension.hasEntered = true
+            }
         }
 
         Item {
@@ -93,19 +90,10 @@ Item {
             Loader {
                 id: loader
                 anchors.fill: parent
-                sourceComponent: extension.heldKey === "network" ? networkPage : null
+                sourceComponent: !extension.isOpen && !extension.isHeld ? null : extension.heldKey === "network" ? networkPage : extension.heldKey === "audio" ? audioPage : extension.heldKey === "power" ? powerPage : null
                 onLoaded: {
                     item.isOpen = Qt.binding(() => extension.isOpen)
                     item.isShown = Qt.binding(() => extension.isContentShown)
-                }
-            }
-
-            Connections {
-                target: loader.item
-                ignoreUnknownSignals: true
-
-                function onCloseRequested() {
-                    extension.closeRequested()
                 }
             }
         }
@@ -115,5 +103,20 @@ Item {
         id: networkPage
 
         NetworkPage {}
+    }
+
+    Component {
+        id: audioPage
+
+        AudioPage {}
+    }
+
+    Component {
+        id: powerPage
+
+        PowerPage {
+            isProtected: extension.isBatteryProtected
+            onProtectRequested: isProtected => extension.batteryProtectRequested(isProtected)
+        }
     }
 }

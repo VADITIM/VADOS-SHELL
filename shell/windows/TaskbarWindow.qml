@@ -15,10 +15,14 @@ PanelWindow {
     readonly property bool isRight: Config.data.taskbar.side === "right"
     readonly property string screenName: screen?.name ?? ""
     property string extensionKey: ""
-    property rect extensionOrigin: Qt.rect(0, 0, 0, 0)
     readonly property var peek: Attention.peek && Attention.peek.screen === screenName && !Overlays.isTaskbarAway(screenName) ? Attention.peek : null
     readonly property bool isFullscreenHere: Compositor.activeWindow?.isFullscreen === true && Compositor.activeWindow.screen === screenName
     readonly property bool isClipboardOpen: ActivityState.isClipboardOn(screenName)
+    readonly property rect clipboardZone: {
+        const body = taskbar.clipboardRect
+        const left = window.isRight ? (screen?.width ?? window.width) - body.x - body.width : body.x
+        return Qt.rect(left, body.y, body.width, body.height)
+    }
     readonly property bool isRaisedOverFullscreen: isFullscreenHere && (peek !== null || taskbar.isAlertShown || isClipboardOpen)
 
     anchors {
@@ -31,7 +35,9 @@ PanelWindow {
     exclusionMode: ExclusionMode.Ignore
     WlrLayershell.layer: window.isRaisedOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "vados-taskbar"
+    WlrLayershell.keyboardFocus: extension.isTyping ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
+    onClipboardZoneChanged: ActivityState.placeClipboard(window.screenName, clipboardZone)
     mask: Region {
         item: inputZone
 
@@ -57,8 +63,9 @@ PanelWindow {
     Item {
         id: extensionZone
         x: window.isRight ? window.width - width : 0
+        y: extension.inputTop
         width: extension.inputWidth
-        height: window.height
+        height: extension.inputHeight
     }
 
     Connections {
@@ -68,6 +75,7 @@ PanelWindow {
             if (screenName !== window.screenName)
                 return
             Overlays.placeTaskbarParts(window.screenName, taskbar.liquidParts())
+            Overlays.placeTaskbarOrigins(window.screenName, taskbar.originPoints())
         }
     }
 
@@ -97,11 +105,9 @@ PanelWindow {
         clipboardSize: clipboard.bodySize
         onClipboardCloseRequested: ActivityState.closeClipboard()
         isCovered: Occupancy.isCovered(window.screenName, Overlays.isHolding(window.screenName))
-        isEaten: extension.isHolding
-        onExtensionRequested: (key, origin) => {
-            window.extensionOrigin = origin
-            window.extensionKey = key
-        }
+        isEngaged: extension.isOpen || extension.isHeld || window.isClipboardOpen || alerts.isExpanded
+        extensionKey: window.extensionKey
+        onExtensionRequested: key => window.extensionKey = key
         onIsAwayChanged: {
             if (isAway)
                 window.extensionKey = ""
@@ -131,7 +137,6 @@ PanelWindow {
         entries: Clipboard.entries
         body: taskbar.clipboardRect
         isBodyShown: taskbar.isClipboardShown
-        isBumpHovered: taskbar.isClipboardBumpHovered
         onPickRequested: entry => {
             Clipboard.pick(entry)
             ActivityState.closeClipboard()
@@ -146,9 +151,11 @@ PanelWindow {
         id: extension
         anchors.fill: parent
         isMirrored: window.isRight
-        inset: taskbar.inset
         extensionKey: window.extensionKey
-        origin: window.extensionOrigin
+        body: taskbar.extensionRect
+        lift: taskbar.extensionLift
+        isBatteryProtected: Config.data.battery.limit
         onCloseRequested: window.extensionKey = ""
+        onBatteryProtectRequested: isProtected => Config.setBatteryLimit(isProtected)
     }
 }

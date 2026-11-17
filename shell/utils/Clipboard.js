@@ -197,3 +197,33 @@ function mimeOf(entry) {
         return imageTypes[entry.path.split(".").pop().toLowerCase()] ?? imageTypes.png
     return "text/plain;charset=utf-8"
 }
+
+function spanOf(entry, imageSpan, lineChars) {
+    if (entry.kind === "image" && !entry.isSecret)
+        return Math.max(1, imageSpan)
+    const isWrapping = !entry.isSecret && (entry.kind === "text" || entry.kind === "url")
+    return isWrapping && lineChars > 0 && labelOf(entry).length > lineChars ? 2 : 1
+}
+
+function layoutOf(entries, imageSpan, lineChars) {
+    const starts = []
+    const spans = []
+    let total = 0
+    for (const entry of entries || []) {
+        const span = spanOf(entry, imageSpan, lineChars)
+        starts.push(total)
+        spans.push(span)
+        total += span
+    }
+    return { starts: starts, spans: spans, total: total }
+}
+
+function indexAtSlot(layout, slot) {
+    if (slot < 0 || slot >= layout.total)
+        return -1
+    for (let index = layout.starts.length - 1; index >= 0; index--) {
+        if (layout.starts[index] <= slot)
+            return index
+    }
+    return -1
+}

@@ -1,6 +1,6 @@
 .pragma library
 
-const surfaces = ["bar", "mutation", "overlay", "lock", "desktop", "debug"]
+const surfaces = ["bar", "mutation", "overlay", "lock", "desktop", "window", "debug"]
 const origins = ["edge", "column", "activity", "idle", "power", "none"]
 const impacts = ["ambient", "glance", "focus", "takeover"]
 
@@ -16,8 +16,10 @@ const features = [
     { key: "clipboard", folder: "clipboard", root: "ClipboardHistory", surface: "mutation", origin: "activity", impact: "focus", needs: [], isBuilt: true },
     { key: "notifications", folder: "notifications", root: "NotificationMenu", surface: "overlay", origin: "column", impact: "focus", needs: [], isBuilt: true, layer: 1, keepsTaskbar: false },
     { key: "screenshot", folder: "screenshot", root: "Screenshot", surface: "overlay", origin: "activity", impact: "focus", needs: [], isBuilt: true, layer: 2, keepsTaskbar: true },
-    { key: "lock", folder: "lock", root: "LockScreen", surface: "lock", origin: "power", impact: "takeover", needs: [], isBuilt: false },
-    { key: "widgets", folder: "widgets", root: "WidgetLayer", surface: "desktop", origin: "none", impact: "ambient", needs: [], isBuilt: false },
+    { key: "lock", folder: "lock", root: "LockScreen", surface: "lock", origin: "power", impact: "takeover", needs: ["sessionLock"], isBuilt: true },
+    { key: "wallpaper", folder: "wallpaper", root: "Wallpaper", surface: "desktop", origin: "none", impact: "ambient", needs: [], isBuilt: true },
+    { key: "widgets", folder: "widgets", root: "WidgetLayer", surface: "desktop", origin: "none", impact: "ambient", needs: [], isBuilt: true },
+    { key: "calculator", folder: "calculator", root: "Calculator", surface: "window", origin: "none", impact: "focus", needs: [], isBuilt: true },
     { key: "canvas", folder: "canvas", root: "Minimap", surface: "bar", origin: "edge", impact: "ambient", needs: ["freeCanvas"], isBuilt: false }
 ]
 

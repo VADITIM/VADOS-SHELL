@@ -17,7 +17,8 @@ Item {
     property real flipAngle: -90
     property real spinAngle: 0
     property bool isSlung: false
-    readonly property real shape: isFlipping || isSlung ? presence : 1
+    property bool isShaped: true
+    readonly property real shape: isShaped && (isFlipping || isSlung) ? presence : 1
 
     signal departed()
 
@@ -47,9 +48,9 @@ Item {
     function play() {
         if (isShown) {
             departure.stop()
-            if (presence >= 1)
+            if (presence === 1)
                 return
-            arrivalPause.duration = Motion.pace(enterDelay + Math.random() * enterWindow)
+            arrivalPause.duration = presence > 1 ? 0 : Motion.pace(enterDelay + Math.random() * enterWindow)
             arrival.restart()
             return
         }

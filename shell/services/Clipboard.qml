@@ -48,12 +48,21 @@ Singleton {
         if (!entry)
             return
         if (entry.kind === "image") {
-            Quickshell.execDetached(["sh", "-c", "exec wl-copy --type \"$1\" < \"$2\"", "sh", Entries.mimeOf(entry), entry.path])
+            imageCopier.command = ["sh", "-c", "exec wl-copy --type \"$1\" < \"$2\"", "sh", Entries.mimeOf(entry), entry.path]
+            imageCopier.running = true
             return
         }
         pendingText = entry.text
         copier.command = ["wl-copy", "--type", Entries.mimeOf(entry)]
         copier.running = true
+    }
+
+    function finishCopy(exitCode) {
+        if (exitCode !== 0) {
+            Log.warn("clipboard", "wl-copy exited with code " + exitCode + ", nothing was copied; is wl-clipboard installed?")
+            return
+        }
+        pasteDelay.restart()
     }
 
     function togglePin(entry) {
@@ -113,8 +122,27 @@ Singleton {
         }
         onExited: exitCode => {
             stdinEnabled = true
+            clipboard.finishCopy(exitCode)
+        }
+    }
+
+    Process {
+        id: imageCopier
+        onExited: exitCode => clipboard.finishCopy(exitCode)
+    }
+
+    Timer {
+        id: pasteDelay
+        interval: Motion.clipboard.pasteDelay
+        onTriggered: pasteKeys.running = true
+    }
+
+    Process {
+        id: pasteKeys
+        command: ["wtype", "-M", "ctrl", "-k", "v", "-m", "ctrl"]
+        onExited: exitCode => {
             if (exitCode !== 0)
-                Log.warn("clipboard", "wl-copy exited with code " + exitCode + ", nothing was copied; is wl-clipboard installed?")
+                Log.warn("clipboard", "wtype exited with code " + exitCode + ", the entry is copied but not pasted; is wtype installed and supported by the compositor?")
         }
     }
 }

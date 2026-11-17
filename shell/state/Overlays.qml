@@ -12,6 +12,8 @@ Singleton {
     property var awayScreens: []
     property var gathering: []
     property var taskbarParts: ({})
+    property var taskbarOrigins: ({})
+    property var heldScreens: []
     property var visitors: ({})
     property var phases: ({})
     property var swaps: ({})
@@ -118,6 +120,8 @@ Singleton {
         awayScreens = awayScreens.filter(screenName => screenNames.indexOf(screenName) >= 0)
         gathering = gathering.filter(screenName => screenNames.indexOf(screenName) >= 0)
         taskbarParts = keepOnly(taskbarParts, screenNames)
+        taskbarOrigins = keepOnly(taskbarOrigins, screenNames)
+        heldScreens = heldScreens.filter(screenName => screenNames.indexOf(screenName) >= 0)
         visitors = keepOnly(visitors, screenNames)
         phases = keepOnly(phases, screenNames)
         swaps = keepOnly(swaps, screenNames)
@@ -201,8 +205,27 @@ Singleton {
         gathering = gathering.filter(held => held !== screenName)
     }
 
+    function isHeld(screenName) {
+        return heldScreens.indexOf(screenName) >= 0
+    }
+
+    function holdTaskbar(screenName) {
+        if (screenName.length === 0)
+            return
+        gatherTaskbar(screenName)
+        if (!isHeld(screenName))
+            heldScreens = heldScreens.concat([screenName])
+    }
+
+    function releaseTaskbar(screenName) {
+        if (!isHeld(screenName))
+            return
+        heldScreens = heldScreens.filter(held => held !== screenName)
+        returnTaskbar(screenName)
+    }
+
     function returnTaskbar(screenName) {
-        if (isAnyOn(screenName))
+        if (isAnyOn(screenName) || isHeld(screenName))
             return
         gathering = gathering.filter(held => held !== screenName)
         awayScreens = awayScreens.filter(away => away !== screenName)
@@ -212,6 +235,12 @@ Singleton {
         const placed = Object.assign({}, taskbarParts)
         placed[screenName] = parts
         taskbarParts = placed
+    }
+
+    function placeTaskbarOrigins(screenName, origins) {
+        const placed = Object.assign({}, taskbarOrigins)
+        placed[screenName] = origins
+        taskbarOrigins = placed
     }
 
     function placeVisitor(key, screenName, visitor) {

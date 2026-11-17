@@ -1,6 +1,5 @@
 import QtQuick
-import qs.components
-import "../../utils/Geometry.js" as Geometry
+import "../utils/Geometry.js" as Geometry
 
 Item {
     id: shape

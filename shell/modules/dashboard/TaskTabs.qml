@@ -27,6 +27,9 @@ Item {
             required property int index
             readonly property bool isCurrent: tabs.current === modelData.key
             readonly property real presence: turn.presence
+            readonly property real flight: Math.sin(Math.PI * presence)
+            readonly property real stretchX: 1 + tabs.look.tabStretch * flight
+            readonly property real stretchY: 1 - tabs.look.tabSquash * flight
             readonly property real baseLeft: tabs.stackRight - width + (1 - presence) * (width + tabs.look.tabOut)
             readonly property real baseTop: tabs.centerY - tabs.stackHeight / 2 + index * (tabs.look.tab + tabs.look.tabGap)
 
@@ -52,16 +55,22 @@ Item {
             LiquidShape {
                 parent: tabs.shapes
                 visible: pill.visible
-                x: pill.baseLeft
-                y: pill.baseTop
-                width: pill.width
-                height: pill.height
+                x: pill.baseLeft - (width - pill.width) / 2
+                y: pill.baseTop - (height - pill.height) / 2
+                width: pill.width * pill.stretchX
+                height: pill.height * pill.stretchY
             }
 
             Item {
                 id: face
                 anchors.fill: parent
                 opacity: tabs.isShown ? Math.min(1, pill.presence * 1.6) : 0
+                transform: Scale {
+                    origin.x: face.width / 2
+                    origin.y: face.height / 2
+                    xScale: pill.stretchX
+                    yScale: pill.stretchY
+                }
 
                 Press {
                     target: face

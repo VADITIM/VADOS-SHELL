@@ -165,6 +165,33 @@ Item {
         onPicked: value => toolbar.colorPicked(value)
     }
 
+    Rectangle {
+        readonly property int pickedIndex: Ink.tools.findIndex(entry => toolbar.isPicked(entry.key))
+        property real centerY: toolbar.toolCenterY(Math.max(0, pickedIndex))
+        x: toolbar.spineX - width / 2
+        y: centerY - height / 2
+        width: toolbar.look.tool
+        height: width
+        radius: width / 2
+        color: Appearance.color.wash
+        opacity: toolbar.isShown && pickedIndex >= 0 && reshape.isArrived ? 1 : 0
+
+        Behavior on centerY {
+            NumberAnimation {
+                duration: Motion.pace(Motion.capture.select)
+                easing.type: Easing.OutBack
+                easing.overshoot: Motion.capture.selectOvershoot
+            }
+        }
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: Motion.pace(Motion.stateDuration)
+                easing.type: Easing.OutQuad
+            }
+        }
+    }
+
     Repeater {
         model: Ink.tools
 
@@ -192,7 +219,7 @@ Item {
                 anchors.fill: parent
                 radius: width / 2
                 color: Appearance.color.wash
-                opacity: toolbar.isPicked(toolFace.modelData.key) || toolArea.containsMouse ? 1 : 0
+                opacity: toolArea.containsMouse && !toolbar.isPicked(toolFace.modelData.key) ? 1 : 0
             }
 
             Glyph {
@@ -206,6 +233,20 @@ Item {
                 transform: Upright {
                     isMirrored: toolbar.isMirrored
                     axis: toolbar.look.toolGlyph / 2
+                }
+            }
+
+            Text {
+                x: (parent.width + toolbar.thickness) / 2 + toolbar.look.hotkeyGap
+                anchors.verticalCenter: parent.verticalCenter
+                text: toolFace.modelData.hotkey
+                color: Appearance.color.textFaint
+                font.family: Appearance.font.sans
+                font.pixelSize: toolbar.look.hotkeySize
+                font.bold: true
+                transform: Upright {
+                    isMirrored: toolbar.isMirrored
+                    axis: width / 2
                 }
             }
 

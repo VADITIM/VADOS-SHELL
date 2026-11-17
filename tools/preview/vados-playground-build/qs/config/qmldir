@@ -1,0 +1,6 @@
+module qs.config
+singleton Appearance 1.0 Appearance.qml
+singleton Motion 1.0 Motion.qml
+singleton Rendering 1.0 Rendering.qml
+singleton Release 1.0 Release.qml
+singleton Config 1.0 Config.qml

@@ -9,6 +9,12 @@ TestCase {
         return JSON.parse(JSON.stringify(value))
     }
 
+    function test_fallbackOfReadsOneKey() {
+        compare(Schema.fallbackOf("pills.opacity"), 0.94)
+        compare(Schema.fallbackOf("pills.blur"), 1)
+        compare(Schema.fallbackOf("missing.key"), undefined)
+    }
+
     function test_everyDefaultValidatesClean() {
         for (const key in Schema.settings)
             compare(Schema.findProblem(key, Schema.settings[key].fallback), "", key)
@@ -27,6 +33,21 @@ TestCase {
         verify(Schema.findProblem("pills.color", "") === "")
     }
 
+    signal relayed(var entries)
+    property var arrived: null
+
+    function test_aListThatCrossedASignalIsStillAList() {
+        relayed.connect(entries => arrived = entries)
+        relayed(["eDP-1:clock:0:0"].concat(["eDP-1:disk:2:0"]))
+        compare(Schema.findProblem("widgets.layout", arrived), "")
+        compare(Schema.findProblem("lock.layout", arrived), "")
+        compare(Array.isArray(Schema.listOf(arrived)), true)
+        compare(Schema.listOf(arrived).length, 2)
+        verify(Schema.findProblem("widgets.layout", "eDP-1:clock:0:0").length > 0, "text is not a list")
+        verify(Schema.findProblem("widgets.layout", [1]).length > 0, "numbers are not names")
+        compare(Schema.listOf("text"), null)
+    }
+
     function test_countRule() {
         verify(Schema.findProblem("notifications.history", 200) === "")
         verify(Schema.findProblem("notifications.history", 0) === "")
@@ -34,6 +55,16 @@ TestCase {
         verify(Schema.findProblem("notifications.history", 2.5) !== "")
         verify(Schema.findProblem("notifications.history", "200") !== "")
         verify(Schema.findProblem("notifications.history", 5000) !== "")
+    }
+
+    function test_secondsRule() {
+        verify(Schema.findProblem("lock.blankAfter", 60) === "")
+        verify(Schema.findProblem("lock.blankAfter", 0) === "", "0 never blanks")
+        verify(Schema.findProblem("lock.blankAfter", 1800) === "", "longer than a count allows")
+        verify(Schema.findProblem("lock.blankAfter", -5) !== "")
+        verify(Schema.findProblem("lock.blankAfter", 30.5) !== "")
+        verify(Schema.findProblem("lock.blankAfter", "60") !== "")
+        verify(Schema.findProblem("lock.blankAfter", 86401) !== "")
     }
 
     function test_cleanSettingsAreIdempotent() {
@@ -103,10 +134,10 @@ TestCase {
     }
 
     function test_unknownKeysAreReportedAndDroppedWithoutAWrite() {
-        const repaired = Schema.repair({ version: 1, taskbar: { side: "right", colour: "red" }, wallpaper: { path: "/a" } })
+        const repaired = Schema.repair({ version: 1, taskbar: { side: "right", colour: "red" }, theme: { path: "/a" } })
         compare(repaired.settings.taskbar.side, "right")
         verify(!("colour" in repaired.settings.taskbar))
-        verify(!("wallpaper" in repaired.settings))
+        verify(!("theme" in repaired.settings))
         compare(repaired.problems.length, 2)
         verify(!repaired.shouldWrite)
     }

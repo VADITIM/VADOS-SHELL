@@ -56,14 +56,17 @@ TestCase {
         compare(Attention.peek, null)
     }
 
-    function test_fullscreenStillPeeks() {
+    function test_fullscreenHoldsNormalOnesAndLetsCriticalThrough() {
         Compositor.activeWindow = { isFullscreen: true }
         arrive(make(5, 1, 0))
         arrive(make(8, 0, 0))
         settleBatch()
-        verify(Attention.peek !== null, "a normal notification peeks over a fullscreen window")
+        compare(Attention.peek, null, "a normal notification waits while a window is fullscreen")
+        arrive(make(7, 2, 0))
+        settleBatch()
+        verify(Attention.peek !== null, "a critical notification still peeks")
         compare(Attention.peek.notifications.length, 1)
-        compare(Attention.peek.notifications[0].id, 5)
+        compare(Attention.peek.notifications[0].id, 7)
     }
 
     function test_heldPeekStaysThenLingers() {

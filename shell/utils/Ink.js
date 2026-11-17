@@ -2,12 +2,13 @@
 .import "Geometry.js" as Geometry
 
 const tools = [
-    { key: "select", glyph: "pointer", label: "SELECT" },
-    { key: "color", glyph: "drop", label: "COLOR" },
-    { key: "paint", glyph: "pen", label: "PAINT" },
-    { key: "erase", glyph: "eraser", label: "ERASE" },
-    { key: "shape", glyph: "shape-box", label: "SHAPE" },
-    { key: "text", glyph: "text", label: "TEXT" }
+    { key: "select", glyph: "pointer", label: "SELECT", hotkey: "S" },
+    { key: "color", glyph: "drop", label: "COLOR", hotkey: "I" },
+    { key: "paint", glyph: "pen", label: "PAINT", hotkey: "B" },
+    { key: "erase", glyph: "eraser", label: "ERASE", hotkey: "E" },
+    { key: "shape", glyph: "shape-box", label: "SHAPE", hotkey: "R" },
+    { key: "arrow", glyph: "shape-arrow", label: "ARROW", hotkey: "A" },
+    { key: "text", glyph: "text", label: "TEXT", hotkey: "T" }
 ]
 
 const shapes = [
@@ -17,7 +18,7 @@ const shapes = [
     { key: "arrow", glyph: "shape-arrow" }
 ]
 
-const drawingTools = ["paint", "shape"]
+const drawingTools = ["paint", "shape", "arrow"]
 const circleSteps = 48
 const arrowSpread = 0.5
 const arrowShare = 4
@@ -30,6 +31,10 @@ function toolOf(key) {
 
 function shapeOf(key) {
     return shapes.find(shape => shape.key === key) ?? shapes[0]
+}
+
+function toolOfHotkey(letter) {
+    return tools.find(tool => tool.hotkey === letter.toUpperCase()) ?? null
 }
 
 function nextOf(list, key, direction) {

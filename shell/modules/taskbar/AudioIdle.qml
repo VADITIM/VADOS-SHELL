@@ -7,12 +7,13 @@ IdlePill {
     id: audioIdle
 
     idleKey: "audio"
+    extensionKey: "audio"
     isAvailable: Audio.isReady
     property string nudge: ""
 
     glyphName: Audio.isMuted ? "muted" : nudge.length > 0 ? nudge : "speaker"
     glyphLevel: Audio.volume
-    onScrolled: steps => nudgeVolume(steps * 0.05)
+    onScrolled: steps => nudgeVolume(steps * Appearance.taskbar.volumeStep)
     onMiddleClicked: Audio.toggleMute()
 
     function nudgeVolume(change) {
@@ -46,35 +47,24 @@ IdlePill {
                 }
             }
 
-            Rectangle {
-                id: track
-                anchors.verticalCenter: parent.verticalCenter
-                width: Math.max(height * slider.reveal, parent.width * slider.reveal)
+            Slider {
+                height: parent.height
+                width: Math.max(Appearance.taskbar.volumeTrack * slider.reveal, parent.width * slider.reveal)
                 opacity: Math.min(1, slider.reveal * 3)
-                height: 6
-                radius: 3
-                color: Appearance.color.hairline
-
-                Rectangle {
-                    width: Math.min(track.width, Math.max(height, slider.width * Math.min(1, Audio.volume)))
-                    height: parent.height
-                    radius: parent.radius
-                    color: Audio.isMuted ? Appearance.color.textFaint : Appearance.color.accent
-                }
-            }
-
-            MouseArea {
-                property real startVolume: 0
-                property real startX: 0
-
-                anchors.fill: parent
-                cursorShape: Qt.SizeHorCursor
-                onPressed: mouse => {
-                    startVolume = Audio.volume
-                    startX = mouse.x
-                }
-                onPositionChanged: mouse => Audio.setVolume(startVolume + (mouse.x - startX) / width)
-                onWheel: wheel => audioIdle.nudgeVolume(wheel.angleDelta.y / 120 * 0.05)
+                value: Audio.volume
+                isMuted: Audio.isMuted
+                canScroll: true
+                look: ({
+                    track: Appearance.taskbar.volumeTrack,
+                    grab: Appearance.taskbar.idleSize,
+                    step: Appearance.taskbar.volumeStep
+                })
+                pace: ({
+                    settle: Motion.extension.slide,
+                    thicken: Motion.extension.trackHeld
+                })
+                onMoved: value => Audio.setVolume(value)
+                onScrolled: steps => audioIdle.nudgeVolume(steps * Appearance.taskbar.volumeStep)
             }
         }
 
@@ -86,7 +76,7 @@ IdlePill {
             characterInterval: Motion.type.quick
             untypeInterval: Motion.type.quickUntype
             color: Audio.isMuted ? Appearance.color.textMuted : Appearance.color.text
-            font.family: Appearance.font.mono
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.font.label
             font.letterSpacing: Appearance.font.labelSpacing / 2
             font.bold: true

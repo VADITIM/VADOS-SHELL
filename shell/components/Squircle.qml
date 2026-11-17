@@ -10,8 +10,9 @@ Shape {
     property color shade: color
     property color strokeColor: "transparent"
     property real strokeWidth: 0
+    property real corner: -1
     readonly property var outline: {
-        const points = Geometry.superellipse(width - strokeWidth, height - strokeWidth, Appearance.radius.squircle, Appearance.radius.squircleSteps)
+        const points = corner < 0 ? Geometry.superellipse(width - strokeWidth, height - strokeWidth, Appearance.radius.squircle, Appearance.radius.squircleSteps) : Geometry.squircle(width - strokeWidth, height - strokeWidth, corner, Appearance.radius.squircle, Appearance.radius.squircleSteps)
         points.push(points[0])
         return points
     }

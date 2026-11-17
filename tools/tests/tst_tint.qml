@@ -61,6 +61,13 @@ Item {
             verify(shade.lightness >= root.look.lightness - 0.01, "lightness " + shade.lightness)
         }
 
+        function test_lightColoursTakeDarkInk() {
+            verify(Tint.isLight(Qt.color("#ffffff")))
+            verify(Tint.isLight(Qt.color("#ffd429")))
+            verify(!Tint.isLight(Qt.color("#ff1744")))
+            verify(!Tint.isLight(Qt.color("#121212")))
+        }
+
         function test_shadeRoundTrips() {
             for (const hex of ["#5865f2", "#1db954", "#e01e5a", "#d97757"]) {
                 const color = Qt.color(hex)

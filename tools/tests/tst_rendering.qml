@@ -35,6 +35,16 @@ Item {
         }
     }
 
+    Backdrop {
+        id: backdrop
+        width: 200
+        height: 150
+        isShown: true
+        source: Qt.resolvedUrl("../icons/source/image.svg")
+        blur: 32
+        detail: 0.5
+    }
+
     TestCase {
         name: "Rendering"
         when: windowShown
@@ -122,6 +132,45 @@ Item {
         function test_transparentLayerRunsNoEffect() {
             liquid.opacity = 0
             verifyNothingRuns()
+        }
+
+        function backdropPart(name) {
+            const found = findChild(backdrop, name)
+            verify(found !== null, name)
+            return found
+        }
+
+        function verifyBackdropBlurs(isRunning) {
+            compare(backdrop.isBlurring, isRunning)
+            compare(backdropPart("pictureTexture").live, isRunning, "picture texture updated")
+            compare(backdropPart("pictureTexture").hideSource, isRunning, "the sharp picture hides under its blur")
+            compare(backdropPart("blurPass").visible, isRunning, "blur pass drawn")
+        }
+
+        function test_backdropBlursOnlyWhileShownWithItsPicture() {
+            tryVerify(() => backdrop.hasPicture, 3000)
+            compare(backdrop.blurRadius, 32)
+            verifyBackdropBlurs(true)
+            compare(backdrop.bleed, 32, "the picture reaches past the edges so the blur never darkens them")
+            backdrop.isShown = false
+            verify(!backdrop.visible)
+            verifyBackdropBlurs(false)
+            backdrop.isShown = true
+            backdrop.opacity = 0
+            verifyBackdropBlurs(false)
+            backdrop.opacity = 1
+            verifyBackdropBlurs(true)
+        }
+
+        function test_liteBackdropDrawsThePictureWithoutBlur() {
+            tryVerify(() => backdrop.hasPicture, 3000)
+            Config.setRenderQuality("lite")
+            compare(backdrop.blurRadius, 0)
+            verifyBackdropBlurs(false)
+            verify(backdropPart("picture").visible, "the picture still covers the screen")
+            compare(backdrop.bleed, 0)
+            Config.setRenderQuality("full")
+            verifyBackdropBlurs(true)
         }
 
         function test_maskedLayersFollowVisibility() {

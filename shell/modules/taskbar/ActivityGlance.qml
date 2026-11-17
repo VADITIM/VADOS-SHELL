@@ -91,7 +91,7 @@ Item {
             anchors.centerIn: parent
             text: Capture.clock
             color: Capture.isPaused ? Appearance.color.textMuted : Appearance.color.text
-            font.family: Appearance.font.mono
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.font.chip
             font.bold: true
             transform: Upright {
@@ -108,7 +108,7 @@ Item {
             verticalAlignment: Text.AlignVCenter
             text: glance.count > Appearance.activity.countLimit ? Appearance.activity.countLimit + "+" : glance.count
             color: glance.isLive ? Appearance.color.accent : Appearance.color.textMuted
-            font.family: Appearance.font.mono
+            font.family: Appearance.font.sans
             font.pixelSize: Appearance.font.label
             font.bold: true
             transform: Upright {

@@ -4,6 +4,8 @@ import VadosTest
 import qs.config
 import qs.components
 import qs.state
+import qs.modules.lock
+import qs.modules.calculator
 import "../../shell/utils/Features.js" as Features
 import "../../shell/utils/Platform.js" as Platform
 
@@ -17,6 +19,8 @@ Item {
     property real pillOpenedAt: 0
     property real alertOpenedAt: 0
     property real clipboardOpenedAt: 0
+    property real lockReadyAt: 0
+    property real calculatorReadyAt: 0
 
     Burst {
         id: burst
@@ -66,6 +70,24 @@ Item {
         overshoot: Motion.clipboard.overshoot
         arriveShare: Motion.clipboard.arriveShare
         onIsArrivedChanged: if (isArrived && isGrowing) scene.clipboardOpenedAt = Clock.now()
+    }
+
+    Calculator {
+        id: calculator
+        width: Appearance.calculator.width
+        height: Appearance.calculator.height
+        onIsReadyChanged: if (isReady) scene.calculatorReadyAt = Clock.now()
+    }
+
+    LockScreen {
+        id: lockScreen
+        width: scene.width
+        height: scene.height
+        visible: isPresent
+        layout: ["clock:5:1", "profile:6:4", "login:5:8"]
+        parts: [Qt.rect(6, 20, 40, 220), Qt.rect(6, 760, 40, 40)]
+        origin: Qt.point(26, 780)
+        onIsReadyChanged: if (isReady) scene.lockReadyAt = Clock.now()
     }
 
     TestCase {
@@ -199,6 +221,22 @@ Item {
             verify(best <= Motion.budget.ready.glance, Math.round(best) + " ms is over the " + Motion.budget.ready.glance + " ms glance budget")
         }
 
+        function test_lockIsReadyInsideTheTakeoverBudget() {
+            let best = Infinity
+            for (let round = 0; round < rounds; round++) {
+                const start = Clock.now()
+                lockScreen.isLocked = true
+                tryCompare(lockScreen, "isReady", true, 3000)
+                best = Math.min(best, scene.lockReadyAt - start)
+                tryCompare(lockScreen, "phase", "active", 3000)
+                lockScreen.isLocked = false
+                tryCompare(lockScreen, "phase", "idle", 3000)
+                verify(!lockScreen.isReady)
+            }
+            console.info("vados: lock ready after " + Math.round(best) + " ms")
+            verify(best <= Motion.budget.ready.takeover, Math.round(best) + " ms is over the " + Motion.budget.ready.takeover + " ms takeover budget")
+        }
+
         function test_clipboardIsReadyInsideTheFocusBudget() {
             let best = Infinity
             for (let round = 0; round < rounds; round++) {
@@ -217,5 +255,19 @@ Item {
             console.info("vados: clipboard ready after " + Math.round(best) + " ms")
             verify(best <= Motion.budget.ready.focus, Math.round(best) + " ms is over the " + Motion.budget.ready.focus + " ms focus budget")
         }
-    }
+    
+        function test_calculatorIsReadyInsideTheFocusBudget() {
+            let best = Infinity
+            for (let round = 0; round < rounds; round++) {
+                const start = Clock.now()
+                calculator.isShown = true
+                tryCompare(calculator, "isReady", true, 3000)
+                best = Math.min(best, scene.calculatorReadyAt - start)
+                calculator.isShown = false
+                tryCompare(calculator, "isReady", false, 3000)
+            }
+            console.info("vados: calculator ready after " + Math.round(best) + " ms")
+            verify(best <= Motion.budget.ready.focus, Math.round(best) + " ms is over the " + Motion.budget.ready.focus + " ms focus budget")
+        }
+}
 }

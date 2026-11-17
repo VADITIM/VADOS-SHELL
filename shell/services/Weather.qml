@@ -8,6 +8,9 @@ Singleton {
     id: weather
 
     property bool isActive: false
+    property bool isOnDesktop: false
+    property bool isOnLock: false
+    readonly property bool isPolling: isActive || isOnDesktop || isOnLock
     property bool isReady: false
     property real temperature: 0
     property real rainChance: 0
@@ -104,21 +107,21 @@ Singleton {
     onLocationChanged: {
         place = null
         fetchedAt = 0
-        if (isActive)
+        if (isPolling)
             refresh()
     }
-    onIsActiveChanged: if (isActive && Date.now() - fetchedAt > Motion.dashboard.weatherPoll) refresh()
+    onIsPollingChanged: if (isPolling && Date.now() - fetchedAt > Motion.dashboard.weatherPoll) refresh()
 
     Supervisor {
         id: supervisor
         name: "weather"
-        isActive: weather.isActive
+        isActive: weather.isPolling
         onRestarted: weather.refresh()
     }
 
     Timer {
         interval: Motion.dashboard.weatherPoll
-        running: weather.isActive
+        running: weather.isPolling
         repeat: true
         onTriggered: weather.refresh()
     }

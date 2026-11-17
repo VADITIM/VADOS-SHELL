@@ -4,6 +4,8 @@ Newest version first. The version and its number are set by the user on each pus
 
 ## Unreleased
 
+- Every push to master publishes a GitHub release of the version in `shell/config/Release.qml` whose notes are that version's section of this file (`.github/workflows/release.yml`, `tools/release-notes.sh`). A version that already has a release is left alone.
+
 ## 0.2.0
 - Wi-Fi: networks with a sign-in (WPA-Enterprise, 802.1X, such as school and campus networks) now join with a user name and password. On iwd the shell asks once for admin rights through polkit to save the sign-in for iwd (PEAP with MSCHAPv2); a wrong sign-in asks again and keeps the user name. Without a running polkit agent the page says NO POLKIT AGENT RUNNING.
 - Settings > Displays: the REFRESH (HZ) choices show only the number (60, 50); a long list scrolls and drags.

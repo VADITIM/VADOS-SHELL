@@ -1,0 +1,23 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the changelog of the current version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -n 's/.*version: "\(.*\)".*/\1/p' shell/config/Release.qml)
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then exit 0; fi
+          if gh release view "v$version" >/dev/null 2>&1; then exit 0; fi
+          tools/release-notes.sh "$version" > notes.md
+          gh release create "v$version" --target "$GITHUB_SHA" --title "v$version" --notes-file notes.md

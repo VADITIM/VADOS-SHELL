@@ -35,7 +35,7 @@ Item {
 
     SequentialAnimation {
         paused: Motion.isHeld && running
-        running: dot.isPulsing && !dot.isPaused && !Motion.isReduced
+        running: dot.isPulsing && dot.visible && !dot.isPaused && !Motion.isReduced
         loops: Animation.Infinite
         onRunningChanged: {
             if (!running)

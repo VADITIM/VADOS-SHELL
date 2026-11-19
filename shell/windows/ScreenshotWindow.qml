@@ -9,12 +9,34 @@ OverlayWindow {
 
     readonly property var pill: ActivityState.placeOn(window.screenName)
 
+    property var windows: []
+    property bool isAwaitingWindows: false
+
     overlayKey: "screenshot"
     isPresent: screenshot.isPresent
     phase: screenshot.phase
 
+    onIsOpenChanged: {
+        windows = []
+        isAwaitingWindows = isOpen
+        if (isOpen)
+            Compositor.refreshWindows()
+    }
+
+    Connections {
+        target: Compositor
+
+        function onWindowsChanged() {
+            if (!window.isAwaitingWindows)
+                return
+            window.isAwaitingWindows = false
+            window.windows = Compositor.windowsOn(window.screenName)
+        }
+    }
+
     Screenshot {
         id: screenshot
+        windows: window.windows
         anchors.fill: parent
         isOpen: window.isOpen
         frame: "file://" + Capture.frameOf(window.screenName) + "?" + Capture.frameStamp

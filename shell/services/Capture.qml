@@ -46,7 +46,7 @@ Singleton {
         if (screenName.length === 0 || shooter.running)
             return
         shootingScreen = screenName
-        shooter.command = ["sh", "-c", "mkdir -p -- \"$(dirname -- \"$2\")\" && exec grim -o \"$1\" \"$2\"", "sh", screenName, frameOf(screenName)]
+        shooter.command = ["sh", "-c", "mkdir -p -- \"$(dirname -- \"$2\")\" && exec grim -l 0 -o \"$1\" \"$2\"", "sh", screenName, frameOf(screenName)]
         shooter.running = true
     }
 

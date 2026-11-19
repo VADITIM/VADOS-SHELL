@@ -77,6 +77,11 @@ TestCase {
         compare(Alerts.plainOf(undefined), "")
     }
 
+    function test_cutKeepsNoMark() {
+        compare(Alerts.cut("short", 10), "short")
+        compare(Alerts.cut("a long message that runs on", 6), "a long")
+    }
+
     function test_clipCutsAtTheLimit() {
         compare(Alerts.clip("short", 10), "short")
         compare(Alerts.clip("exactly ten", 11), "exactly ten")

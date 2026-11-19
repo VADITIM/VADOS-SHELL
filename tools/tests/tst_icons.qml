@@ -10,7 +10,7 @@ TestCase {
     function test_everyIconDrawsSomething() {
         for (const name in Icons.paths) {
             const icon = Icons.paths[name]
-            compare(Object.keys(icon).sort(), ["fill", "stroke"], name)
+            compare(Object.keys(icon).filter(key => key !== "rule").sort(), ["fill", "stroke"], name)
             verify(icon.stroke.length + icon.fill.length > 0, name)
         }
     }

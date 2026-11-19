@@ -133,6 +133,13 @@ Item {
                 radius: 1.5
                 color: task.isActive ? Appearance.color.accent : Appearance.color.textFaint
 
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Motion.pace(Motion.stateDuration)
+                        easing.type: Easing.OutQuad
+                    }
+                }
+
                 Behavior on height {
                     NumberAnimation {
                         duration: Motion.pace(Motion.stateDuration)

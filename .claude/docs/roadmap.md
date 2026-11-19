@@ -25,6 +25,7 @@ Ordered by the phases of `direction.md` (user, 2026-11-07): engine integrity, th
 | Notifications menu | `notifications` | overlay | the taskbar column | focus | built (2026-11-10): history and send tray, `SUPER + N`; hardware checks left |
 | Screenshot | `screenshot` | overlay (keeps the taskbar) | the activity pill | focus | built (2026-11-11): frozen frame, select, move and resize, the toolbar as a copy of the activity pill (select, colour wheel, paint, erase, editable shapes), ink on the whole screen, Ctrl+C with COPIED, Esc; the wheel and handles still to check on a real screen |
 | Clipboard history | `clipboard` | mutation | the activity pill | focus | built (2026-11-11): six rows, pins, kinds, secrets, `SUPER + V`; checks on a real session left |
+| Password prompt | `prompt` | mutation | the activity pill | focus | built (2026-11-18): the polkit agent (`PolkitAgent`) and the GNOME keyring prompter (`keyring.py`) in the activity pill's body, like the clipboard; opt-in `prompts.enabled`; a successful real password still to check |
 | Lock screen | `lock` | lock | the power pill | takeover | built (2026-11-14): ext-session-lock, PAM, the enter from the power pill and the leave into the taskbar, seven modules, blanking, crash recovery; checks on a real lock left |
 | Wallpaper | `wallpaper` | desktop | none | ambient | built (2026-11-13): `WidgetWindow` per screen while `wallpaper.path` is set, crossfade, the picker in Customization |
 | Widgets | `widgets` | desktop | none | ambient | built (2026-11-14): six widgets in `WidgetWindow` per monitor, the NOTES widget (2026-11-16), `widgets.layout` per monitor name, drag on the desktop, the Widgets tab; checks on a real session left |
@@ -100,16 +101,17 @@ Note: `Clipboard History.md`. The activity pill mutates into a wider, taller pil
 Proposed in `Additional.md` and taken as good suggestions (§ Decided 9); both are in `direction.md` phase 3 ("audio and brightness controls", "network and battery").
 
 - **Audio routing**: the audio idle pill grows an `Extension` page (like the Wi-Fi page): output and input devices, per-stream volume, dragging a stream onto a device. Built on `services/Audio.qml` (PipeWire is already bound for volume and for Discord's streams) and `modules/extension`. To build: `modules/extension/AudioPage.qml`, stream and device lists in `Audio`.
-- **Power profiles**: Performance, Balanced and Power Saver from the battery idle pill or the dashboard's battery notch, through `power-profiles-daemon`. To build: profile reading and setting in `services/Battery.qml` (or a `Profiles` service), a three-way control; the liquid tints by profile only if the user wants it.
+- **Power profiles**: Performance, Balanced and Power Saver from the battery idle pill or the dashboard's battery bar, through `power-profiles-daemon`. To build: profile reading and setting in `services/Battery.qml` (or a `Profiles` service), a three-way control; the liquid tints by profile only if the user wants it.
 - **Brightness** is in `direction.md` and in no note: a slider on the same extension pattern.
 
 ### 5. Settings: the remaining tabs
 
 **Layout (2026-11-13, from the user's sketches)**: flat `Section`s with a large title and a hairline (no cards), choices as `FULL | REDUCED` with the chosen one ringed or filled, explicit columns, the selection colour wheel on the right of the Settings tab, the clock in the bottom-left corner, a typed heading and a quieter second pop bar with hover names (`decisions.md`). Left after this: Apps, V/AI (contract 8).
 
-Note: `Settings.md`. The sweep, the accent navigation pop bar, the second pop bar, User, Pills, Taskbar and the lock layout editor are built (2026-11-09). Left, each a tab added through `Settings.tabs` / `subTabsByTab` and a `Page` of `Piece`s:
+Note: `Settings.md`. The sweep, the accent navigation pop bar, the second pop bar, User, Taskbar and the lock layout editor are built (2026-11-09; the Pills tab was dropped on 2026-11-17, its keys stay in `shell.json`). Left, each a tab added through `Settings.tabs` / `subTabsByTab` and a `Page` of `Piece`s:
 
 - **System font** (Customization), **built 2026-11-13** (`FontPage`, `services/SystemFont.qml`, `scripts/system-font.py`; Qt platform themes are not written, `quirks.md`): changes the font of the whole system, not only the shell. To build: a font list (fontconfig), a service that writes the user's fontconfig, GTK and Qt font settings and can put the previous ones back. Opt-in and reversible: it takes over a system role (`rules/security.md`). Key `appearance.systemFont`.
+- **Keyboard** (Customization), **built 2026-11-19** (`KeyboardPage`, `services/Keyboards.qml`, `scripts/keyboards.py`, `decisions.md`): a layout override per keyboard (all keyboards on driftwm, each keyboard on Hyprland) and VIA/Vial key remapping on a drawn board. Still to do (`known-issues.md`): plain VIA layout files, `qmk flash` for compiled keymaps, advanced keycodes, per-device layouts on driftwm.
 - **Link to VAD/OS** (Advanced), **built 2026-11-13** (`FamilyPage`, `services/Family.qml`, `utils/Family.js` with `tst_family`; icons only for installed apps): detect installed VAD/OS apps from their desktop entries. Installed: offer to make them the default apps (through `xdg-mime`), one confirm per app. Not installed: their icons and GitHub release links. Opening a link uses the browser; the shell itself fetches nothing.
 - **Services** (Advanced): Media Player is built; Blip joins with contract 2.
 - **Wallpaper** (Customization, first sub tab), **built 2026-11-13** (`WallpaperPage`, `services/Wallpapers.qml`, `modules/wallpaper`, `windows/WidgetWindow.qml`; keys `wallpaper.path`, `wallpaper.folder`): one image on every screen; per monitor is left (`known-issues.md`).
@@ -173,7 +175,13 @@ Agreed 2026-11-12. The login screen before the session matches the shell. SDDM s
 - **To verify**: that the installed SDDM is Qt 6 and which greeter QML API it exposes (`sddm` context object, `userModel`, `sessionModel`); whether the accent and profile picture can be read from `shell.json` at install time.
 - **Done when**: the theme runs in test mode with no warnings, logs in, shows a wrong password, offers the session and user choice, and the keyring is unlocked after login.
 
-## Phase 3, continued: agreed before the notes
+### 10. Boot screen (splash and Plymouth)
+
+**State**: built 2026-11-17 (`services/Boot.qml`, `utils/Boot.js`, `scripts/boot.py`, `assets/boot/`, `tst_boot`; decisions in `decisions.md` § Boot screen switches). Verified: the plan's round trips in `tst_boot`, the splash rendered from the mark as a 256 px 24-bit BMP, `boot.py status` on this machine. Left for the done line: a real apply through `pkexec`, a boot with each switch on, and switching both off again.
+
+Agreed 2026-11-17. Two switches in Advanced / Services, BOOT: SPLASH (the unified kernel image's picture) and PLYMOUTH (the animated boot screen), both off by default and both applied from the shell with one admin prompt each. GRUB and other boot loaders are out of scope for now. Not a surface (no `Features.js` row): it runs before the shell exists.
+
+- **Done when**: each switch turns on and off from the shell, the machine boots with the VAD/OS mark in the accent and then the Plymouth theme, and a failed rebuild leaves every file as it was.
 
 5. **Desktop mode, Windows parity:**
    - Aero-snap by dragging a window to a screen edge or corner, with a liquid preview of the target region.

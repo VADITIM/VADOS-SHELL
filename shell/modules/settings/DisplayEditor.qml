@@ -12,12 +12,18 @@ Row {
     property real areaWidth: 0
     property real areaHeight: 0
     property Item side: null
+    property rect field: Qt.rect(0, 0, 0, 0)
+    property real fieldCorner: 0
+    property real tallestSide: 0
+    property bool canSwitchMode: false
+    property string windowMode: ""
     readonly property real sideHeight: sideColumn.height
     property var draft: []
     property var base: []
     property var bodyNames: []
     property string picked: ""
     property string carried: ""
+    property bool isNudging: false
     property real carryX: 0
     property real carryY: 0
     property real carryFromX: 0
@@ -44,6 +50,7 @@ Row {
     readonly property var refreshes: pickedOutput ? Displays.refreshesOf(pickedOutput, pickedOutput.mode.width, pickedOutput.mode.height) : []
     readonly property real canvasWidth: Math.max(0, areaWidth - (side ? 0 : section.width + section.columnGap))
     readonly property real canvasHeight: Math.max(0, areaHeight)
+    readonly property rect reach: field.width > 0 && field.height > 0 ? field : Qt.rect(0, 0, canvasWidth, canvasHeight)
     readonly property var liveView: viewOf(draft)
     readonly property var view: carried.length > 0 && heldView ? heldView : liveView
     readonly property string pressedName: gesture.pressed ? nameAt(gesture.pressPoint.x, gesture.pressPoint.y) : ""
@@ -57,6 +64,7 @@ Row {
     signal applyRequested(var layout)
     signal keepRequested
     signal revertRequested
+    signal modeRequested(string mode)
 
     spacing: section.columnGap
 
@@ -122,8 +130,10 @@ Row {
         base = outputs
         draft = outputs.map(output => Object.assign({}, output))
         const names = outputs.map(output => output.name)
-        if (names.join("\n") !== bodyNames.join("\n"))
+        if (names.join("\n") !== bodyNames.join("\n")) {
             bodyNames = names
+            tallestSide = 0
+        }
         if (!names.includes(picked))
             picked = names.length > 0 ? names[0] : ""
     }
@@ -163,24 +173,38 @@ Row {
         carryX = carryFromX + travelX
         carryY = carryFromY + travelY
         picked = name
+        isNudging = true
         carried = name
     }
 
-    function follow(travelX, travelY) {
-        carryX = carryFromX + travelX
-        carryY = carryFromY + travelY
+    function onCanvasGrid(position, offset, origin) {
+        const held = heldView
+        const world = Displays.onGrid((position - offset) / held.ratio + origin, look.grid)
+        return (world - origin) * held.ratio + offset
     }
 
-    function drop(velocityX, velocityY) {
+    function follow(travelX, travelY) {
+        carryX = onCanvasGrid(carryFromX + travelX, heldView.offsetX, heldView.x)
+        carryY = onCanvasGrid(carryFromY + travelY, heldView.offsetY, heldView.y)
+    }
+
+    function drop() {
         const name = carried
         const held = heldView
         if (name.length === 0 || !held || held.ratio <= 0)
             return
-        const x = Math.round((carryX + velocityX * Motion.displays.fling - held.offsetX) / held.ratio + held.x)
-        const y = Math.round((carryY + velocityY * Motion.displays.fling - held.offsetY) / held.ratio + held.y)
-        draft = Displays.snapped(draft, name, x, y, look.snap)
+        const x = Math.round((carryX - held.offsetX) / held.ratio + held.x)
+        const y = Math.round((carryY - held.offsetY) / held.ratio + held.y)
+        draft = Displays.snapped(draft, name, x, y, look.snap, look.grid)
         carried = ""
         heldView = null
+    }
+
+    function nudge(stepX, stepY) {
+        if (!isNudging || !pickedOutput || !isPickedLit || carried.length > 0)
+            return false
+        draft = Displays.withOutput(draft, pickedName, { x: pickedOutput.x + stepX, y: pickedOutput.y + stepY })
+        return true
     }
 
     function apply() {
@@ -213,214 +237,206 @@ Row {
             width: editor.canvasWidth
             height: editor.canvasHeight
 
-            Item {
-                id: frame
-                width: editor.canvasWidth
-                height: editor.canvasHeight
-                clip: true
+            Masked {
+                x: editor.reach.x
+                y: editor.reach.y
+                width: editor.reach.width
+                height: editor.reach.height
 
-                Squircle {
+                mask: Rectangle {
                     anchors.fill: parent
-                    corner: editor.look.corner
-                    color: Appearance.color.raised
-                    strokeWidth: editor.look.line
-                    strokeColor: Qt.alpha(Appearance.color.text, editor.look.lineAlpha)
+                    radius: editor.fieldCorner
                 }
 
-                Repeater {
-                    model: editor.bodyNames
+                Item {
+                    id: grid
 
-                    Item {
-                        id: body
+                    readonly property real step: editor.look.grid * editor.view.ratio
+                    readonly property real originX: editor.view.offsetX - editor.view.x * editor.view.ratio - editor.reach.x
+                    readonly property real originY: editor.view.offsetY - editor.view.y * editor.view.ratio - editor.reach.y
+                    readonly property real startX: step > 0 ? originX - Math.ceil(originX / step) * step : 0
+                    readonly property real startY: step > 0 ? originY - Math.ceil(originY / step) * step : 0
 
-                        required property string modelData
-                        readonly property var output: editor.draft.find(entry => entry.name === modelData) ?? null
-                        readonly property var rect: output ? editor.rectOnCanvas(output) : ({ x: 0, y: 0, width: 0, height: 0 })
-                        readonly property bool isLit: output !== null && Displays.isLit(output)
-                        readonly property bool isCarried: editor.carried === modelData
-                        readonly property bool isPicked: editor.pickedName === modelData
-                        property real restX: 0
-                        property real restY: 0
-                        property real restWidth: 0
-                        property real restHeight: 0
-                        property bool isSettled: false
+                    anchors.fill: parent
+                    visible: step >= editor.look.gridSpacingMin
 
-                        function rest() {
-                            restX = rect.x
-                            restY = rect.y
-                            restWidth = rect.width
-                            restHeight = rect.height
-                            isSettled = true
+                    Repeater {
+                        model: grid.step > 0 ? Math.ceil(grid.width / grid.step) + 1 : 0
+
+                        Rectangle {
+                            required property int index
+                            x: Math.round(grid.startX + index * grid.step)
+                            width: editor.look.line
+                            height: grid.height
+                            color: Qt.alpha(Appearance.color.text, editor.look.gridAlpha)
                         }
+                    }
 
-                        function land() {
-                            isSettled = false
-                            restX = editor.carryX
-                            restY = editor.carryY
-                            isSettled = true
-                            Qt.callLater(rest)
+                    Repeater {
+                        model: grid.step > 0 ? Math.ceil(grid.height / grid.step) + 1 : 0
+
+                        Rectangle {
+                            required property int index
+                            y: Math.round(grid.startY + index * grid.step)
+                            width: grid.width
+                            height: editor.look.line
+                            color: Qt.alpha(Appearance.color.text, editor.look.gridAlpha)
                         }
+                    }
+                }
 
-                        x: isCarried ? editor.carryX : restX
-                        y: isCarried ? editor.carryY : restY
-                        z: isCarried ? 1 : 0
-                        width: restWidth
-                        height: restHeight
-                        visible: output !== null && opacity > 0
-                        opacity: isLit ? 1 : 0
-                        scale: isLit ? 1 : editor.look.offScale
+                Item {
+                    id: frame
+                    x: -editor.reach.x
+                    y: -editor.reach.y
+                    width: editor.canvasWidth
+                    height: editor.canvasHeight
 
-                        onRectChanged: {
-                            if (!isCarried && isLit)
-                                rest()
-                        }
-                        onIsLitChanged: {
-                            if (isLit) {
-                                isSettled = false
-                                rest()
+                    Repeater {
+                        model: editor.bodyNames
+
+                        Item {
+                            id: body
+
+                            required property string modelData
+                            readonly property var output: editor.draft.find(entry => entry.name === modelData) ?? null
+                            readonly property var rect: output ? editor.rectOnCanvas(output) : ({ x: 0, y: 0, width: 0, height: 0 })
+                            readonly property bool isLit: output !== null && Displays.isLit(output)
+                            readonly property bool isCarried: editor.carried === modelData
+                            readonly property bool isPicked: editor.pickedName === modelData
+                            property real restX: 0
+                            property real restY: 0
+                            property real restWidth: 0
+                            property real restHeight: 0
+
+                            function rest() {
+                                restX = rect.x
+                                restY = rect.y
+                                restWidth = rect.width
+                                restHeight = rect.height
                             }
-                        }
-                        onIsCarriedChanged: {
-                            if (!isCarried)
-                                land()
-                        }
-                        Component.onCompleted: rest()
 
-                        Behavior on opacity {
-                            NumberAnimation {
-                                duration: Motion.pace(body.isLit ? Motion.displays.power : Motion.displays.powerLeave)
-                                easing.type: Easing.OutCubic
+                            x: isCarried ? editor.carryX : restX
+                            y: isCarried ? editor.carryY : restY
+                            z: isCarried ? 1 : 0
+                            width: restWidth
+                            height: restHeight
+                            visible: output !== null && opacity > 0
+                            opacity: isLit ? 1 : 0
+                            scale: isLit ? 1 : editor.look.offScale
+
+                            onRectChanged: {
+                                if (!isCarried && isLit)
+                                    rest()
                             }
-                        }
-
-                        Behavior on scale {
-                            NumberAnimation {
-                                duration: Motion.pace(body.isLit ? Motion.displays.power : Motion.displays.powerLeave)
-                                easing.type: body.isLit ? Easing.OutBack : Easing.InCubic
+                            onIsLitChanged: {
+                                if (isLit)
+                                    rest()
                             }
-                        }
-
-                        Behavior on restX {
-                            enabled: body.isSettled && !editor.isViewing
-                            NumberAnimation {
-                                duration: Motion.pace(Motion.displays.glide)
-                                easing.type: Easing.OutBack
+                            onIsCarriedChanged: {
+                                if (!isCarried)
+                                    rest()
                             }
-                        }
+                            Component.onCompleted: rest()
 
-                        Behavior on restY {
-                            enabled: body.isSettled && !editor.isViewing
-                            NumberAnimation {
-                                duration: Motion.pace(Motion.displays.glide)
-                                easing.type: Easing.OutBack
+                            Behavior on opacity {
+                                NumberAnimation {
+                                    duration: Motion.pace(body.isLit ? Motion.displays.power : Motion.displays.powerLeave)
+                                    easing.type: Easing.OutCubic
+                                }
                             }
-                        }
 
-                        Behavior on restWidth {
-                            enabled: body.isSettled && !editor.isViewing
-                            NumberAnimation {
-                                duration: Motion.pace(Motion.displays.frame)
-                                easing.type: Easing.OutCubic
+                            Behavior on scale {
+                                NumberAnimation {
+                                    duration: Motion.pace(body.isLit ? Motion.displays.power : Motion.displays.powerLeave)
+                                    easing.type: body.isLit ? Easing.OutBack : Easing.InCubic
+                                }
                             }
-                        }
 
-                        Behavior on restHeight {
-                            enabled: body.isSettled && !editor.isViewing
-                            NumberAnimation {
-                                duration: Motion.pace(Motion.displays.frame)
-                                easing.type: Easing.OutCubic
-                            }
-                        }
-
-                        Piece {
-                            anchors.fill: parent
-                            isCentered: true
-
-                            Item {
-                                id: face
+                            Piece {
                                 anchors.fill: parent
+                                isCentered: true
 
-                                Press {
-                                    target: face
-                                    isPressed: editor.pressedName === body.modelData && !body.isCarried
-                                    isRaised: body.isCarried
-                                }
-
-                                Squircle {
+                                Item {
+                                    id: face
                                     anchors.fill: parent
-                                    corner: editor.look.corner
-                                    color: body.isPicked ? Qt.alpha(Appearance.color.accent, editor.look.bodyAlpha) : Qt.alpha(Appearance.color.text, editor.look.restAlpha)
-                                    strokeWidth: body.isPicked || body.isCarried ? editor.look.outline : editor.look.line
-                                    strokeColor: body.isPicked ? Appearance.color.accent : Qt.alpha(Appearance.color.text, editor.look.lineAlpha * 2)
-                                }
 
-                                Column {
-                                    anchors.centerIn: parent
-                                    width: parent.width - editor.look.padding / 2
-                                    spacing: editor.look.nameGap
-
-                                    Text {
-                                        width: parent.width
-                                        horizontalAlignment: Text.AlignHCenter
-                                        elide: Text.ElideRight
-                                        text: body.modelData.toUpperCase()
-                                        color: body.isPicked ? Appearance.color.accent : Appearance.color.text
-                                        font.family: Appearance.font.sans
-                                        font.pixelSize: Appearance.font.label
-                                        font.letterSpacing: Appearance.font.labelSpacing
-                                        font.bold: true
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        color: body.isPicked ? Qt.alpha(Appearance.color.accent, editor.look.bodyAlpha) : Qt.alpha(Appearance.color.text, editor.look.restAlpha)
+                                        border.width: body.isPicked || body.isCarried ? editor.look.outline : editor.look.line
+                                        border.color: body.isPicked ? Appearance.color.accent : Qt.alpha(Appearance.color.text, editor.look.lineAlpha * 2)
                                     }
 
-                                    Text {
-                                        width: parent.width
-                                        horizontalAlignment: Text.AlignHCenter
-                                        elide: Text.ElideRight
-                                        text: body.output ? body.output.mode.width + " X " + body.output.mode.height + "  " + Displays.hertzOf(body.output.mode.refresh) + " HZ" : ""
-                                        color: Appearance.color.textMuted
-                                        font.family: Appearance.font.sans
-                                        font.pixelSize: Appearance.font.chip
-                                        font.letterSpacing: Appearance.font.labelSpacing
+                                    Column {
+                                        anchors.centerIn: parent
+                                        width: parent.width - editor.look.padding / 2
+                                        spacing: editor.look.nameGap
+
+                                        Text {
+                                            width: parent.width
+                                            horizontalAlignment: Text.AlignHCenter
+                                            elide: Text.ElideRight
+                                            text: body.modelData.toUpperCase()
+                                            color: body.isPicked ? Appearance.color.accent : Appearance.color.text
+                                            font.family: Appearance.font.sans
+                                            font.pixelSize: Appearance.font.label
+                                            font.letterSpacing: Appearance.font.labelSpacing
+                                            font.bold: true
+                                        }
+
+                                        Text {
+                                            width: parent.width
+                                            horizontalAlignment: Text.AlignHCenter
+                                            elide: Text.ElideRight
+                                            text: body.output ? body.output.mode.width + " X " + body.output.mode.height + "  " + Displays.hertzOf(body.output.mode.refresh) + " HZ" : ""
+                                            color: Appearance.color.textMuted
+                                            font.family: Appearance.font.sans
+                                            font.pixelSize: Appearance.font.chip
+                                            font.letterSpacing: Appearance.font.labelSpacing
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
 
-                Gesture {
-                    id: gesture
-                    anchors.fill: parent
-                    cursorShape: editor.carried.length > 0 ? Qt.ClosedHandCursor : Qt.OpenHandCursor
-                    onTapped: mouse => {
-                        const name = editor.nameAt(mouse.x, mouse.y)
-                        if (name.length > 0)
-                            editor.picked = name
-                    }
-                    onCrossed: (travelX, travelY) => {
-                        const name = editor.nameAt(pressPoint.x, pressPoint.y)
-                        if (name.length > 0) {
-                            editor.pickUp(name, travelX, travelY)
-                            return
+                    Gesture {
+                        id: gesture
+                        anchors.fill: parent
+                        cursorShape: editor.carried.length > 0 ? Qt.ClosedHandCursor : Qt.OpenHandCursor
+                        onTapped: mouse => {
+                            const name = editor.nameAt(mouse.x, mouse.y)
+                            editor.isNudging = name.length > 0
+                            if (name.length > 0)
+                                editor.picked = name
                         }
-                        editor.panFromX = editor.panX
-                        editor.panFromY = editor.panY
-                        editor.isPanning = true
-                    }
-                    onMoved: (travelX, travelY) => {
-                        if (editor.carried.length > 0)
-                            editor.follow(travelX, travelY)
-                        else if (editor.isPanning)
-                            editor.panTo(editor.panFromX + travelX, editor.panFromY + travelY)
-                    }
-                    onThrown: (travelX, travelY, velocityX, velocityY) => {
-                        editor.isPanning = false
-                        editor.drop(velocityX, velocityY)
-                    }
+                        onCrossed: (travelX, travelY) => {
+                            const name = editor.nameAt(pressPoint.x, pressPoint.y)
+                            if (name.length > 0) {
+                                editor.pickUp(name, travelX, travelY)
+                                return
+                            }
+                            editor.panFromX = editor.panX
+                            editor.panFromY = editor.panY
+                            editor.isPanning = true
+                        }
+                        onMoved: (travelX, travelY) => {
+                            if (editor.carried.length > 0)
+                                editor.follow(travelX, travelY)
+                            else if (editor.isPanning)
+                                editor.panTo(editor.panFromX + travelX, editor.panFromY + travelY)
+                        }
+                        onThrown: (travelX, travelY, velocityX, velocityY) => {
+                            editor.isPanning = false
+                            editor.drop()
+                        }
 
-                    WheelHandler {
-                        id: wheel
-                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                        onWheel: event => editor.zoomAt(wheel.point.position.x, wheel.point.position.y, Math.pow(editor.look.zoomStep, event.angleDelta.y / Motion.settings.wheelNotch))
+                        WheelHandler {
+                            id: wheel
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            onWheel: event => editor.zoomAt(wheel.point.position.x, wheel.point.position.y, Math.pow(editor.look.zoomStep, event.angleDelta.y / Motion.settings.wheelNotch))
+                        }
                     }
                 }
             }
@@ -430,8 +446,22 @@ Row {
     Column {
         id: sideColumn
         parent: editor.side ?? editor
-        y: editor.side ? Math.max(0, Math.round((editor.side.height - height) / 2)) : 0
+        y: editor.side ? Math.max(0, Math.round((editor.side.height - Math.max(height, editor.tallestSide)) / 2)) : 0
         spacing: editor.section.gap
+
+        onHeightChanged: editor.tallestSide = Math.max(editor.tallestSide, height)
+
+        Section {
+            visible: editor.canSwitchMode
+            title: "WINDOW MODE"
+            icon: "window"
+
+            OptionGroup {
+                options: ["canvas", "desktop"]
+                current: editor.windowMode
+                onPicked: option => editor.modeRequested(option)
+            }
+        }
 
         Section {
             title: "MONITOR"
@@ -452,6 +482,7 @@ Row {
 
             Hint {
                 family: Appearance.font.sans
+                lines: editor.look.descriptionLines
                 text: !editor.pickedOutput ? "NO MONITORS FOUND" : (editor.pickedOutput.description ?? "").length > 0 ? editor.pickedOutput.description.toUpperCase() : "NO DESCRIPTION"
             }
         }
@@ -516,6 +547,7 @@ Row {
             OptionGroup {
                 label: "REFRESH (HZ)"
                 labelFamily: Appearance.font.sans
+                canInline: false
                 options: editor.refreshes.map(hertz => String(hertz))
                 current: editor.pickedOutput ? String(Displays.hertzOf(editor.pickedOutput.mode.refresh)) : ""
                 onPicked: option => editor.pickRefresh(parseInt(option))

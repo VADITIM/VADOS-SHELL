@@ -3,6 +3,7 @@ import QtQuick
 import Quickshell
 import qs.config
 import qs.services
+import "../utils/ActivityTabs.js" as Tabs
 
 Singleton {
     id: state
@@ -15,6 +16,7 @@ Singleton {
     readonly property string leadKey: Activities.order.includes(lead) ? lead : Activities.order[0] ?? "media"
     readonly property bool isReading: Overlays.stack.indexOf("notifications") >= 0
     property string clipboardScreen: ""
+    property string promptScreen: ""
     readonly property bool canClipboard: Clipboard.isEnabled
     readonly property bool isRecording: Capture.isRecording
     property var places: ({})
@@ -106,6 +108,8 @@ Singleton {
     }
 
     function toggleClipboard(name) {
+        if (promptScreen.length > 0)
+            return
         if (isClipboardOn(name)) {
             closeClipboard()
             return
@@ -119,6 +123,22 @@ Singleton {
 
     function closeClipboard() {
         clipboardScreen = ""
+    }
+
+    function isPromptOn(name) {
+        return name.length > 0 && promptScreen === name
+    }
+
+    function openPrompt(name) {
+        if (name.length === 0)
+            return
+        closeClipboard()
+        fold()
+        promptScreen = name
+    }
+
+    function closePrompt() {
+        promptScreen = ""
     }
 
     function set(name, wanted) {
@@ -147,11 +167,15 @@ Singleton {
     }
 
     function rotate(direction) {
-        const order = mode === "expanded" ? Activities.order.filter(key => key !== "notifications") : Activities.order
-        if (order.length < 2)
-            return
-        const at = Math.max(0, order.indexOf(leadKey))
-        lead = order[(at + direction + order.length) % order.length]
+        const order = mode === "expanded" ? Activities.tabs.filter(key => key !== "notifications") : Activities.tabs
+        lead = Tabs.stepFrom(order, leadKey, direction)
+    }
+
+    function show(name, key) {
+        const wasExpanded = modeOn(name) === "expanded"
+        pin(key)
+        if (wasExpanded)
+            set(name, "expanded")
     }
 
     function fold() {

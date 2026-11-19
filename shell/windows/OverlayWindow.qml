@@ -13,6 +13,7 @@ PanelWindow {
     property string phase: "idle"
     readonly property string screenName: screen?.name ?? ""
     property bool isComplete: false
+    property string reportedOn: ""
     readonly property bool isOpen: isComplete && Overlays.isOpen(overlayKey, screenName) && !Overlays.isWaiting(overlayKey, screenName)
     readonly property bool isHandingOver: Overlays.isHandingOver(overlayKey, screenName)
     readonly property bool hasCircle: Overlays.hasCircle(overlayKey, screenName)
@@ -20,7 +21,7 @@ PanelWindow {
     readonly property bool shouldStream: Config.data.taskbar.gather === "merge"
     readonly property bool canHandOff: Config.data.taskbar.style !== "bare" && !Occupancy.isCovered(screenName, true)
     readonly property bool isPointedAt: !Compositor.capabilities.focusTracking || Compositor.focusedScreen === screenName
-    readonly property bool hasKeyboard: Overlays.ownsKeyboard(overlayKey, screenName) && isPointedAt && !FrameDebug.isActive
+    readonly property bool hasKeyboard: Overlays.ownsKeyboard(overlayKey, screenName) && isPointedAt && !FrameDebug.isActive && !ActivityState.isPromptOn(screenName)
 
     function requestClose() {
         Overlays.close(overlayKey)
@@ -40,7 +41,14 @@ PanelWindow {
         Overlays.placeVisitor(overlayKey, screenName, visitor)
     }
 
-    onPhaseChanged: Overlays.reportPhase(overlayKey, screenName, phase)
+    onPhaseChanged: {
+        reportedOn = screenName
+        Overlays.reportPhase(overlayKey, screenName, phase)
+    }
+    onScreenNameChanged: {
+        Overlays.move(overlayKey, reportedOn, screenName, phase)
+        reportedOn = screenName
+    }
     Component.onCompleted: isComplete = true
 
     FrameTap {

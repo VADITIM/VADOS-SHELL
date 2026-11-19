@@ -48,9 +48,9 @@ Item {
             depth: Motion.press.card
         }
 
-        Rectangle {
+        Squircle {
             anchors.fill: parent
-            radius: height / 2
+            corner: Appearance.search.rowCorner
             color: Appearance.color.wash
             opacity: row.isSelected || area.containsMouse ? 1 : 0
 

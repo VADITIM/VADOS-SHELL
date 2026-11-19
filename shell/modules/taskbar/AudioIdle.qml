@@ -13,6 +13,7 @@ IdlePill {
 
     glyphName: Audio.isMuted ? "muted" : nudge.length > 0 ? nudge : "speaker"
     glyphLevel: Audio.volume
+    hasWheel: true
     onScrolled: steps => nudgeVolume(steps * Appearance.taskbar.volumeStep)
     onMiddleClicked: Audio.toggleMute()
 
@@ -68,20 +69,24 @@ IdlePill {
             }
         }
 
-        TypedText {
+        ScrambleText {
             width: 44
             anchors.verticalCenter: parent.verticalCenter
+            label: "volume"
             target: Audio.isMuted ? "MUTE" : Math.round(Audio.volume * 100) + "%"
             isShown: audioIdle.isUnfolded
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
             color: Audio.isMuted ? Appearance.color.textMuted : Appearance.color.text
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.font.label
-            font.letterSpacing: Appearance.font.labelSpacing / 2
-            font.bold: true
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.pace(Motion.stateDuration)
+                    easing.type: Easing.OutQuad
+                }
+            }
+            spacing: Appearance.font.labelSpacing / 2
 
             MouseArea {
+                property string hoverName: Audio.isMuted ? "UNMUTE" : "MUTE"
                 anchors.fill: parent
                 anchors.margins: -8
                 cursorShape: Qt.PointingHandCursor

@@ -15,22 +15,25 @@ IdlePill {
         height: Appearance.taskbar.idleSize
         spacing: 8
 
-        TypedText {
+        ScrambleText {
             anchors.verticalCenter: parent.verticalCenter
-            width: Math.min(fullWidth, 130)
+            width: Math.min(implicitWidth, 130)
             clip: true
+            label: "network name"
             isShown: networkIdle.isUnfolded
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
             target: Network.isWired ? "WIRED" : Network.isConnected ? Network.ssid.toUpperCase() : Network.isEnabled ? "NO NETWORK" : "WIFI OFF"
             color: nameArea.containsMouse ? Appearance.color.accent : Network.isConnected ? Appearance.color.text : Appearance.color.textMuted
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.font.label
-            font.letterSpacing: Appearance.font.labelSpacing
-            font.bold: true
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.pace(Motion.stateDuration)
+                    easing.type: Easing.OutQuad
+                }
+            }
 
             MouseArea {
                 id: nameArea
+                property string hoverName: "NETWORKS"
                 anchors.fill: parent
                 enabled: networkIdle.isUnfolded && Network.isEnabled
                 hoverEnabled: true

@@ -10,6 +10,7 @@ Item {
     property int blur: 0
     property real detail: 1
     property color ground: "black"
+    property bool isImmediate: false
     readonly property bool isRendering: isShown && opacity > 0
     readonly property int blurRadius: Rendering.blur(blur)
     readonly property bool hasPicture: picture.status === Image.Ready
@@ -30,11 +31,11 @@ Item {
         objectName: "picture"
         anchors.fill: parent
         anchors.margins: -backdrop.bleed
-        source: backdrop.source.length === 0 ? "" : backdrop.source.startsWith("/") ? "file://" + backdrop.source : backdrop.source
+        source: backdrop.source.length === 0 || backdrop.width < 1 || backdrop.height < 1 ? "" : backdrop.source.startsWith("/") ? "file://" + backdrop.source : backdrop.source
         sourceSize: Qt.size(Math.max(1, Math.round(backdrop.width * backdrop.detail)), Math.max(1, Math.round(backdrop.height * backdrop.detail)))
         fillMode: Image.PreserveAspectCrop
-        asynchronous: true
-        cache: false
+        asynchronous: !backdrop.isImmediate
+        cache: true
         smooth: true
     }
 

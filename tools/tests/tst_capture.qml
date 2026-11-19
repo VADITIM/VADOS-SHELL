@@ -95,9 +95,21 @@ TestCase {
         compare(Ink.erased([line, box], { x: 300, y: 260 }, 10), [line])
     }
 
-    function test_undoTakesTheLastStroke() {
-        compare(Ink.undone([1, 2, 3]), [1, 2])
-        compare(Ink.undone([]), [])
+    function test_undoRevertsEveryChangeNotOnlyNewStrokes() {
+        const box = { kind: "box", color: "#fff", width: 4, points: [{ x: 0, y: 0 }, { x: 10, y: 10 }] }
+        const moved = Ink.shifted(box, 50, 0)
+        let past = Ink.recorded([], [], [box])
+        past = Ink.recorded(past, [box], [moved])
+        compare(past.length, 2, "a move is remembered like a new stroke")
+        compare(Ink.recorded(past, [moved], [moved]), past, "a press that changed nothing is not")
+        compare(Ink.recorded(past, null, [moved]), past)
+        let result = Ink.undone(past, [moved])
+        compare(result.strokes, [box], "undo puts the box back where it was")
+        result = Ink.undone(result.past, result.strokes)
+        compare(result.strokes, [], "and then takes it away")
+        result = Ink.undone(result.past, result.strokes)
+        compare(result.strokes, [], "with nothing left it changes nothing")
+        compare(result.past, [])
     }
 
     function test_toolsCycleAndEveryToolHasGlyph() {
@@ -161,5 +173,36 @@ TestCase {
         compare(Ink.shifted(text, 5, 5).text, "HELLO")
         compare(Ink.removed(strokes, 0), [text])
         compare(Ink.erased(strokes, { x: 110, y: 110 }, 4), [box])
+    }
+
+    function test_theSmallestWindowUnderThePointerIsPicked() {
+        const wide = { id: 1, x: 0, y: 0, width: 800, height: 600 }
+        const small = { id: 2, x: 100, y: 100, width: 200, height: 150 }
+        compare(Ink.windowAt([wide, small], { x: 150, y: 150 }).id, 2)
+        compare(Ink.windowAt([small, wide], { x: 150, y: 150 }).id, 2)
+        compare(Ink.windowAt([wide, small], { x: 500, y: 500 }).id, 1)
+        compare(Ink.windowAt([wide, small], { x: 900, y: 500 }), null)
+        compare(Ink.windowAt([], { x: 1, y: 1 }), null)
+    }
+
+    function test_heldShiftStraightensTheBrushToFortyFiveDegrees() {
+        let stroke = Ink.strokeOf("paint", "#ffffff", 4, { x: 10, y: 10 })
+        stroke = Ink.extended(stroke, { x: 40, y: 12 }, true)
+        stroke = Ink.extended(stroke, { x: 110, y: 20 }, true)
+        compare(stroke.points.length, 2)
+        compare(stroke.points[1].y, 10, "close to horizontal snaps flat")
+        const diagonal = Ink.extended(Ink.strokeOf("paint", "#ffffff", 4, { x: 0, y: 0 }), { x: 50, y: 40 }, true)
+        verify(Math.abs(diagonal.points[1].x - diagonal.points[1].y) < 0.001, "near 45 degrees snaps to it")
+    }
+
+    function test_releasingShiftBringsTheFreehandPathBack() {
+        let stroke = Ink.strokeOf("paint", "#ffffff", 4, { x: 0, y: 0 })
+        stroke = Ink.extended(stroke, { x: 10, y: 30 }, false)
+        stroke = Ink.extended(stroke, { x: 60, y: 20 }, false)
+        const straight = Ink.straightened(stroke, true)
+        compare(straight.points.length, 2)
+        const free = Ink.straightened(straight, false)
+        compare(free.points.length, 4)
+        compare(free.points[3], { x: 60, y: 20 })
     }
 }

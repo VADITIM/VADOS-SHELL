@@ -35,6 +35,13 @@ Singleton {
         received(notification)
     }
 
+    function appIconOf(notification) {
+        const name = notification?.appIcon || DesktopEntries.byId(notification?.desktopEntry ?? "")?.icon || ""
+        if (name.length === 0 || name.startsWith("/") || name.startsWith("file:"))
+            return name.length > 0 && name.startsWith("/") ? "file://" + name : name
+        return Quickshell.iconPath(name, true)
+    }
+
     function iconOf(notification) {
         if (History.isStorableIcon(notification.image))
             return notification.image

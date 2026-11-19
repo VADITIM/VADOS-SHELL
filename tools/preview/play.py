@@ -16,6 +16,7 @@ QtObject {
             property bool enabled: true
             property string style: "floating"
             property string side: "left"
+            property string overlap: "hide"
             property bool compact: false
             property string gather: "merge"
         }
@@ -51,12 +52,14 @@ QtObject {
             property var layout: ["clock:5:1", "profile:6:4", "login:5:8"]
             property string wallpaper: ""
             property int blankAfter: 60
+            property int sleepAfter: 300
         }
         property QtObject wallpaper: QtObject { property string path: ""; property string folder: "" }
         property QtObject widgets: QtObject { property var layout: [] }
     }
     function setTaskbarStyle(style) { data.taskbar.style = style }
     function setTaskbarSide(side) { data.taskbar.side = side }
+    function setTaskbarOverlap(overlap) { data.taskbar.overlap = overlap }
     function setTaskbarCompact(isCompact) { data.taskbar.compact = isCompact }
     function setTaskbarGather(gather) { data.taskbar.gather = gather }
     function setAccent(color) { data.appearance.accent = color }
@@ -89,6 +92,7 @@ QtObject {
     function setLockLayout(entries) { data.lock.layout = entries }
     function setLockWallpaper(value) { data.lock.wallpaper = value }
     function setLockBlankAfter(seconds) { data.lock.blankAfter = seconds }
+    function setLockSleepAfter(seconds) { data.lock.sleepAfter = seconds }
     function toggleFavorite(appId) {
         const favorites = data.search.favorites.slice()
         const at = favorites.indexOf(appId)

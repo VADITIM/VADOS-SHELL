@@ -84,7 +84,12 @@ Item {
                 }
 
                 Masked {
-                    anchors.fill: parent
+                    readonly property real fit: thumbnail.implicitWidth > 0 && thumbnail.implicitHeight > 0
+                        ? Math.min(parent.width / thumbnail.implicitWidth, parent.height / thumbnail.implicitHeight)
+                        : 0
+                    anchors.centerIn: parent
+                    width: thumbnail.implicitWidth * fit
+                    height: thumbnail.implicitHeight * fit
                     visible: row.isTall
                     mask: Rectangle {
                         anchors.fill: parent
@@ -97,8 +102,9 @@ Item {
                         source: row.isTall ? "file://" + row.entry.path : ""
                         sourceSize.width: row.look.width
                         sourceSize.height: row.look.row * row.look.imageSpan
-                        fillMode: Image.PreserveAspectCrop
+                        fillMode: Image.PreserveAspectFit
                         asynchronous: true
+                        cache: true
                         smooth: true
                     }
                 }
@@ -114,7 +120,7 @@ Item {
                 visible: !row.isTall
                 label: "clipboard entry"
                 sweepWidth: Math.min(label.implicitWidth, width)
-                isShown: row.isArrived && !row.isTall
+                isShown: row.isArrived
                 leaveDuration: Motion.clipboard.faceLeave
                 barColor: row.inkColor
 

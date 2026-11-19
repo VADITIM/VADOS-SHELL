@@ -15,11 +15,10 @@ Item {
     readonly property var look: Appearance.dashboard.drive
     readonly property bool isPresent: turn.presence > 0.5
     readonly property real share: total > 0 ? used / total : 0
-    readonly property color usageColor: Appearance.bandColor(share, Appearance.dashboard.usageBands)
+    readonly property color usageColor: Appearance.levelColor(share, Appearance.dashboard.loadBands)
 
     signal paged()
 
-    width: look.width
     height: look.glyph + look.rowGap + look.barHeight
 
     function gigabytes(bytes) {

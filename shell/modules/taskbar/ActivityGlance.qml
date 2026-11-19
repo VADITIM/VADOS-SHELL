@@ -13,9 +13,9 @@ Item {
     readonly property bool isRecording: key === "recording"
     readonly property bool isCall: key === "call"
     readonly property bool isMedia: key === "media"
-    readonly property bool isCounted: key === "notifications" || key === "tray"
+    readonly property bool isCounted: key === "notifications"
     readonly property bool isLive: Activities.liveKeys.includes(key)
-    readonly property int count: key === "notifications" ? Activities.unreadCount : key === "tray" ? Activities.trayItems.length : 0
+    readonly property int count: key === "notifications" ? Activities.unreadCount : 0
 
     width: Appearance.activity.glyph
     height: Appearance.activity.length - Appearance.activity.padding * 2
@@ -38,7 +38,7 @@ Item {
             visible: glance.isRecording
             anchors.centerIn: parent
             isPaused: Capture.isPaused
-            isPulsing: glance.isShown
+            isPulsing: glance.isShown && glance.isRecording
         }
 
         Glyph {

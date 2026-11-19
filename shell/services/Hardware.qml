@@ -64,6 +64,8 @@ Singleton {
         "df -B1 --output=target,used,size -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null | tail -n +2 | sed 's/^/disk=/'"
     ].join("\n")
 
+    Component.onCompleted: probeQuery.running = true
+
     function refresh() {
         statFile.reload()
         memoryFile.reload()

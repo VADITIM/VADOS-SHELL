@@ -4,6 +4,7 @@ import qs.services
 import qs.components
 import "../../utils/Liquid.js" as Liquid
 import "../../utils/Geometry.js" as Geometry
+import "../../utils/PillOrder.js" as PillOrder
 
 Item {
     id: shell
@@ -13,6 +14,7 @@ Item {
     property bool isSummoned: false
     property bool isEngaged: false
     property string expandedIdle: ""
+    readonly property string preparedExtension: expandedIdle.length > 0 && idleFor(expandedIdle) !== null ? idleFor(expandedIdle).extensionKey : ""
     property string hoverOpenedKey: ""
     property Item hoveredIdle: null
     property point safeApex: Qt.point(0, 0)
@@ -30,8 +32,13 @@ Item {
     property real fuse: isFused ? 1 : 0
     readonly property Item tipShapes: tipLiquid.shapes
     property bool isCompact: false
+    property var idleOrder: PillOrder.keys
+    property var hiddenIdles: []
+    property bool isReordering: false
 
     property bool isMirrored: false
+    property string frostSource: ""
+    property real screenWidth: width
     property bool isAway: false
     property bool isGathering: false
     property bool isMerging: true
@@ -43,6 +50,7 @@ Item {
     property bool isEaten: false
     property string extensionKey: ""
     property string heldExtensionKey: ""
+    property real extensionFoot: 0
     readonly property Item extensionIdle: heldExtensionKey.length > 0 ? idleExtending(heldExtensionKey) : null
     readonly property real clockTop: clock.y
     readonly property rect extensionRect: extensionIdle ? extensionIdle.bodyRect() : Qt.rect(0, 0, 0, 0)
@@ -61,7 +69,9 @@ Item {
     signal dashboardRequested()
     signal extensionRequested(string key)
     signal activityModeRequested(string mode)
+    signal activityFoldRequested
     signal activityLeadRequested(int direction)
+    signal activityTabRequested(string key)
     signal clipboardCloseRequested()
 
     readonly property bool isRevealed: (!isCovered || isSummoned) && !isAway
@@ -126,16 +136,20 @@ Item {
         }
     }
 
-    function liquidParts() {
+    function liquidGroups() {
+        const groups = { tasks: [], activity: [], system: [] }
         if (isBare)
-            return []
-        const parts = []
+            return groups
         for (const pill of allPills()) {
             if (pill.isShown && pill.popScale > 0.5)
-                parts.push(Qt.rect(pill.x + pill.thickness * (1 - pill.popScale) / 2, pill.shellTop, pill.thickness * pill.popScale, pill.shellLength * pill.popScale))
+                groups.tasks.push(Qt.rect(pill.x + pill.thickness * (1 - pill.popScale) / 2, pill.shellTop, pill.thickness * pill.popScale, pill.shellLength * pill.popScale))
         }
         if (activityPill.isShown && activityPill.popScale > 0.5)
-            parts.push(activityPill.bodyRect())
+            groups.activity.push(activityPill.bodyRect())
+        if (trayIdle.isShown && trayIdle.popScale >= 0.5) {
+            const traySize = trayIdle.size * trayIdle.popScale
+            groups.tasks.unshift(Qt.rect(trayHolder.x + trayIdle.circleX + (trayIdle.size - traySize) / 2, trayHolder.y + (trayIdle.height - traySize) / 2, trayIdle.shellWidth * trayIdle.popScale, traySize))
+        }
         const idles = idleColumn.children
         for (let position = 0; position < idles.length; position++) {
             const idle = idles[position]
@@ -144,9 +158,14 @@ Item {
             const size = idle.size * idle.popScale
             const left = idleColumn.x + idle.x + idle.circleX + (idle.size - size) / 2
             const top = idleColumn.y + idle.y + (idle.height - size) / 2
-            parts.push(Qt.rect(left, top, idle.shellWidth * idle.popScale, size))
+            groups.system.push(Qt.rect(left, top, idle.shellWidth * idle.popScale, size))
         }
-        return parts
+        return groups
+    }
+
+    function liquidParts() {
+        const groups = liquidGroups()
+        return groups.tasks.concat(groups.activity, groups.system)
     }
 
     function allPills() {
@@ -193,6 +212,29 @@ Item {
             compactRequested(isFolding)
     }
 
+    function scrollIdles(delta) {
+        if (delta === 0 || (delta < 0) === isCompact)
+            return
+        foldIdles(delta < 0)
+    }
+
+    function idleRank(idleKey) {
+        return PillOrder.rankOf(idleOrder, idleKey)
+    }
+
+    function keepsCompact(idleKey) {
+        return PillOrder.isKeptCompact(idleOrder, idleKey)
+    }
+
+    function isIdleHidden(idleKey) {
+        return hiddenIdles.indexOf(idleKey) >= 0
+    }
+
+    onIdleOrderChanged: {
+        isReordering = true
+        reorderSettle.restart()
+    }
+
     function hoverIdle(idle, isHovered) {
         if (isHovered) {
             hoveredIdle = idle
@@ -204,6 +246,8 @@ Item {
     }
 
     function idleFor(idleKey) {
+        if (idleKey === trayIdle.idleKey)
+            return trayIdle
         const idles = idleColumn.children
         for (let position = 0; position < idles.length; position++) {
             if (idles[position].idleKey === idleKey)
@@ -602,6 +646,9 @@ Item {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
+        frostSource: shell.frostSource
+        frostSize: Qt.size(shell.screenWidth, shell.height)
+        isFrostMirrored: shell.isMirrored
         isShown: true
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
@@ -643,6 +690,9 @@ Item {
     LiquidLayer {
         id: tipLiquid
         anchors.fill: parent
+        frostSource: shell.frostSource
+        frostSize: Qt.size(shell.screenWidth, shell.height)
+        isFrostMirrored: shell.isMirrored
         isShown: shell.isBare && tip.visible
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
@@ -737,7 +787,21 @@ Item {
         host: shell
         isRevealed: shell.isRevealed && !shell.isEaten && !shell.swallows(y, y + height)
         x: shell.inset
+        y: Appearance.taskbar.margin + trayIdle.height
+    }
+
+    Item {
+        id: trayHolder
+        x: shell.inset
         y: Appearance.taskbar.margin
+        width: Appearance.taskbar.thickness
+        height: trayIdle.height
+
+        TrayIdle {
+            id: trayIdle
+            host: shell
+            origin: trayHolder
+        }
     }
 
     ActivityPill {
@@ -754,59 +818,87 @@ Item {
         y: shell.activityCenter
         z: activityPill.isSpreadBody ? 1 : 0
         onModeRequested: mode => shell.activityModeRequested(mode)
+        onFoldRequested: shell.activityFoldRequested()
         onLeadRequested: direction => shell.activityLeadRequested(direction)
+        onTabRequested: key => shell.activityTabRequested(key)
     }
 
-    Column {
+    Item {
         id: idleColumn
+
+        readonly property var heights: ({
+            usb: usbIdle.height,
+            audio: audioIdle.height,
+            network: networkIdle.height,
+            battery: batteryIdle.height,
+            settings: settingsIdle.height,
+            power: powerIdle.height
+        })
+        readonly property var offsets: PillOrder.offsetsFor(shell.idleOrder, heights)
+
+        function slotOf(idleKey) {
+            return foldDot.height + offsets[idleKey]
+        }
+
         x: shell.inset
+        width: Appearance.taskbar.thickness
+        height: foldDot.height + offsets.total
         anchors.bottom: clock.top
         anchors.bottomMargin: Appearance.taskbar.idleGap
 
         FoldDot {
+            id: foldDot
             host: shell
             origin: idleColumn
         }
 
         UsbIdle {
+            id: usbIdle
             host: shell
             origin: idleColumn
-            order: 1
+            y: idleColumn.slotOf(idleKey)
         }
 
         AudioIdle {
+            id: audioIdle
             host: shell
             origin: idleColumn
-            order: 2
-            isKeptCompact: true
+            y: idleColumn.slotOf(idleKey)
         }
 
         NetworkIdle {
+            id: networkIdle
             host: shell
             origin: idleColumn
-            order: 3
+            y: idleColumn.slotOf(idleKey)
         }
 
         BatteryIdle {
+            id: batteryIdle
             host: shell
             origin: idleColumn
-            order: 4
+            y: idleColumn.slotOf(idleKey)
         }
 
         SettingsIdle {
             id: settingsIdle
             host: shell
             origin: idleColumn
-            order: 5
+            y: idleColumn.slotOf(idleKey)
         }
 
         PowerIdle {
             id: powerIdle
             host: shell
             origin: idleColumn
-            order: 6
-            isKeptCompact: true
+            y: idleColumn.slotOf(idleKey)
         }
+    }
+
+    Timer {
+        id: reorderSettle
+        interval: Motion.fold.settle
+        onTriggered: shell.isReordering = false
     }
 
     Clock {
@@ -854,7 +946,7 @@ Item {
             const children = idleColumn.children
             for (let position = 0; position < children.length; position++)
                 reach = Math.max(reach, children[position].reachRight ?? 0)
-            return reach
+            return Math.max(reach, trayIdle.reachRight)
         }
 
         width: !shell.isRevealed

@@ -20,6 +20,7 @@ Column {
 
         Piece {
             role: "label"
+            anchors.verticalCenter: parent.verticalCenter
 
             Text {
                 id: name
@@ -47,6 +48,7 @@ Column {
         Piece {
             role: "label"
             anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
 
             Text {
                 text: Math.round(fader.value * 100) + "%"

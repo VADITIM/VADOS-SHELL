@@ -1,0 +1,10 @@
+#!/bin/sh
+outputs=$(xrandr --query | awk '/ connected/ { print $1 }')
+primary=$(xrandr --query | awk '/ connected primary/ { print $1; exit }')
+[ -n "$primary" ] || primary=$(printf '%s\n' "$outputs" | head -n 1)
+[ -n "$primary" ] || exit 0
+xrandr --output "$primary" --auto --primary --pos 0x0
+for output in $outputs; do
+    [ "$output" = "$primary" ] || xrandr --output "$output" --auto --same-as "$primary"
+done
+exit 0

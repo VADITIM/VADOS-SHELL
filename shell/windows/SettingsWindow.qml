@@ -25,9 +25,38 @@ OverlayWindow {
     }
 
     Binding {
+        target: GitHub
+        property: "isActive"
+        value: true
+        when: window.isPresent
+        restoreMode: Binding.RestoreValue
+    }
+
+    Binding {
         target: Compositor
         property: "isWatchingOutputs"
         value: settings.isDisplaysShown
+    }
+
+    Binding {
+        target: Boot
+        property: "isWatching"
+        value: settings.isServicesShown
+    }
+
+    Binding {
+        target: Login
+        property: "isWatching"
+        value: settings.isServicesShown
+    }
+
+    Connections {
+        target: Boot
+
+        function onApplied(isSplash, isPlymouth) {
+            Config.setBootSplash(isSplash)
+            Config.setBootPlymouth(isPlymouth)
+        }
     }
 
     LockPreviews {
@@ -50,7 +79,9 @@ OverlayWindow {
         onIsCarryingChanged: window.carry(isCarrying)
         accent: Appearance.color.accent
         taskbarSide: Config.data.taskbar.side
-        barStyle: Config.data.taskbar.style
+        taskbarOverlap: Config.data.taskbar.overlap
+        taskbarOrder: Config.data.taskbar.order
+        taskbarHidden: Config.data.taskbar.hidden
         taskbarGather: Config.data.taskbar.gather
         windowMode: Config.data.desktop.mode
         canSwitchMode: Confinement.canConfine
@@ -68,17 +99,18 @@ OverlayWindow {
         profileSecondName: Config.data.profile.secondName
         profilePicture: Config.data.profile.picture
         profileGithub: Config.data.profile.github
-        pillOpacity: Config.data.pills.opacity
-        pillBlur: Config.data.pills.blur
-        pillColor: Config.data.pills.color
+        profileFavorites: Config.data.profile.favorites
         isMediaPlayerOn: Config.data.services.mediaPlayer
+        isDashboardWeatherOn: Config.data.dashboard.weather
         isNotificationsOn: Config.data.notifications.enabled
+        isPromptsOn: Config.data.prompts.enabled
         lockLayout: Config.data.lock.layout
         lockWallpaper: Config.data.lock.wallpaper
         lockBlankAfter: Config.data.lock.blankAfter
         wallpaper: Config.data.wallpaper.path
         wallpaperFolder: Config.data.wallpaper.folder
         widgetsLayout: Config.data.widgets.layout
+        keyboardLayouts: Config.data.keyboard.layouts
         widgetScreens: Array.from(Quickshell.screens, screen => ({ name: screen.name, width: screen.width, height: screen.height }))
         widgetScreen: window.screenName
         onWidgetsLayoutRequested: entries => Config.setWidgetsLayout(entries)
@@ -95,10 +127,15 @@ OverlayWindow {
         }
         onWallpaperFolderRequested: folder => Config.setWallpaperFolder(folder)
         onChoiceStyleRequested: style => Config.setChoiceStyle(style)
+        onPillToneRequested: tone => Config.setPillTone(tone)
         onChoiceColorRequested: (style, value) => style === "pill" ? Config.setChoicePill(value) : Config.setChoiceOutline(value)
         onLockLayoutRequested: entries => Config.setLockLayout(entries)
         onLockWallpaperRequested: value => Config.setLockWallpaper(value)
         onLockBlankAfterRequested: seconds => Config.setLockBlankAfter(seconds)
+        onKeyboardLayoutsRequested: entries => {
+            Config.setKeyboardLayouts(entries)
+            Compositor.applyKeyboardLayouts(entries)
+        }
         onFontRequested: family => {
             Config.setSystemFont(family)
             if (family.length > 0)
@@ -113,18 +150,20 @@ OverlayWindow {
             github: Config.setProfileGithub
         })[field](value)
         onPictureRequested: window.choosePicture()
-        onPillRequested: (field, value) => ({
-            opacity: Config.setPillOpacity,
-            blur: Config.setPillBlur,
-            color: Config.setPillColor
-        })[field](value)
+        onFavoritesRequested: names => Config.setProfileFavorites(names)
         onMediaPlayerRequested: isOn => Config.setMediaPlayer(isOn)
+        onDashboardWeatherRequested: isOn => Config.setDashboardWeather(isOn)
         onNotificationsRequested: isOn => Config.setNotificationsEnabled(isOn)
+        onPromptsRequested: isOn => Config.setPromptsEnabled(isOn)
+        onLoginRequested: choice => Login.request(choice)
+        onBootRequested: (part, isOn) => Boot.request(part, isOn, "#" + Appearance.color.accent.toString().slice(-6))
         onCloseRequested: window.requestClose()
         onLanded: window.land()
         onAccentRequested: value => Config.setAccent(value.toString())
         onSideRequested: side => Config.setTaskbarSide(side)
-        onStyleRequested: style => Config.setTaskbarStyle(style)
+        onOverlapRequested: overlap => Config.setTaskbarOverlap(overlap)
+        onOrderRequested: order => Config.setTaskbarOrder(order)
+        onHiddenRequested: hidden => Config.setTaskbarHidden(hidden)
         onGatherRequested: gather => Config.setTaskbarGather(gather)
         onModeRequested: mode => Config.setWindowMode(mode)
         onReducedMotionRequested: isReduced => Config.setReducedMotion(isReduced)

@@ -71,7 +71,7 @@ Item {
         preferredRendererType: Shape.CurveRenderer
 
         ShapePath {
-            strokeColor: Qt.rgba(ring.color.r, ring.color.g, ring.color.b, ring.look.trackAlpha)
+            strokeColor: Qt.alpha(Appearance.color.textFaint, ring.look.trackAlpha)
             strokeWidth: ring.look.ringStroke
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap
@@ -87,7 +87,7 @@ Item {
         }
 
         ShapePath {
-            strokeColor: Qt.alpha(Appearance.color.accent, ring.hasOuter ? ring.look.usageTrack : 0)
+            strokeColor: Qt.alpha(Appearance.color.textFaint, ring.hasOuter ? ring.look.usageTrack : 0)
             strokeWidth: ring.look.usageStroke
             fillColor: "transparent"
             capStyle: ShapePath.RoundCap

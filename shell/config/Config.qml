@@ -70,6 +70,27 @@ Singleton {
         file.writeAdapter()
     }
 
+    function setTaskbarOverlap(overlap) {
+        if (!accept("taskbar.overlap", overlap))
+            return
+        adapter.taskbar.overlap = overlap
+        file.writeAdapter()
+    }
+
+    function setTaskbarOrder(order) {
+        if (!accept("taskbar.order", order))
+            return
+        adapter.taskbar.order = Schema.listOf(order)
+        file.writeAdapter()
+    }
+
+    function setTaskbarHidden(hidden) {
+        if (!accept("taskbar.hidden", hidden))
+            return
+        adapter.taskbar.hidden = Schema.listOf(hidden)
+        file.writeAdapter()
+    }
+
     function setTaskbarCompact(isCompact) {
         if (!accept("taskbar.compact", isCompact))
             return
@@ -134,6 +155,13 @@ Singleton {
         if (!accept("widgets.layout", entries))
             return
         adapter.widgets.layout = Schema.listOf(entries)
+        file.writeAdapter()
+    }
+
+    function setKeyboardLayouts(entries) {
+        if (!accept("keyboard.layouts", entries))
+            return
+        adapter.keyboard.layouts = Schema.listOf(entries)
         file.writeAdapter()
     }
 
@@ -202,6 +230,27 @@ Singleton {
         file.writeAdapter()
     }
 
+    function setBootSplash(isOn) {
+        if (!accept("boot.splash", isOn))
+            return
+        adapter.boot.splash = isOn
+        file.writeAdapter()
+    }
+
+    function setBootPlymouth(isOn) {
+        if (!accept("boot.plymouth", isOn))
+            return
+        adapter.boot.plymouth = isOn
+        file.writeAdapter()
+    }
+
+    function setPromptsEnabled(isEnabled) {
+        if (!accept("prompts.enabled", isEnabled))
+            return
+        adapter.prompts.enabled = isEnabled
+        file.writeAdapter()
+    }
+
     function setNotificationsEnabled(isEnabled) {
         if (!accept("notifications.enabled", isEnabled))
             return
@@ -227,6 +276,13 @@ Singleton {
         if (!accept("send.devices", entries))
             return
         adapter.send.devices = Schema.listOf(entries)
+        file.writeAdapter()
+    }
+
+    function setDashboardWeather(isShowing) {
+        if (!accept("dashboard.weather", isShowing))
+            return
+        adapter.dashboard.weather = isShowing
         file.writeAdapter()
     }
 
@@ -282,6 +338,13 @@ Singleton {
         pendingWrite.restart()
     }
 
+    function setProfileFavorites(entries) {
+        if (!accept("profile.favorites", entries))
+            return
+        adapter.profile.favorites = Schema.listOf(entries)
+        file.writeAdapter()
+    }
+
     function setProfileGithub(value) {
         if (!accept("profile.github", value))
             return
@@ -312,6 +375,13 @@ Singleton {
         adapter.pills.color = value
         pendingWrite.interval = Motion.settings.write
         pendingWrite.restart()
+    }
+
+    function setPillTone(tone) {
+        if (!accept("pills.tone", tone))
+            return
+        adapter.pills.tone = tone
+        file.writeAdapter()
     }
 
     function setBatteryLimit(isLimited) {
@@ -347,6 +417,13 @@ Singleton {
         if (!accept("lock.blankAfter", seconds))
             return
         adapter.lock.blankAfter = seconds
+        file.writeAdapter()
+    }
+
+    function setLockSleepAfter(seconds) {
+        if (!accept("lock.sleepAfter", seconds))
+            return
+        adapter.lock.sleepAfter = seconds
         file.writeAdapter()
     }
 
@@ -390,7 +467,10 @@ Singleton {
                 property bool enabled: true
                 property string style: "floating"
                 property string side: "left"
+                property string overlap: "hide"
                 property bool compact: false
+                property var order: ["usb", "audio", "network", "battery", "fold", "settings", "power"]
+                property var hidden: []
                 property string gather: "merge"
             }
             property JsonObject appearance: JsonObject {
@@ -412,11 +492,13 @@ Singleton {
                 property string picture: ""
                 property string secondName: ""
                 property string github: ""
+                property var favorites: []
             }
             property JsonObject pills: JsonObject {
                 property real opacity: 0.94
                 property real blur: 1
                 property string color: ""
+                property string tone: "dark"
             }
             property JsonObject services: JsonObject {
                 property bool mediaPlayer: true
@@ -425,6 +507,7 @@ Singleton {
                 property var layout: ["clock:5:1", "profile:6:4", "login:5:8"]
                 property string wallpaper: ""
                 property int blankAfter: 60
+                property int sleepAfter: 300
             }
             property JsonObject wallpaper: JsonObject {
                 property string path: ""
@@ -432,6 +515,9 @@ Singleton {
             }
             property JsonObject widgets: JsonObject {
                 property var layout: []
+            }
+            property JsonObject keyboard: JsonObject {
+                property var layouts: []
             }
             property JsonObject weather: JsonObject {
                 property string location: ""
@@ -441,6 +527,14 @@ Singleton {
             }
             property JsonObject dashboard: JsonObject {
                 property bool taskIcons: false
+                property bool weather: true
+            }
+            property JsonObject boot: JsonObject {
+                property bool splash: false
+                property bool plymouth: false
+            }
+            property JsonObject prompts: JsonObject {
+                property bool enabled: false
             }
             property JsonObject notifications: JsonObject {
                 property bool enabled: false

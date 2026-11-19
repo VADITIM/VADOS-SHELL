@@ -8,6 +8,7 @@ import qs.modules.taskbar
 import qs.modules.extension
 import qs.modules.alerts
 import qs.modules.clipboard
+import qs.modules.prompt
 
 PanelWindow {
     id: window
@@ -18,12 +19,14 @@ PanelWindow {
     readonly property var peek: Attention.peek && Attention.peek.screen === screenName && !Overlays.isTaskbarAway(screenName) ? Attention.peek : null
     readonly property bool isFullscreenHere: Compositor.activeWindow?.isFullscreen === true && Compositor.activeWindow.screen === screenName
     readonly property bool isClipboardOpen: ActivityState.isClipboardOn(screenName)
+    readonly property bool isPromptOpen: ActivityState.isPromptOn(screenName) && !Overlays.isHolding(screenName)
+    readonly property bool isBodyOpen: isClipboardOpen || isPromptOpen
     readonly property rect clipboardZone: {
         const body = taskbar.clipboardRect
         const left = window.isRight ? (screen?.width ?? window.width) - body.x - body.width : body.x
         return Qt.rect(left, body.y, body.width, body.height)
     }
-    readonly property bool isRaisedOverFullscreen: isFullscreenHere && (peek !== null || taskbar.isAlertShown || isClipboardOpen)
+    readonly property bool isRaisedOverFullscreen: isFullscreenHere && (peek !== null || taskbar.isAlertShown || isBodyOpen)
 
     anchors {
         left: !window.isRight
@@ -33,9 +36,9 @@ PanelWindow {
     }
     implicitWidth: Appearance.taskbar.windowWidth
     exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.layer: window.isRaisedOverFullscreen ? WlrLayer.Overlay : WlrLayer.Top
+    WlrLayershell.layer: window.isRaisedOverFullscreen || window.isPromptOpen ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "vados-taskbar"
-    WlrLayershell.keyboardFocus: extension.isTyping ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: extension.isTyping || isPromptOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     color: "transparent"
     onClipboardZoneChanged: ActivityState.placeClipboard(window.screenName, clipboardZone)
     mask: Region {
@@ -76,6 +79,7 @@ PanelWindow {
                 return
             Overlays.placeTaskbarParts(window.screenName, taskbar.liquidParts())
             Overlays.placeTaskbarOrigins(window.screenName, taskbar.originPoints())
+            Overlays.placeTaskbarGroups(window.screenName, taskbar.liquidGroups())
         }
     }
 
@@ -86,8 +90,12 @@ PanelWindow {
         anchors.fill: parent
         hostWindow: window
         isMirrored: window.isRight
+        frostSource: Config.data.wallpaper.path
+        screenWidth: window.screen?.width ?? window.width
         barStyle: Config.data.taskbar.style
         isCompact: Config.data.taskbar.compact
+        idleOrder: Config.data.taskbar.order
+        hiddenIdles: Config.data.taskbar.hidden
         onCompactRequested: isCompact => Config.setTaskbarCompact(isCompact)
         onSettingsRequested: Overlays.toggle("settings", window.screenName)
         onDashboardRequested: Overlays.toggle("dashboard", window.screenName)
@@ -98,15 +106,23 @@ PanelWindow {
         activityMode: ActivityState.modeOn(window.screenName)
         activityLead: ActivityState.leadKey
         onActivityModeRequested: mode => ActivityState.set(window.screenName, mode)
+        onActivityFoldRequested: ActivityState.fold()
         onActivityLeadRequested: direction => ActivityState.rotate(direction)
+        onActivityTabRequested: key => ActivityState.show(window.screenName, key)
         isAlerting: window.peek !== null
         alertSize: alerts.bodySize
-        isClipboardOpen: window.isClipboardOpen
-        clipboardSize: clipboard.bodySize
-        onClipboardCloseRequested: ActivityState.closeClipboard()
+        isClipboardOpen: window.isBodyOpen
+        clipboardSize: window.isPromptOpen ? prompt.bodySize : clipboard.bodySize
+        onClipboardCloseRequested: {
+            if (window.isPromptOpen)
+                Passwords.cancel("the activity pill closed")
+            else
+                ActivityState.closeClipboard()
+        }
         isCovered: Occupancy.isCovered(window.screenName, Overlays.isHolding(window.screenName))
-        isEngaged: extension.isOpen || extension.isHeld || window.isClipboardOpen || alerts.isExpanded
+        isEngaged: extension.isOpen || extension.isHeld || window.isBodyOpen || alerts.isExpanded
         extensionKey: window.extensionKey
+        extensionFoot: extension.footHeight
         onExtensionRequested: key => window.extensionKey = key
         onIsAwayChanged: {
             if (isAway)
@@ -136,7 +152,7 @@ PanelWindow {
         isMirrored: window.isRight
         entries: Clipboard.entries
         body: taskbar.clipboardRect
-        isBodyShown: taskbar.isClipboardShown
+        isBodyShown: taskbar.isClipboardShown && !window.isPromptOpen
         onPickRequested: entry => {
             Clipboard.pick(entry)
             ActivityState.closeClipboard()
@@ -147,6 +163,17 @@ PanelWindow {
         onCloseRequested: ActivityState.closeClipboard()
     }
 
+    Prompt {
+        id: prompt
+        anchors.fill: parent
+        isMirrored: window.isRight
+        request: Passwords.request
+        body: taskbar.clipboardRect
+        isBodyShown: taskbar.isClipboardShown && window.isPromptOpen
+        onSubmitted: (password, isChoiceChosen) => Passwords.submit(password, isChoiceChosen)
+        onCancelled: reason => Passwords.cancel(reason)
+    }
+
     Extension {
         id: extension
         anchors.fill: parent
@@ -154,6 +181,7 @@ PanelWindow {
         extensionKey: window.extensionKey
         body: taskbar.extensionRect
         lift: taskbar.extensionLift
+        preparedKey: taskbar.preparedExtension
         isBatteryProtected: Config.data.battery.limit
         onCloseRequested: window.extensionKey = ""
         onBatteryProtectRequested: isProtected => Config.setBatteryLimit(isProtected)

@@ -23,12 +23,14 @@ Item {
             turn.snap(1)
     }
 
-    Turn {
+    Sprout {
+        look: Appearance.extension.sprout
+        pace: Motion.extension.sprout
         id: turn
         width: row.width
         height: Appearance.extension.row
         isShown: row.isShown
-        enterDelay: Math.min(row.index, 8) * Motion.reveal.stagger
+        enterDelay: Math.min(row.index, 8) * Motion.extension.sprout.stagger
 
         Press {
             target: face
@@ -67,6 +69,13 @@ Item {
                 elide: Text.ElideRight
                 text: row.modelData.ssid.toUpperCase()
                 color: row.isActive || rowHover.hovered ? Appearance.color.text : Appearance.color.textBody
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: Motion.pace(Motion.stateDuration)
+                        easing.type: Easing.OutQuad
+                    }
+                }
                 font.family: Appearance.font.sans
                 font.pixelSize: Appearance.font.label
                 font.letterSpacing: Appearance.font.labelSpacing
@@ -79,7 +88,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 width: Appearance.extension.lock
                 height: Appearance.extension.lock
-                visible: row.modelData.isSecured && !row.isForgetting
+                visible: row.modelData.isSecured && !row.isKnown && !row.isActive && !row.isForgetting
                 name: "lock"
                 color: Appearance.color.textMuted
             }

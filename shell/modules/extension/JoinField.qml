@@ -19,6 +19,13 @@ Rectangle {
     border.width: 1
     border.color: input.activeFocus ? Appearance.color.accent : "transparent"
 
+    Behavior on border.color {
+        ColorAnimation {
+            duration: Motion.pace(Motion.stateDuration)
+            easing.type: Easing.OutQuad
+        }
+    }
+
     TextInput {
         id: input
         anchors.verticalCenter: parent.verticalCenter

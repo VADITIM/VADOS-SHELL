@@ -12,11 +12,21 @@ Item {
     property bool isSettled: false
     property string armedKey: ""
     property var order: []
-    readonly property var rows: Controls.sectionRows(Audio.outputs, Audio.inputs, Audio.streams)
+    readonly property var armed: Controls.tabRows(Audio.outputs, Audio.inputs, Audio.streams, "stream").find(entry => entry.key === armedKey) ?? null
+    readonly property string shownTab: armed !== null ? "output" : Audio.tab
+    readonly property var rows: Controls.tabRows(Audio.outputs, Audio.inputs, Audio.streams, shownTab)
     readonly property string layout: rows.map(entry => entry.key).join("|")
-    readonly property var armed: rows.find(entry => entry.key === armedKey) ?? null
+    readonly property real footHeight: height - volumeTurn.y
+    readonly property real listTop: Appearance.extension.tab + Appearance.extension.tabGap
+    readonly property real area: height - footHeight - Appearance.extension.splitRoom - listTop
 
     onLayoutChanged: order = rows.map(entry => entry.key)
+    onShownTabChanged: {
+        if (!isShown)
+            return
+        isSettled = false
+        settle.restart()
+    }
     onArmedChanged: {
         if (armed === null)
             armedKey = ""
@@ -46,10 +56,15 @@ Item {
 
     Item {
         id: header
+        y: parent.height - height
         width: parent.width
         height: Appearance.extension.header
 
         Turn {
+            flipAngle: 0
+            spinAngle: Motion.extension.glyphSpin
+            enterDuration: Motion.extension.glyphPop
+            enterEasing: Easing.OutBack
             anchors.verticalCenter: parent.verticalCenter
             width: Appearance.extension.glyph
             height: Appearance.extension.glyph
@@ -63,20 +78,17 @@ Item {
             }
         }
 
-        TypedText {
+        ScrambleText {
+            label: "extension header"
             anchors.verticalCenter: parent.verticalCenter
             x: Appearance.extension.glyph + 10
-            width: Math.min(fullWidth, buttons.x - x - 8)
+            width: Math.min(implicitWidth, buttons.x - x - 8)
             clip: true
             isShown: page.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
             target: page.armed !== null ? "ROUTE TO..." : "AUDIO"
             color: Appearance.color.text
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.font.label
-            font.letterSpacing: Appearance.font.labelSpacing
-            font.bold: true
+            family: Appearance.font.sans
+            pixelSize: Appearance.font.label
         }
 
         Row {
@@ -100,9 +112,11 @@ Item {
         }
     }
 
-    Turn {
+    Sprout {
+        look: Appearance.extension.sprout
+        pace: Motion.extension.sprout
         id: volumeTurn
-        y: header.height
+        y: header.y - height
         width: parent.width
         height: volumeTrack.height
         isShown: page.isShown
@@ -114,16 +128,80 @@ Item {
             width: parent.width
             value: Audio.volume
             isMuted: Audio.isMuted
+            isFilled: volumeTurn.presence > Appearance.extension.sprout.seed
             hasSteps: true
             onMoved: value => Audio.setVolume(value)
         }
     }
 
+    Row {
+        id: tabs
+        width: parent.width
+        height: Appearance.extension.tab
+
+        Repeater {
+            model: Controls.audioTabs
+
+            Sprout {
+                id: tabTurn
+                required property var modelData
+                required property int index
+                readonly property bool isPicked: page.shownTab === modelData.key
+                look: Appearance.extension.sprout
+                pace: Motion.extension.sprout
+                width: tabs.width / Controls.audioTabs.length
+                height: tabs.height
+                isShown: page.isShown
+                enterDelay: index * Motion.extension.sprout.stagger
+
+                Sweep {
+                    anchors.fill: parent
+                    isOn: tabHover.hovered && !tabTurn.isPicked
+                    fill: Appearance.extension.hoverWash
+                }
+
+                Sweep {
+                    anchors.fill: parent
+                    isOn: tabTurn.isPicked
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: tabTurn.modelData.label
+                    color: tabTurn.isPicked ? Appearance.color.accent : tabHover.hovered ? Appearance.color.text : Appearance.color.textMuted
+                    font.family: Appearance.font.sans
+                    font.pixelSize: Appearance.font.chip
+                    font.letterSpacing: Appearance.font.labelSpacing
+                    font.bold: true
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Motion.pace(Motion.stateDuration)
+                            easing.type: Easing.OutQuad
+                        }
+                    }
+                }
+
+                HoverHandler {
+                    id: tabHover
+                    cursorShape: Qt.PointingHandCursor
+                }
+
+                TapHandler {
+                    onTapped: {
+                        page.armedKey = ""
+                        Audio.pickTab(tabTurn.modelData.key)
+                    }
+                }
+            }
+        }
+    }
+
     ListView {
         id: list
-        y: header.height + volumeTurn.height + Appearance.extension.headerGap
+        y: page.listTop + (page.area - height) / 2
         width: parent.width
-        height: parent.height - y
+        height: Math.min(page.area, contentHeight)
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         model: page.order

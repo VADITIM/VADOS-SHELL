@@ -1,5 +1,8 @@
 # Known issues
 
+- **The shell holds about 845 MB resident on three screens** (2026-11-18, 960 MB before each overlay became one window, `decisions.md` § Overlays built ahead). Not a leak; without overlays it is about 695 MB, so the five overlay windows cost about 150 MB, settings the most (its banners). Opening an overlay on a screen of another size relays it out on the opening frame; all three screens here are 1080p, so that cost is not measured.
+- **The taskbar clock redraws every second on every screen** (2026-11-18): the seconds roll keeps each taskbar window rendering about 30 frames a second, so the shell is never fully idle (each frame is cheap: under 1 ms on the render thread). A minute clock or a shorter roll would stop it; a design choice for the user.
+- **Seven tests fail in the working tree as of 2026-11-18, outside the performance fix**: `tst_preview` (`NotificationMenu.qml` `fadeShare` undefined, `Motion.qml` lines 304 and 305 assigning undefined, a second interceptor on a prompt `TextInput`'s opacity), `tst_icons` (the `performance` path, the `animation` icon's rule), `tst_widgets` (three drag tests) and `tst_activity` (`test_clipboardStaysClosedInAMenu`).
 - **The clipboard history, the 1.3 times expanded pill and the new leave are untested in Qt (2026-11-11).** This machine has no PySide6: `tst_clipboard`, `tst_gulp`, the new `tst_activity`, `tst_features` and `tst_preview` cases were written but not run; `utils/Clipboard.js` was checked with Node and `check-rules.py` passes. Nothing ran against a real `wl-paste` either (`quirks.md` § Clipboard history).
 - **Ready budgets cover four engines (2026-11-10, clipboard 2026-11-11).** `tst_features` measures `Burst`, `Mutate`, the alert's and the clipboard's `Reshape`; the activity pill's expanded views and the Wi-Fi `Extension` are not measured against `Motion.budget.ready`, and the measurement is offscreen script time plus the animation clock, not a real compositor frame.
 - **Planned surfaces have a row and a contract but no code** (`canvas`); two points in `roadmap.md` § Still open wait for the user (the app manager's move action, keyboard focus for the V/AI widget).
@@ -105,7 +108,12 @@ Seen in a nested driftwm (winit backend, the shell with its own home): all six w
 ## Lock screen (2026-11-14)
 
 - **Unlocking is not run yet.** Seen in a nested driftwm (2026-11-14): `lock lock` locks and draws the screen, killing the shell leaves the output black and locked, a restarted shell locks again from its marker, and PAM `login` asks for the password. Typing the password, a wrong one, blanking and a second monitor are unchecked.
-- **The leave starts from the main screen's layout, not from where the bodies were.** If the screen changed size during the lock, `LockLeave` computes the frames for the new size; the bodies jump less than a cell, unchecked on hardware.
+- **The leave starts from the bodies as drawn for the old size.** If the screen changed size during the lock, the leave's snapshot holds the cells of the old size; the bodies jump less than a cell, unchecked on hardware.
+- **The first lock after the shell starts still creates the veil's render surface** (2026-11-18): the veil windows are kept from startup unmapped, so the first map pays the scene graph and shader setup once; later locks map an existing window. Not measured on the live session.
+- **Module droplets may fuse in flight** (2026-11-17): the modules all leave one point on the wall, so two bound for neighbouring cells can neck together on the way before parting; their curves alternate sides, nothing keeps them apart beyond that.
+- **Keys typed during the lock enter reach the focused window** (2026-11-17). The session lock engages about one second after the request, and the veil window has no keyboard (`check-rules.py` `[overlays]`), so a password typed straight after pressing lock goes to the app that had focus. Fix waiting on the user: let `LockWindow` take `keyboardFocus` while `Lock.isLocking` (and `WlrLayer.Overlay`, so a closing overlay never shows over the cut).
+- **The lock veil is unrun on a real session** (2026-11-17): only offscreen tests. Unchecked: that driftwm really keeps the desktop and the veil on screen until the lock surface commits (read in `session_lock.rs`, `SessionLock::Pending`), that the lock surface's first frame matches the veil's last to the pixel, the stencil clip of the cut on real hardware, and Hyprland, which may paint something else between the request and the first lock frame.
+- **Module contents vanish in the unlock frame.** Text and pictures live on the lock surface, so they go with it; the veil carries on with the bodies only.
 - **No auto-lock.** Idle only blanks the locked screen (`decisions.md` § Lock screen); locking the desktop after idle or before suspend (logind `PrepareForSleep`, `loginctl lock-session` from elsewhere) does nothing in the shell yet.
 - **The password field takes no cursor movement or input method.** Keys append, Backspace deletes, Escape and Ctrl+Backspace clear; dead keys and compose come through `event.text` but an input method popup is not supported on the lock surface.
 - **Fingerprint and other PAM modules that need no answer are unsupported**: the conversation starts only on Enter with a non-empty password, and a second question ends it with AUTHENTICATION FAILED.
@@ -113,3 +121,28 @@ Seen in a nested driftwm (winit backend, the shell with its own home): all six w
 - **Row hover colour is not animated in Audio and Network rows.** Only the Power icon fades (`Behavior on color`); the others switch at once. Left as is.
 
 - The clipboard over an open menu has no liquid enter or leave (a flat panel, 2026-11-16), and the menu still owns the keyboard, so Escape may close the menu.
+
+- **The boot screen keeps the accent it was switched on with** (2026-11-17): changing the accent does not redraw the splash or the Plymouth mark; switching the option off and on again does. Redrawing on every accent change would ask for admin rights each time.
+- **The settings home page sometimes opens blank** (2026-11-17): once in about 20 live opens, right after several reloads in a row, the body, nav bar and clock came up but the banner and its version line did not (the area was empty, not faint). The real `Settings` module in system Qt (`qml6` with the preview mock tree) showed the banner every time: repeated opens, async loading, a window hidden until present, close and reopen at every gap up to 2.2 s, opening after a reload and reloading while open. Not reproduced since; cause unknown. `Masked` re-enabling `layer.enabled` was suspected for the profile picture but did not fail in a test.
+
+## Pill frost shows only the wallpaper (2026-11-17)
+
+- The frost behind the taskbar pills is the shell's blurred copy of `wallpaper.path`, not what is really behind them: an app window under a pill (an unfocused one; the focused one hides the taskbar) is not frosted, the wallpaper shows instead. Without a shell wallpaper (`wallpaper.path` empty, driftwm's own background) there is no frost.
+- Overlay bodies (dashboard, search, settings, notifications) and the screenshot toolbar have no frost yet; their liquid layers take a `frostSource` when wanted.
+- Assumes driftwm crops its `wallpaper` background like `PreserveAspectCrop` and that the frost lines up on a real session; not yet seen on screen. The extra cost (three window-sized textures and one blur while shown) is unmeasured on a GPU.
+- **The password prompt is unseen with a real request** (2026-11-18): the keyring helper was checked against a Gcr client on a private bus name, the request logic and the overlay stacking by tests; polkit through `PolkitAgent`, picking another identity (only the default one is asked) and a keyring unlock in the running shell are unchecked.
+
+## Keyboard tab (2026-11-19)
+
+- driftwm takes one layout for every keyboard; overriding the built-in keyboard alone needs a per-device keymap in driftwm.
+- Plain VIA boards (no Vial definition) show the ANSI fallback read only: VIA keeps the layout JSON outside the firmware, and loading one from a file is not built.
+- No firmware flashing: compiled keymaps (`qmk flash`) and QMK boards without VIA or Vial are not programmed; `qmk` is not installed here.
+- The keycode picker covers the basic HID codes, modifiers, media and (VIA protocol 12 and newer) MO and TG layers; mod-taps, macros, tap dance and Vial combos are not offered, and legends are US names, not the chosen xkb layout's characters.
+- KLE rotation (`r`, `rx`, `ry`) and ISO enter shapes are drawn as plain rectangles.
+- Without a udev rule granting the hidraw node (Vial's `59-vial.rules`), every read and write after READ AS ADMIN asks for the admin password once.
+- Not tried on a session yet: the tab, the driftwm reload with a new layout, Hyprland's device names and a real Vial write.
+
+## Tests (2026-11-19)
+
+- PySide6 is not installed on the Linux machine, so `tools/tests/run.py` cannot start; the suite was run with `/usr/lib/qt6/bin/qmltestrunner` and a QML stand-in for `VadosTest`, which cannot write files, so `tst_statefile`, `tst_lock`, `tst_lockrecovery` and `tst_confinement` fail there for that reason only.
+- `tst_preview` `test_favouritingAndHidingKeepTheOtherRows` fails at the favourite check (line 87); nothing changed on 2026-11-19 touches that path, cause not found yet.

@@ -8,6 +8,7 @@ Item {
     property real value: 0
     property bool isMuted: false
     property bool hasSteps: false
+    property bool isFilled: true
     readonly property real stepsWidth: hasSteps ? less.width + more.width + Appearance.extension.rowGap * 2 : 0
 
     signal moved(real value)
@@ -31,7 +32,7 @@ Item {
         anchors.leftMargin: track.hasSteps ? Appearance.extension.rowGap : 0
         anchors.rightMargin: track.hasSteps ? Appearance.extension.rowGap : 0
         anchors.verticalCenter: parent.verticalCenter
-        value: track.value
+        value: track.isFilled ? track.value : 0
         isMuted: track.isMuted
         look: ({
             track: Appearance.extension.track,

@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Shapes
+import qs.config
 import "../utils/Icons.js" as Icons
 
 Item {
@@ -14,6 +15,13 @@ Item {
 
     implicitWidth: 20
     implicitHeight: 20
+
+    Behavior on color {
+        ColorAnimation {
+            duration: Motion.pace(Motion.stateDuration)
+            easing.type: Easing.OutQuad
+        }
+    }
 
     function cloud(left, bottom, size) {
         const unit = size / 11
@@ -108,6 +116,8 @@ Item {
             return "M4.5 17 V12 a7.5 7.5 0 0 1 15 0 V17 M4.5 13.5 H7.5 V19.5 H4.5 Z M16.5 13.5 H19.5 V19.5 H16.5 Z"
         case "deafened":
             return "M4.5 17 V12 a7.5 7.5 0 0 1 15 0 V17 M4.5 13.5 H7.5 V19.5 H4.5 Z M16.5 13.5 H19.5 V19.5 H16.5 Z M3.5 3.5 L20.5 20.5"
+        case "arrow-right":
+            return "M4.5 12 H19 M13.5 6.5 L19 12 L13.5 17.5"
         case "play":
             return "M8 5.5 L18.5 12 L8 18.5 Z"
         case "pause":
@@ -156,6 +166,8 @@ Item {
             return "M5.5 18.5 L18.5 5.5 M11 5.5 H18.5 V13"
         case "text":
             return "M5.5 6 H18.5 M12 6 V19 M9 19 H15"
+        case "keyboard":
+            return "M4 7 H20 V17 H4 Z M7 10 H8 M10 10 H11 M13 10 H14 M16 10 H17 M8 14 H16"
         case "stop":
             return "M7 7 H17 V17 H7 Z"
         case "record":

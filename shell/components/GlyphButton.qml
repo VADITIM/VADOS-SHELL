@@ -6,6 +6,7 @@ Item {
 
     property string glyphName
     property string label
+    property string hoverName
     property real glyphSize: 18
     property color color: Appearance.color.textBody
     property bool isArmed: false
@@ -24,6 +25,20 @@ Item {
         border.width: button.isArmed ? 1.5 : 0
         border.color: Qt.rgba(Appearance.color.danger.r, Appearance.color.danger.g, Appearance.color.danger.b, 0.55)
         opacity: area.containsMouse || button.isArmed || button.isSelected ? 1 : 0
+
+        Behavior on color {
+            ColorAnimation {
+                duration: Motion.pace(Motion.stateDuration)
+                easing.type: Easing.OutQuad
+            }
+        }
+
+        Behavior on border.color {
+            ColorAnimation {
+                duration: Motion.pace(Motion.stateDuration)
+                easing.type: Easing.OutQuad
+            }
+        }
 
         Behavior on opacity {
             NumberAnimation {
@@ -61,6 +76,13 @@ Item {
             font.pixelSize: Appearance.font.label
             font.letterSpacing: Appearance.font.labelSpacing
             font.bold: true
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Motion.pace(Motion.stateDuration)
+                    easing.type: Easing.OutQuad
+                }
+            }
         }
     }
 

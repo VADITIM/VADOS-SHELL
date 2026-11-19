@@ -218,6 +218,13 @@ TestCase {
         compare(Displays.problemOf([output("A", 0, 0, 1920, 1080), output("B", 1920, 500, 1280, 1024), output("C", 640, 1080, 1280, 720)]), "", "a chain of touching monitors is connected")
     }
 
+    function test_droppedMonitorSlidesOnTheGrid() {
+        const layout = [output("A", 0, 0, 1920, 1080), output("B", 1920, 0, 1920, 1080)]
+        compare(Displays.snapped(layout, "B", 1950, 300, 48, 120)[1].y, 360, "a free slide lands on the nearest grid line")
+        compare(Displays.snapped(layout, "B", 1950, 30, 48, 120)[1].y, 0, "an edge in reach still wins over the grid")
+        compare(Displays.snapped(layout, "B", 1950, 300, 48, 0)[1].y, 300, "without a grid the slide stays free")
+    }
+
     function test_droppedMonitorSnapsEdgeToEdge() {
         const layout = [output("A", 0, 0, 1920, 1080), output("B", 1920, 0, 1920, 1080)]
         const right = Displays.snapped(layout, "B", 2100, 30, reach)

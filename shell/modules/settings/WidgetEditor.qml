@@ -9,7 +9,6 @@ Row {
     property var layout: []
     property var screens: []
     property string startScreen: ""
-    property string wallpaper: ""
     property real areaWidth: 0
     property real areaHeight: 0
     property Item side: null
@@ -31,6 +30,7 @@ Row {
     readonly property var screenGrid: shown ? Widgets.gridOn(shown.width, shown.height, widgetLook) : ({ columns: 0, rows: 0 })
     readonly property var origin: shown ? Widgets.originOn(shown.width, shown.height, screenGrid, widgetLook) : ({ x: 0, y: 0 })
     readonly property var placements: shown ? Widgets.placedOn(layout, shown.name, screenGrid) : []
+    readonly property rect frameRect: Qt.rect(0, frameColumn.y, frameWidth, frameHeight)
     readonly property string pressedKey: gesture.pressed ? keyAt(gesture.pressPoint.x, gesture.pressPoint.y) : ""
 
     signal layoutRequested(var entries)
@@ -92,8 +92,8 @@ Row {
         const key = carried
         if (!key || ratio <= 0)
             return
-        const column = Math.round(((carryX + velocityX * Motion.settings.widgetFling) / ratio - origin.x) / widgetLook.cell)
-        const row = Math.round(((carryY + velocityY * Motion.settings.widgetFling) / ratio - origin.y) / widgetLook.cell)
+        const column = Math.round(((carryX + velocityX * Motion.widgets.fling) / ratio - origin.x) / widgetLook.cell)
+        const row = Math.round(((carryY + velocityY * Motion.widgets.fling) / ratio - origin.y) / widgetLook.cell)
         carried = ""
         write(Widgets.moved(placements, screenGrid, key, column, row))
     }
@@ -101,6 +101,7 @@ Row {
     onStartScreenChanged: monitor = startScreen
 
     Column {
+        id: frameColumn
         spacing: editor.section.rowGap
         y: Math.max(0, Math.round((editor.areaHeight - editor.frameHeight) / 2))
 
@@ -113,31 +114,6 @@ Row {
                 id: frame
                 width: editor.frameWidth
                 height: editor.frameHeight
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: Appearance.unit.small
-                    color: Appearance.color.raised
-                }
-
-                Masked {
-                    anchors.fill: parent
-                    visible: editor.wallpaper.length > 0
-
-                    mask: Rectangle {
-                        anchors.fill: parent
-                        radius: Appearance.unit.small
-                    }
-
-                    Image {
-                        anchors.fill: parent
-                        source: !editor.visible || editor.wallpaper.length === 0 ? "" : editor.wallpaper.startsWith("/") ? "file://" + editor.wallpaper : editor.wallpaper
-                        sourceSize.width: Appearance.settings.wallpaper.previewWidth
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        opacity: editor.look.wallpaperShade
-                    }
-                }
 
                 Lattice {
                     anchors.fill: parent
@@ -206,7 +182,7 @@ Row {
                         Behavior on restX {
                             enabled: tile.isSettled
                             NumberAnimation {
-                                duration: Motion.pace(Motion.settings.widgetGlide)
+                                duration: Motion.pace(Motion.widgets.glide)
                                 easing.type: Easing.OutBack
                             }
                         }
@@ -214,7 +190,7 @@ Row {
                         Behavior on restY {
                             enabled: tile.isSettled
                             NumberAnimation {
-                                duration: Motion.pace(Motion.settings.widgetGlide)
+                                duration: Motion.pace(Motion.widgets.glide)
                                 easing.type: Easing.OutBack
                             }
                         }

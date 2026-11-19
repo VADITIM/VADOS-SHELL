@@ -84,6 +84,10 @@ function plainOf(text) {
     return plain.split(" ").filter(part => part.length > 0).join(" ")
 }
 
+function cut(text, limit) {
+    return plainOf(text).slice(0, Math.max(0, limit))
+}
+
 function clip(text, limit) {
     const plain = plainOf(text)
     if (plain.length <= limit)

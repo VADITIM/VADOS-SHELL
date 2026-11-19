@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=VAD/OS
+Description=The VAD/OS mark with accent bubbles rising under it
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/vados
+ScriptFile=/usr/share/plymouth/themes/vados/vados.script

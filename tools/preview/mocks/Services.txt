@@ -20,6 +20,8 @@ QtObject {
         { key: "5", node: null, label: "Discord", volume: 1, isMuted: false, isDefault: false }
     ]
     property var routed: []
+    property string tab: "output"
+    function pickTab(key) { tab = key }
     function setVolume(value) { isMuted = false; volume = Math.max(0, Math.min(1, value)) }
     function setRowVolume(row, value) {}
     function toggleMute() { isMuted = !isMuted }
@@ -109,15 +111,19 @@ QtObject {
 Power|pragma Singleton
 import QtQuick
 QtObject {
-    function lock() { Lock.lock() }
+    function lock() { Lock.request() }
+    property int hibernated: 0
     function suspend() { console.log("power: suspend") }
+    function hibernate() { hibernated += 1 }
     function restart() { console.log("power: restart") }
+    function logOut() { console.log("power: log out") }
     function shutdown() { console.log("power: shutdown") }
 }
 Lock|pragma Singleton
 import QtQuick
 QtObject {
     readonly property bool canLock: true
+    property bool isLocking: false
     property bool isLocked: false
     property bool isSecure: isLocked
     property bool isChecking: false
@@ -127,9 +133,10 @@ QtObject {
     property int failures: 0
     property bool isBlank: false
     readonly property int blankAfter: 60
-    readonly property string status: !isLocked ? "unlocked" : isBlank ? "blank" : "locked"
+    readonly property string status: isLocking ? "locking" : !isLocked ? "unlocked" : isBlank ? "blank" : "locked"
     signal unlocked()
-    function lock() { isLocked = true; return true }
+    function request() { if (!isLocked) isLocking = true; return true }
+    function lock() { isLocking = false; isLocked = true; return true }
     function submit(password) {
         if (!isLocked || password.length === 0)
             return
@@ -154,6 +161,43 @@ QtObject {
     readonly property string time: Qt.formatDateTime(now, "hh:mm:ss")
     readonly property string date: Qt.formatDateTime(now, "ddd dd MMM").toUpperCase()
     property Timer ticker: Timer { interval: 1000; running: true; repeat: true; onTriggered: now = new Date() }
+}
+Banner|pragma Singleton
+import QtQuick
+QtObject {
+    property var font: null
+    function render(text) { return "" }
+}
+Machine|pragma Singleton
+import QtQuick
+QtObject {
+    property string os: "Arch Linux"
+    property string kernel: "6.12.1-arch1-1"
+    property string host: "preview"
+    property real bootTime: Date.now() - 3 * 3600000
+}
+GitHub|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isActive: false
+    property string detected: "vaditim"
+    property string status: "ready"
+    property string source: "gh"
+    readonly property string login: detected
+    readonly property bool isSignedIn: source === "gh"
+    property bool isConnecting: false
+    property var days: Array.from({ length: 182 }, (unused, index) => ({ date: "", count: (index * 7) % 5 }))
+    property var pinned: []
+    property var repositories: [
+        { name: "VADITIM/VADOS-SHELL", url: "https://github.com/VADITIM/VADOS-SHELL", description: "The shell", stars: 3, language: "QML", date: "2026-11-17T10:00:00Z" },
+        { name: "VADITIM/VADOS-FILES", url: "https://github.com/VADITIM/VADOS-FILES", description: "Files", stars: 1, language: "Rust", date: "2026-11-16T10:00:00Z" }
+    ]
+    property var chosen: []
+    readonly property var favorites: repositories
+    property var pushes: Array.from({ length: 8 }, (unused, index) => ({ repository: "VADITIM/VADOS-SHELL", title: "Push " + index, url: "https://github.com/VADITIM/VADOS-SHELL", date: "2026-11-17T10:00:00Z", hash: "" }))
+    function refresh() {}
+    function connect() {}
+    function open(url) {}
 }
 Hardware|pragma Singleton
 import QtQuick
@@ -246,7 +290,8 @@ QtObject {
 Activities|pragma Singleton
 import QtQuick
 QtObject {
-    readonly property var keys: ["recording", "call", "media", "notifications", "tray"]
+    readonly property var keys: ["recording", "call", "media", "notifications"]
+    readonly property var tabs: ["notifications", "media", "call"]
     readonly property int notificationCount: Notifications.list.length
     readonly property int unreadCount: Notifications.unreadCount
     readonly property var trayItems: Tray.items
@@ -298,6 +343,7 @@ QtObject {
     readonly property bool isUrgent: list.some(notification => isCritical(notification) && unreadIds.indexOf(notification.id) >= 0)
     signal received(var notification)
     function isCritical(notification) { return notification.urgency === 2 }
+    function appIconOf(notification) { return "" }
     function isLow(notification) { return notification.urgency === 0 }
     function isAlive(notification) { return list.some(candidate => candidate.id === notification.id) }
     function markRead() { unreadIds = [] }
@@ -367,16 +413,20 @@ QtObject {
     property bool isHyprland: false
     property bool isDriftwm: false
     readonly property string name: isHyprland ? "hyprland" : isDriftwm ? "driftwm" : "generic"
+    readonly property string label: isHyprland ? "HYPRLAND" : isDriftwm ? "DRIFTWM" : "WAYLAND"
     readonly property var capabilities: Platform.capabilitiesOf(name)
     readonly property string level: Platform.levelOf(capabilities)
     property var canvasState: null
     property var activeWindow: null
     property var lastWindow: null
+    property var windows: []
     property string focusedScreen: "play"
     property var sent: []
     signal canvasChanged()
     function isListed(value, windowId) { return false }
     function viewports() { return [] }
+    function refreshWindows() {}
+    function windowsOn(screenName) { return windows.filter(window => window.screen === screenName) }
     function send(argumentsList) { sent = sent.concat([argumentsList.join(" ")]) }
     function action(spec) {}
     property var powered: []
@@ -391,6 +441,13 @@ QtObject {
     property real trialNow: 0
     readonly property int outputTrialLeft: Displays.remaining(outputTrial, trialNow)
     property var appliedOutputs: []
+    property var appliedKeyboards: []
+    function applyKeyboardLayouts(entries) {
+        if (!capabilities.keyboardLayout)
+            return false
+        appliedKeyboards = Array.from(entries ?? [])
+        return true
+    }
     function readOutputs() {}
     function applyOutputs(layout) {
         if (!capabilities.outputConfiguration || Displays.problemOf(layout).length > 0)
@@ -492,6 +549,94 @@ QtObject {
     function makeDefault(key) { defaulted = defaulted.concat([key]) }
     function openReleases(key) { opened = opened.concat([key]) }
 }
+Boot|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isWatching: false
+    property var current: ({})
+    property string problem: ""
+    readonly property bool isKnown: true
+    property bool canSplash: true
+    property bool canPlymouth: true
+    property bool needsPlymouth: false
+    property bool isSplashOn: false
+    property bool isPlymouthOn: false
+    property bool isBusy: false
+    signal applied(bool isSplash, bool isPlymouth)
+    function refresh() {}
+    function request(part, isOn, accent) {
+        if (part === "splash")
+            isSplashOn = isOn
+        else
+            isPlymouthOn = isOn
+        applied(isSplashOn, isPlymouthOn)
+    }
+}
+Polkit|pragma Singleton
+import QtQuick
+QtObject {
+    readonly property bool isEnabled: false
+    property bool isRegistered: false
+    property var request: null
+    function submit(password) { request = null }
+    function cancel() { request = null }
+}
+Keyring|pragma Singleton
+import QtQuick
+QtObject {
+    readonly property bool isEnabled: false
+    property bool isServing: false
+    property var request: null
+    function answer(isContinue, password, isChoiceChosen) { request = null }
+    function cancel() { request = null }
+}
+Passwords|pragma Singleton
+import QtQuick
+QtObject {
+    property var request: null
+    function submit(password, isChoiceChosen) { request = null }
+    function cancel(reason) { request = null }
+}
+Login|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isWatching: false
+    property var current: ({})
+    property string problem: ""
+    readonly property bool isKnown: true
+    property bool canChoose: true
+    property bool isVados: false
+    property string mainTheme: "breeze"
+    property bool isBusy: false
+    function refresh() {}
+    function request(choice) { isVados = choice === "vados" }
+}
+Keyboards|pragma Singleton
+import QtQuick
+QtObject {
+    property bool isWatching: false
+    property var choices: [
+        { layout: "us", variant: "", description: "English (US)" },
+        { layout: "us", variant: "dvorak", description: "English (Dvorak)" },
+        { layout: "de", variant: "", description: "German" },
+        { layout: "de", variant: "nodeadkeys", description: "German (no dead keys)" }
+    ]
+    property var devices: [{ name: "AT Translated Set 2 keyboard", isBuiltIn: true }, { name: "Keychron K2", isBuiltIn: false }]
+    property var boards: [{ path: "/dev/hidraw3", name: "Keychron K2", vendor: "3434", product: "0220", isWritable: true }]
+    property var board: ({})
+    property string boardPath: ""
+    property bool isDenied: false
+    property bool isAdmin: false
+    property string problem: ""
+    property bool isBusy: false
+    property var written: []
+    function refresh() {}
+    function readBoard(path, asAdmin) {
+        boardPath = path
+        board = { protocol: 12, layers: 2, rows: 1, columns: 3, hasDefinition: true, layout: [["0,0", "0,1", { w: 2 }, "0,2"]], keymap: [[[4, 5, 6]], [[1, 1, 1]]] }
+    }
+    function writeKeys(changes) { written = written.concat(changes) }
+}
 SystemFont|pragma Singleton
 import QtQuick
 QtObject {
@@ -510,6 +655,7 @@ QtObject {
     property bool isWatching: false
     property var images: []
     readonly property string folder: "/home/user/Pictures/Wallpapers"
+    function reveal(place) {}
 }
 Notes|pragma Singleton
 import QtQuick

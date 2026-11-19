@@ -141,7 +141,7 @@ Item {
         Masked {
             id: lines
             width: details.width
-            height: details.height - Appearance.activity.expanded.control
+            height: details.height
             visible: view.expansion > 0
             mask: Rectangle {
                 anchors.fill: parent
@@ -153,80 +153,60 @@ Item {
                 }
             }
 
-            TypedText {
-                id: sourceLabel
-                target: Activities.mediaSource.toUpperCase()
-                isShown: view.isShown
-                characterInterval: Motion.type.quick
-                untypeInterval: Motion.type.quickUntype
-                color: Appearance.color.textMuted
-                font.family: Appearance.font.sans
-                font.pixelSize: Appearance.activity.expanded.label
-                font.letterSpacing: Appearance.font.labelSpacing
-                font.bold: true
-            }
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Appearance.activity.expanded.lineGap
 
-            TypedText {
-                id: title
-                y: sourceLabel.height + Appearance.activity.expanded.lineGap
-                target: Activities.title.length > 0 ? Activities.title : "NOTHING PLAYING"
-                isShown: view.isShown
-                characterInterval: Motion.type.quick
-                untypeInterval: Motion.type.quickUntype
-                color: Appearance.color.text
-                font.family: Appearance.font.sans
-                font.pixelSize: Appearance.activity.expanded.body
-                font.bold: true
-            }
-
-            TypedText {
-                y: title.y + title.height + Appearance.activity.expanded.lineGap
-                target: Activities.artist
-                isShown: view.isShown
-                characterInterval: Motion.type.quick
-                untypeInterval: Motion.type.quickUntype
-                color: Appearance.color.textMuted
-                font.family: Appearance.font.sans
-                font.pixelSize: Appearance.activity.expanded.body
-            }
-        }
-
-        Row {
-            y: details.height - Appearance.activity.expanded.control
-            spacing: Appearance.activity.expanded.controlGap
-
-            Repeater {
-                model: ["previous", "toggle", "next"]
-
-                Turn {
-                    id: control
-                    required property string modelData
-                    required property int index
-                    width: Appearance.activity.expanded.control
-                    height: Appearance.activity.expanded.control
+                ScrambleText {
+                    label: "activity media source"
+                    target: Activities.mediaSource.toUpperCase()
                     isShown: view.isShown
-                    enterDelay: (index + 1) * Motion.activity.stagger
-                    enterDuration: Motion.activity.faceEnter
-                    leaveDuration: Motion.activity.faceLeave
-                    leaveDelay: (2 - index) * Motion.activity.leaveStagger
-                    leaveWindow: 0
+                    color: Appearance.color.textMuted
+                    pixelSize: Appearance.activity.expanded.smallLabel
+                }
 
-                    GlyphButton {
-                        anchors.fill: parent
-                        glyphSize: Appearance.activity.expanded.controlGlyph
-                        glyphName: control.modelData === "toggle" ? (Activities.isPlaying ? "pause" : "play") : control.modelData
-                        isSelected: control.modelData === "toggle" && Activities.isPlaying
-                        onClicked: {
-                            if (control.modelData === "toggle")
-                                Activities.togglePlaying()
-                            else if (control.modelData === "next")
-                                Activities.next()
-                            else
-                                Activities.previous()
-                        }
-                    }
+                ScrambleText {
+                    label: "activity media title"
+                    target: Activities.title.length > 0 ? Activities.title : "NOTHING PLAYING"
+                    isShown: view.isShown
+                    color: Appearance.color.text
+                    pixelSize: Appearance.activity.expanded.smallBody
+                    spacing: 0
+                }
+
+                ScrambleText {
+                    label: "activity media artist"
+                    target: Activities.artist
+                    isShown: view.isShown
+                    color: Appearance.color.textMuted
+                    pixelSize: Appearance.activity.expanded.smallBody
+                    isBold: false
+                    spacing: 0
                 }
             }
+        }
+    }
+
+    ActivityBuds {
+        host: view.host
+        pill: view.pill
+        x: -view.x
+        y: -view.y
+        side: -1
+        label: "activity media controls"
+        isShown: view.isShown
+        items: [
+            { key: "previous", glyph: "previous" },
+            { key: "toggle", glyph: Activities.isPlaying ? "pause" : "play", isSelected: Activities.isPlaying },
+            { key: "next", glyph: "next" }
+        ]
+        onChosen: key => {
+            if (key === "toggle")
+                Activities.togglePlaying()
+            else if (key === "next")
+                Activities.next()
+            else
+                Activities.previous()
         }
     }
 }

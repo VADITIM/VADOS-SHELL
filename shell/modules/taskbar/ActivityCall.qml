@@ -13,7 +13,7 @@ Item {
 
     readonly property var look: Appearance.activity.call
     readonly property size bodySize: Qt.size(look.width, look.height)
-    readonly property real dropShare: Math.max(0, Math.min(1, (expansion - Motion.activity.dropStart) / (1 - Motion.activity.dropStart)))
+    readonly property real headSize: look.head * Math.min(1.1, expansion) * pill.popScale
     readonly property real detailsLeft: look.height / 2 + look.avatar / 2 + Appearance.activity.expanded.detailGap
     readonly property string elapsed: {
         const minutes = Math.floor(Activities.callSeconds / 60)
@@ -24,27 +24,16 @@ Item {
     width: look.width
     height: look.height
 
-    function dropCenterX(index) {
-        return look.width - look.height / 2 - index * (look.drop + look.dropSpacing)
-    }
-
-    Repeater {
+    LiquidShape {
         parent: view.host.liquidShapes
-        model: 2
-
-        LiquidShape {
-            required property int index
-            readonly property real size: view.look.drop * view.dropShare * view.pill.popScale
-            visible: size > 0.5
-            width: size
-            height: size
-            x: view.pill.x + view.x + view.dropCenterX(index) - size / 2
-            y: view.pill.y + view.pill.bodyHeight / 2 + (view.look.drop / 2 + view.look.dropGap) * view.dropShare - size / 2
-        }
+        visible: view.headSize > 0.5
+        width: view.headSize
+        height: view.headSize
+        x: view.pill.x + view.pill.expandedLeft + view.pill.bodyHeight / 2 - width / 2
+        y: view.pill.y - height / 2
     }
 
     Turn {
-        id: avatarTurn
         x: view.look.height / 2 - width / 2
         y: view.look.height / 2 - height / 2
         width: view.look.avatar
@@ -60,16 +49,18 @@ Item {
             height: view.look.avatar
             radius: width / 2
             color: Appearance.color.wash
+            border.width: Appearance.activity.media.ringStroke
+            border.color: Appearance.color.hairline
 
             Glyph {
                 anchors.centerIn: parent
-                width: Appearance.activity.expanded.glyph * 1.4
+                width: Appearance.activity.expanded.glyph * 1.6
                 height: width
                 name: "headset"
                 color: Appearance.color.accent
                 transform: Upright {
                     isMirrored: view.host.isMirrored
-                    axis: Appearance.activity.expanded.glyph * 0.7
+                    axis: Appearance.activity.expanded.glyph * 0.8
                 }
             }
         }
@@ -86,90 +77,51 @@ Item {
             axis: details.width / 2
         }
 
-        TypedText {
-            id: sourceLabel
-            target: Activities.callSource.toUpperCase()
-            isShown: view.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
-            color: Appearance.color.textMuted
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.activity.expanded.label
-            font.letterSpacing: Appearance.font.labelSpacing
-            font.bold: true
-        }
+        Column {
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Appearance.activity.expanded.lineGap
 
-        TypedText {
-            id: statusLine
-            y: sourceLabel.height + Appearance.activity.expanded.lineGap
-            target: Activities.isCalling ? "IN VOICE" : "NO CALL"
-            isShown: view.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
-            color: Appearance.color.text
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.activity.expanded.body
-            font.bold: true
-        }
+            ScrambleText {
+                label: "activity call source"
+                target: Activities.callSource.toUpperCase()
+                isShown: view.isShown
+                color: Appearance.color.textMuted
+                pixelSize: Appearance.activity.expanded.smallLabel
+            }
 
-        TypedText {
-            y: statusLine.y + statusLine.height + Appearance.activity.expanded.lineGap
-            target: Activities.isCalling ? view.elapsed : ""
-            isShown: view.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
-            color: Appearance.color.accent
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.activity.expanded.body
+            ScrambleText {
+                label: "activity call status"
+                target: Activities.isCalling ? "IN VOICE" : "NO CALL"
+                isShown: view.isShown
+                color: Appearance.color.text
+                pixelSize: Appearance.activity.expanded.smallBody
+                spacing: 0
+            }
+
+            ScrambleText {
+                label: "activity call time"
+                target: Activities.isCalling ? view.elapsed : ""
+                isShown: view.isShown
+                color: Appearance.color.accent
+                pixelSize: Appearance.activity.expanded.smallBody
+                isBold: false
+                spacing: 0
+            }
         }
     }
 
-    Repeater {
-        model: ["mic", "deafen"]
-
-        Turn {
-            id: dropFace
-            required property string modelData
-            required property int index
-            readonly property bool isMic: modelData === "mic"
-            readonly property bool isOff: isMic ? Activities.isMicMuted : Activities.isDeafened
-            x: view.dropCenterX(index) - width / 2
-            y: view.look.height + view.look.dropGap + (view.look.drop - height) / 2
-            width: Appearance.activity.expanded.glyph
-            height: Appearance.activity.expanded.glyph
-            isShown: view.isShown
-            enterDelay: (index + 2) * Motion.activity.stagger
-            enterDuration: Motion.activity.faceEnter
-            leaveDuration: Motion.activity.faceLeave
-            leaveDelay: index * Motion.activity.leaveStagger
-            leaveWindow: 0
-
-            Press {
-                target: dropFace
-                isPressed: dropArea.pressed
-                depth: Motion.press.glyph
-            }
-
-            Glyph {
-                anchors.fill: parent
-                name: dropFace.isMic ? (dropFace.isOff ? "mic-off" : "mic") : (dropFace.isOff ? "deafened" : "headphones")
-                color: dropFace.isOff ? Appearance.color.danger : dropArea.containsMouse ? Appearance.color.accent : Appearance.color.textBody
-                transform: Upright {
-                    isMirrored: view.host.isMirrored
-                    axis: Appearance.activity.expanded.glyph / 2
-                }
-            }
-
-            MouseArea {
-                id: dropArea
-                anchors.centerIn: parent
-                width: view.look.drop
-                height: view.look.drop
-                enabled: view.isShown
-                hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: dropFace.isMic ? Activities.toggleMic() : Activities.toggleDeafen()
-            }
-        }
+    ActivityBuds {
+        host: view.host
+        pill: view.pill
+        x: -view.x
+        y: -view.y
+        side: -1
+        label: "activity call controls"
+        isShown: view.isShown
+        items: [
+            { key: "mic", glyph: Activities.isMicMuted ? "mic-off" : "mic", isOff: Activities.isMicMuted },
+            { key: "deafen", glyph: Activities.isDeafened ? "deafened" : "headphones", isOff: Activities.isDeafened }
+        ]
+        onChosen: key => key === "mic" ? Activities.toggleMic() : Activities.toggleDeafen()
     }
 }

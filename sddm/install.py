@@ -12,7 +12,7 @@ THEME = os.path.join(HERE, "vados")
 SETTINGS = os.path.join(os.path.expanduser("~"), ".config", "vados", "shell.json")
 TARGET = "/usr/share/sddm/themes/vados"
 FACES = "/usr/share/sddm/faces"
-SELECTION = "/etc/sddm.conf.d/theme.conf"
+SELECTION = "/etc/sddm.conf.d/vados.conf"
 
 
 def read_settings():
@@ -56,8 +56,9 @@ def commands(folder, settings):
         f"sudo rm -rf {TARGET}",
         f"sudo cp -r {quoted} {TARGET}",
         f"sudo chmod -R a+rX {TARGET}",
+        f"sudo chmod 755 {TARGET}/Xsetup",
         "sudo mkdir -p /etc/sddm.conf.d",
-        f"printf '[Theme]\\nCurrent=vados\\n' | sudo tee {SELECTION}",
+        f"printf '[Theme]\\nCurrent=vados\\n\\n[X11]\\nDisplayCommand={TARGET}/Xsetup\\n' | sudo tee {SELECTION}",
     ]
     picture = os.path.expanduser(setting(settings, "profile.picture", ""))
     if picture and os.path.isfile(picture):

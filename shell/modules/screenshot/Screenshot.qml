@@ -27,6 +27,14 @@ Item {
     property int editingIndex: -1
     property string dragMode: ""
     property bool isCutting: false
+    property bool isShiftHeld: false
+    property var windows: []
+    property var past: []
+    property var dragBefore: null
+    property var textBefore: null
+    property real toolbarShift: 0
+    property real heldShift: 0
+    property real heldPointerY: 0
     property real presence: 0
 
     readonly property var look: Appearance.capture
@@ -36,6 +44,7 @@ Item {
     readonly property real pixelRatio: frameImage.implicitWidth > 0 && width > 0 ? frameImage.implicitWidth / width : 1
     readonly property point pointer: pointerHover.hovered ? pointerHover.point.position : Qt.point(-1, -1)
     readonly property bool isPointerInside: hasSelection && Ink.contains(selection, pointer)
+    readonly property var hoveredWindow: tool === "select" && dragMode === "" && !isOverHandle ? Ink.windowAt(windows, pointer) : null
     readonly property bool isEditing: tool === "select" || tool === "shape" || tool === "arrow"
     readonly property bool canCarry: isEditing || tool === "text"
     readonly property var handles: isEditing ? Ink.handlesOf(strokes) : []
@@ -59,6 +68,10 @@ Item {
         heldCorner = -1
         editingIndex = -1
         strokes = []
+        past = []
+        dragBefore = null
+        textBefore = null
+        toolbarShift = 0
         drawing = null
         dragMode = ""
         menu = ""
@@ -79,7 +92,13 @@ Item {
             tool = "shape"
     }
 
+    function remember(before) {
+        past = Ink.recorded(past, before, strokes)
+    }
+
     function editText(index) {
+        if (textBefore === null)
+            textBefore = strokes
         editingIndex = index
         textEditor.text = strokes[index].text
         textEditor.cursorPosition = textEditor.length
@@ -98,6 +117,8 @@ Item {
         editingIndex = -1
         if (strokes[index].text.trim().length === 0)
             strokes = Ink.removed(strokes, index)
+        remember(textBefore)
+        textBefore = null
         shot.forceActiveFocus()
     }
 
@@ -107,6 +128,7 @@ Item {
             editText(index)
             return
         }
+        textBefore = strokes
         strokes = strokes.concat([Ink.textOf(inkColor.toString(), look.textSize, { x: point.x, y: point.y - look.textSize * look.textLift })])
         editText(strokes.length - 1)
     }
@@ -124,7 +146,20 @@ Item {
     }
 
     function undo() {
-        strokes = Ink.undone(strokes)
+        const result = Ink.undone(past, strokes)
+        past = result.past
+        strokes = result.strokes
+    }
+
+    function holdToolbar(pointerY) {
+        heldShift = toolbarShift
+        heldPointerY = pointerY
+    }
+
+    function dragToolbar(pointerY, toolbarHeight) {
+        const lowest = toolbarHeight / 2 - pillCenterY
+        const highest = height - toolbarHeight / 2 - pillCenterY
+        toolbarShift = Math.max(lowest, Math.min(highest, heldShift + pointerY - heldPointerY))
     }
 
     function nudge(stepX, stepY) {
@@ -162,6 +197,7 @@ Item {
         const point = Ink.pointOf(pressed)
         finishText()
         menu = ""
+        dragBefore = strokes
         const isInside = hasSelection && Ink.contains(selection, point)
         const grab = isEditing ? Ink.grabOf(strokes, point, look.grab) : null
         const selectionCorner = Ink.cornerAt(selectionHandles, point, look.grab)
@@ -205,11 +241,19 @@ Item {
         else if (dragMode === "carry")
             strokes = Ink.replaced(strokes, heldIndex, Ink.shifted(heldStroke, travelX, travelY))
         else if (dragMode === "draw")
-            drawing = Ink.extended(drawing, point)
+            drawing = Ink.extended(drawing, point, isShiftHeld)
         else if (dragMode === "erase")
             strokes = Ink.erased(strokes, point, look.eraser)
         else if (dragMode === "select")
             selection = Ink.clampInto(Ink.rectOf(Ink.pointOf(gesture.pressPoint), point), bounds)
+    }
+
+    function pickWindow(point) {
+        const target = Ink.windowAt(windows, point)
+        if (!target)
+            return false
+        selection = Ink.clampInto(Ink.rectOf({ x: target.x, y: target.y }, { x: target.x + target.width, y: target.y + target.height }), bounds)
+        return true
     }
 
     function tap(tapped) {
@@ -222,8 +266,12 @@ Item {
             placeText(point)
         else if (tool === "select" && Ink.textAt(strokes, point, look.grab) >= 0)
             editText(Ink.textAt(strokes, point, look.grab))
-        else if (tool === "erase")
+        else if (tool === "erase") {
+            const before = strokes
             strokes = Ink.erased(strokes, point, look.eraser)
+            remember(before)
+        } else if (tool === "select" && pickWindow(point))
+            return
         else if (tool === "select" && hasSelection && !Ink.contains(selection, point))
             selection = Ink.centeredAt(selection, point, bounds)
     }
@@ -233,6 +281,8 @@ Item {
             strokes = strokes.concat([drawing])
         if (dragMode === "select" && !hasSelection)
             selection = Ink.isUsable(heldSelection, look.smallest) ? heldSelection : null
+        remember(dragBefore)
+        dragBefore = null
         drawing = null
         heldSelection = null
         heldStroke = null
@@ -304,7 +354,17 @@ Item {
         ScriptAction { script: shot.lifecycle.send("exited") }
     }
 
+    onIsShiftHeldChanged: {
+        if (dragMode === "draw" && drawing && drawing.kind === "paint")
+            drawing = Ink.straightened(drawing, isShiftHeld)
+    }
+
+    Keys.onReleased: event => {
+        shot.isShiftHeld = (event.modifiers & Qt.ShiftModifier) !== 0
+    }
+
     Keys.onPressed: event => {
+        shot.isShiftHeld = (event.modifiers & Qt.ShiftModifier) !== 0
         const isControl = (event.modifiers & Qt.ControlModifier) !== 0
         const step = (event.modifiers & Qt.ShiftModifier) !== 0 ? look.nudgeFar : look.nudge
         if (event.key === Qt.Key_Escape)
@@ -342,7 +402,7 @@ Item {
         id: frameImage
         anchors.fill: parent
         source: shot.frame
-        cache: false
+        cache: true
         smooth: true
         mipmap: true
     }
@@ -374,7 +434,7 @@ Item {
             width: shot.width
             height: shot.height
             source: shot.frame
-            cache: false
+            cache: true
             smooth: true
             mipmap: true
         }
@@ -420,6 +480,17 @@ Item {
             font.pixelSize: Appearance.font.chip
             font.letterSpacing: Appearance.font.labelSpacing
         }
+    }
+
+    Rectangle {
+        x: (shot.hoveredWindow?.x ?? 0) - border.width
+        y: (shot.hoveredWindow?.y ?? 0) - border.width
+        width: (shot.hoveredWindow?.width ?? 0) + border.width * 2
+        height: (shot.hoveredWindow?.height ?? 0) + border.width * 2
+        visible: shot.hoveredWindow !== null && !shot.isCutting
+        color: "transparent"
+        border.width: shot.look.outline
+        border.color: Appearance.color.textMuted
     }
 
     Rectangle {
@@ -485,6 +556,9 @@ Item {
             if (event.key === Qt.Key_Escape || ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter) && !isShift)) {
                 shot.finishText()
                 event.accepted = true
+            } else if ((event.modifiers & Qt.ControlModifier) !== 0 && event.key === Qt.Key_C && selectedText.length === 0) {
+                shot.cut()
+                event.accepted = true
             }
         }
 
@@ -502,8 +576,9 @@ Item {
     }
 
     Toolbar {
+        id: toolbar
         x: shot.isMirrored ? shot.width - shot.pillSpineX - width + spineX : shot.pillSpineX - spineX
-        y: shot.pillCenterY - height / 2
+        y: Math.max(0, Math.min(shot.height - height, shot.pillCenterY + shot.toolbarShift - height / 2))
         isShown: !shot.isCutting && shot.lifecycle.isShowing
         startSize: shot.pillSize
         startGlyph: shot.pillGlyph
@@ -516,5 +591,7 @@ Item {
         onMenuToggled: key => shot.toggleMenu(key)
         onColorPicked: value => shot.pickColor(value)
         onShapePicked: key => shot.pickShape(key)
+        onDragStarted: pointerY => shot.holdToolbar(pointerY)
+        onDragMoved: pointerY => shot.dragToolbar(pointerY, toolbar.height)
     }
 }

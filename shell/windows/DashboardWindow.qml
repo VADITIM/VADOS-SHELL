@@ -38,7 +38,7 @@ OverlayWindow {
         target: Weather
         property: "isActive"
         value: true
-        when: window.isOpen
+        when: window.isOpen && Config.data.dashboard.weather
         restoreMode: Binding.RestoreValue
     }
 
@@ -56,6 +56,7 @@ OverlayWindow {
         onIsCarryingChanged: window.carry(isCarrying)
         onCloseRequested: window.requestClose()
         hasTaskIcons: Config.data.dashboard.taskIcons
+        hasWeather: Config.data.dashboard.weather
         onLanded: window.land()
         onTaskIconsToggled: Config.setTaskIcons(!Config.data.dashboard.taskIcons)
     }

@@ -9,11 +9,12 @@ Item {
     property string labelFamily: Appearance.font.sans
     property var options: []
     property string current
+    property bool canInline: true
     readonly property var look: Appearance.settings.choice
     readonly property int currentIndex: options.indexOf(current)
     readonly property Item currentEntry: currentIndex >= 0 && entries.count === options.length ? entries.itemAt(currentIndex) : null
     readonly property bool hasLabel: label.length > 0
-    readonly property bool isInline: hasLabel && caption.implicitWidth + look.inlineGap + line.width <= width
+    readonly property bool isInline: canInline && hasLabel && caption.implicitWidth + look.inlineGap + line.width <= width
 
     signal picked(string option)
 

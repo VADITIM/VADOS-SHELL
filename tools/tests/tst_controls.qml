@@ -44,11 +44,17 @@ TestCase {
         compare(Controls.streamLabel(null, "", "node"), "node")
     }
 
-    function test_sectionsSkipEmptyGroups() {
-        const rows = Controls.sectionRows([{ key: "1" }], [], [{ key: "2" }, { key: "3" }])
-        compare(rows.map(row => row.key), ["header-output", "1", "header-stream", "2", "3"])
-        compare(rows[1].kind, "output")
-        compare(rows[3].kind, "stream")
+    function test_audioTabsListOneKindEach() {
+        const outputs = [{ key: "1" }]
+        const streams = [{ key: "2" }, { key: "3" }]
+        compare(Controls.audioTabs.map(tab => tab.label), ["OUTPUT", "INPUT", "STREAM"])
+        compare(Controls.tabRows(outputs, [], streams, "output").map(row => row.key), ["1"])
+        compare(Controls.tabRows(outputs, [], streams, "input"), [], "an empty tab lists nothing")
+        const listed = Controls.tabRows(outputs, [], streams, "stream")
+        compare(listed.map(row => row.key), ["2", "3"])
+        compare(listed[0].kind, "stream")
+        compare(Controls.audioTabOf("bogus"), "output", "a saved tab that no longer exists falls back to OUTPUT")
+        compare(Controls.tabRows(outputs, [], streams, "bogus").map(row => row.key), ["1"])
     }
 
     function test_iwdStationAndNetworksAreRead() {
@@ -68,6 +74,9 @@ TestCase {
         compare(networks[1].isSecured, false)
         compare(networks[1].ssid, "Cafe Free")
         compare(networks[0].isEnterprise, false)
+        const faint = Controls.parseIwdNetworks("      FRITZ!Box 6660 Cable VZ           psk                 *" + escape + "[1;90m***" + escape + "[0m    \n      Far                               psk                 " + escape + "[1;90m****" + escape + "[0m    \n")
+        compare(faint[0].strength, 0.25, "the greyed stars are the missing signal")
+        compare(faint[1].strength, 0)
         compare(Controls.parseIwdNetworks("      Campus                            8021x               ****    \n")[0].isEnterprise, true)
         compare(Controls.securityOf({ isSecured: true, isEnterprise: true }), "enterprise")
         compare(Controls.securityOf({ isSecured: true, isEnterprise: false }), "secured")

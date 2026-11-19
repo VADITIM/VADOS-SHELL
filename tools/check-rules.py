@@ -9,7 +9,11 @@ import animations
 SHELL = os.path.join(ROOT, "shell")
 
 ENGINE_TESTS = {
+    "shell/utils/Prompts.js": "tst_prompts.qml",
     "shell/utils/Liquid.js": "tst_liquid.qml",
+    "shell/utils/GitHub.js": "tst_github.qml",
+    "shell/utils/PillOrder.js": "tst_pillorder.qml",
+    "shell/utils/SliceText.js": "tst_slicetext.qml",
     "shell/state/Overlays.qml": "tst_overlays.qml",
     "shell/state/Attention.qml": "tst_attention.qml",
     "shell/state/ActivityState.qml": "tst_activity.qml",
@@ -54,9 +58,18 @@ ENGINE_TESTS = {
     "shell/utils/Ink.js": "tst_capture.qml",
     "shell/utils/Placement.js": "tst_placement.qml",
     "shell/utils/Widgets.js": "tst_widgets.qml",
+    "shell/utils/Keyboards.js": "tst_keyboards.qml",
+    "shell/utils/Keymap.js": "tst_keyboards.qml",
     "shell/utils/Displays.js": "tst_displays.qml",
     "shell/utils/Arithmetic.js": "tst_calculator.qml",
     "shell/utils/Builtins.js": "tst_calculator.qml",
+    "shell/utils/Boot.js": "tst_boot.qml",
+    "shell/utils/Scramble.js": "tst_scramble.qml",
+    "shell/components/ScrambleText.qml": "tst_scramble.qml",
+    "shell/components/Flood.qml": "tst_scramble.qml",
+    "shell/utils/Veil.js": "tst_veil.qml",
+    "shell/utils/Sling.js": "tst_sling.qml",
+    "shell/components/Cut.qml": "tst_veil.qml",
 }
 
 FEATURE_REGISTRY = "shell/utils/Features.js"
@@ -189,10 +202,10 @@ def check(files):
             "colours come from Appearance.color (rules/frontend.md)", scope="shell/modules/")
     only_in("tokens", r"\"#[0-9a-fA-F]{3,8}\"", set(),
             "colours come from Appearance.color (rules/frontend.md)", scope="shell/components/")
-    only_in("overlays", r"WlrLayershell\.keyboardFocus", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml", "shell/windows/TaskbarWindow.qml", "shell/windows/WidgetWindow.qml"},
-            "overlays are OverlayWindows registered in state/Overlays.qml; the taskbar takes the keyboard only while an extension field asks for text, the desktop only while a text widget is pointed at or typed in (rules/interaction.md)")
-    only_in("overlays", r"WlrLayer\.Overlay", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml", "shell/windows/TaskbarWindow.qml", "shell/windows/ClipboardDismissWindow.qml"},
-            "overlays are OverlayWindows registered in state/Overlays.qml; the taskbar rises only for an alert over a fullscreen window and the clipboard panel over an open menu (rules/interaction.md)")
+    only_in("overlays", r"WlrLayershell\.keyboardFocus", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml", "shell/windows/TaskbarWindow.qml", "shell/windows/WidgetWindow.qml", "shell/windows/PromptPanelWindow.qml"},
+            "overlays are OverlayWindows registered in state/Overlays.qml; the taskbar takes the keyboard only while an extension field asks for text or the password prompt is open (its panel over an open menu), the desktop only while a text widget is pointed at or typed in (rules/interaction.md)")
+    only_in("overlays", r"WlrLayer\.Overlay", {"shell/windows/OverlayWindow.qml", "shell/windows/FrameWindow.qml", "shell/windows/TaskbarWindow.qml", "shell/windows/ClipboardDismissWindow.qml", "shell/windows/PromptPanelWindow.qml"},
+            "overlays are OverlayWindows registered in state/Overlays.qml; the taskbar rises only for an alert over a fullscreen window and the clipboard and password panels over an open menu (rules/interaction.md)")
     only_in("lock", r"WlSessionLock", {"shell/windows/LockWindow.qml"},
             "the session lock lives only in windows/LockWindow.qml (rules/security.md)")
     only_in("lock", r"PamContext", {"shell/services/Lock.qml"},
@@ -352,7 +365,7 @@ def check(files):
             if f'overlayKey: "{key}"' not in sources.get(f"shell/windows/{window}.qml", ""):
                 flag("features", f"shell/windows/{window}.qml", 1, f"the window of `{key}` is an OverlayWindow with overlayKey \"{key}\" (rules/features.md)")
             if not re.search(r"OverlaySlot \{[^{}]*overlayKey: \"" + re.escape(key) + r"\"[^{}]*\b" + re.escape(window) + r" \{", sources.get("shell/shell.qml", "")):
-                flag("features", "shell/shell.qml", 1, f"`{key}` is built but shell.qml has no OverlaySlot with overlayKey \"{key}\" holding its {window} per screen; an overlay window exists only while wanted (rules/features.md)")
+                flag("features", "shell/shell.qml", 1, f"`{key}` is built but shell.qml has no OverlaySlot with overlayKey \"{key}\" holding its {window}; every overlay window is built once at startup and moved to the screen it opens on (rules/features.md)")
             if f'target: "{key}"' not in sources.get("shell/keybinds/Shortcuts.qml", ""):
                 flag("features", "shell/keybinds/Shortcuts.qml", 1, f"`{key}` is built but has no IPC target \"{key}\" (rules/features.md)")
         if surface == "window":

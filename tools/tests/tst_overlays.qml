@@ -236,6 +236,27 @@ TestCase {
         compare(gathers, 1)
     }
 
+    function test_movedOverlayLeavesNothingOnItsLastScreen() {
+        Overlays.open("dashboard", "A")
+        Overlays.reportPhase("dashboard", "A", "active")
+        Overlays.placeVisitor("dashboard", "A", { x: 1 })
+        Overlays.close("dashboard")
+        Overlays.reportPhase("dashboard", "A", "exiting")
+        Overlays.open("dashboard", "B")
+        Overlays.move("dashboard", "A", "B", "exiting")
+        compare(Overlays.phaseOf("dashboard", "A"), "idle")
+        compare(Overlays.visitorOn("A"), null)
+        verify(!Overlays.isTaskbarAway("A"), "the screen it left gets its taskbar back")
+        compare(Overlays.phaseOf("dashboard", "B"), "exiting")
+        verify(Overlays.isTaskbarAway("B"))
+    }
+
+    function test_firstMoveOfAnIdleOverlayReportsNothing() {
+        Overlays.move("search", "", "A", "idle")
+        compare(Object.keys(Overlays.phases["A"] ?? {}).length, 0)
+        verify(!Overlays.isTaskbarAway("A"))
+    }
+
     function test_lostScreenLeavesNothingBehind() {
         Overlays.open("search", "B")
         Overlays.placeTaskbarParts("B", [{ x: 1 }])

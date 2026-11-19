@@ -37,6 +37,8 @@ Item {
     signal menuToggled(string key)
     signal colorPicked(color value)
     signal shapePicked(string key)
+    signal dragStarted(real pointerY)
+    signal dragMoved(real pointerY)
 
     width: Math.max(sideX + Math.max(panelWidth, shapesWidth), spineX - thickness / 2 + startSize.width) + margin
     height: margin * 2 + Math.max(length, panelHeight, startSize.height)
@@ -60,6 +62,22 @@ Item {
         if (key === "shape")
             return Ink.shapeOf(shapeKind).glyph
         return Ink.toolOf(key).glyph
+    }
+
+    function toolIndexAt(localY) {
+        const pitch = look.tool + look.toolGap
+        return Math.max(0, Math.min(Ink.tools.length - 1, Math.round((localY - look.toolPadding - look.tool / 2) / pitch)))
+    }
+
+    function pointerYOf(travelY) {
+        return barGesture.mapToItem(null, barGesture.pressPoint.x, barGesture.pressPoint.y + travelY).y
+    }
+
+    function activate(key) {
+        if (key === "color" || key === "shape")
+            menuToggled(key)
+        else
+            toolPicked(key)
     }
 
     function isPicked(key) {
@@ -90,7 +108,7 @@ Item {
         anchors.fill: parent
         isShown: toolbar.isRendering
         fill: Appearance.color.panel
-        rim: Appearance.color.hairline
+        rim: Appearance.color.accent
         fillAlpha: Appearance.color.panelAlpha
         melt: Appearance.taskbar.melt
 
@@ -132,12 +150,22 @@ Item {
         }
     }
 
-    MouseArea {
+    Gesture {
+        id: barGesture
+        readonly property int pressedIndex: toolbar.toolIndexAt(pressPoint.y)
         x: toolbar.spineX - toolbar.thickness / 2
         y: toolbar.centerY - toolbar.length / 2
         width: toolbar.thickness
         height: toolbar.length
         enabled: toolbar.isShown
+        isHorizontal: false
+        cursorShape: isDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+        onCrossed: toolbar.dragStarted(toolbar.pointerYOf(0))
+        onMoved: (travelX, travelY) => {
+            if (isDragging)
+                toolbar.dragMoved(toolbar.pointerYOf(travelY))
+        }
+        onTapped: mouse => toolbar.activate(Ink.tools[toolbar.toolIndexAt(mouse.y)].key)
     }
 
     MouseArea {
@@ -204,14 +232,13 @@ Item {
             width: toolbar.look.tool
             height: toolbar.look.tool
             isShown: toolbar.isShown
-            enterDelay: Math.abs(index - (Ink.tools.length - 1) / 2) * Motion.capture.stagger
-            enterDuration: Motion.capture.faceEnter
-            leaveDuration: Motion.capture.faceLeave
+            enterDuration: 0
+            leaveDuration: 0
             leaveWindow: 0
 
             Press {
                 target: toolFace
-                isPressed: toolArea.pressed
+                isPressed: barGesture.pressed && !barGesture.isDragging && barGesture.pressedIndex === toolFace.index
                 depth: Motion.press.glyph
             }
 
@@ -240,7 +267,9 @@ Item {
                 x: (parent.width + toolbar.thickness) / 2 + toolbar.look.hotkeyGap
                 anchors.verticalCenter: parent.verticalCenter
                 text: toolFace.modelData.hotkey
-                color: Appearance.color.textFaint
+                color: Appearance.color.accent
+                style: Text.Raised
+                styleColor: toolbar.look.hotkeyShade
                 font.family: Appearance.font.sans
                 font.pixelSize: toolbar.look.hotkeySize
                 font.bold: true
@@ -255,14 +284,8 @@ Item {
                 anchors.fill: parent
                 enabled: toolbar.isShown
                 hoverEnabled: true
-                cursorShape: Qt.PointingHandCursor
-                onClicked: {
-                    const key = toolFace.modelData.key
-                    if (key === "color" || key === "shape")
-                        toolbar.menuToggled(key)
-                    else
-                        toolbar.toolPicked(key)
-                }
+                acceptedButtons: Qt.NoButton
+                cursorShape: barGesture.isDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
             }
         }
     }

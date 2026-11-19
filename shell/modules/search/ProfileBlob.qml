@@ -32,6 +32,7 @@ Item {
 
     readonly property var look: Appearance.search.profile
     readonly property var actions: [
+        { key: "logout", glyph: "logout", isGuarded: true },
         { key: "lock", glyph: "lock", isGuarded: false },
         { key: "suspend", glyph: "moon", isGuarded: false },
         { key: "restart", glyph: "restart", isGuarded: true },
@@ -118,6 +119,9 @@ Item {
             break
         case "suspend":
             Power.suspend()
+            break
+        case "logout":
+            Power.logOut()
             break
         case "restart":
             Power.restart()
@@ -374,7 +378,7 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     radius: width / 2
-                    color: button.isArmed ? Appearance.color.danger : Appearance.color.wash
+                    color: button.isArmed ? Appearance.color.powerColors[button.modelData.key] : Appearance.color.wash
                     opacity: button.isArmed ? profile.look.armedWash : buttonArea.containsMouse || button.isSelected ? 1 : 0
                     border.width: button.isSelected ? profile.look.ring : 0
                     border.color: Appearance.color.accent
@@ -392,7 +396,7 @@ Item {
                     width: profile.look.buttonGlyph
                     height: profile.look.buttonGlyph
                     name: button.modelData.glyph
-                    color: button.isArmed ? Appearance.color.danger : button.isSelected ? Appearance.color.accent : Appearance.color.textBody
+                    color: button.isArmed ? Appearance.color.text : Appearance.color.powerColors[button.modelData.key]
                 }
             }
 

@@ -303,39 +303,53 @@ FocusScope {
             width: menu.width
             height: menu.height
 
-            ListView {
-                id: listView
+            Masked {
                 x: menu.edgeX(menu.listX, width)
                 y: menu.look.top
                 width: menu.listWidth
                 height: menu.listBottom - y
-                clip: true
-                spacing: 0
-                boundsBehavior: Flickable.DragOverBounds
-                model: rows
-                currentIndex: menu.zone === "list" ? menu.cursor : -1
-                onCurrentIndexChanged: if (currentIndex >= 0) listDrift.glideAround(() => positionViewAtIndex(currentIndex, ListView.Contain))
-
-                Drift {
-                    id: listDrift
+                mask: Rectangle {
+                    id: listMask
+                    readonly property real fadeShare: Math.min(0.5, menu.look.listFade / Math.max(1, height))
+                    anchors.fill: parent
+                    gradient: Gradient {
+                        GradientStop { position: 0; color: "transparent" }
+                        GradientStop { position: listMask.fadeShare; color: "white" }
+                        GradientStop { position: 1 - listMask.fadeShare; color: "white" }
+                        GradientStop { position: 1; color: "transparent" }
+                    }
                 }
 
-                delegate: NotificationRow {
-                    required property string key
-                    required property string appName
-                    required property string desktopEntry
-                    required property string summary
-                    required property string body
-                    required property string icon
-                    required property int index
-                    width: listView.width
-                    entry: ({ key: key, appName: appName, desktopEntry: desktopEntry, summary: summary, body: body, icon: icon })
-                    isShown: menu.isContentShown
-                    isSelected: menu.zone === "list" && menu.cursor === index
-                    enterDelay: Math.min(index, menu.look.staggerRows) * Motion.notifications.stagger
-                    onActivated: menu.openEntry(menu.entryOf(key))
-                    onForgotten: Qt.callLater(menu.forgetEntry, menu.entryOf(key))
-                    onPointed: menu.select("list", index)
+                ListView {
+                    id: listView
+                    anchors.fill: parent
+                    spacing: 0
+                    boundsBehavior: Flickable.DragOverBounds
+                    model: rows
+                    currentIndex: menu.zone === "list" ? menu.cursor : -1
+                    onCurrentIndexChanged: if (currentIndex >= 0) listDrift.glideAround(() => positionViewAtIndex(currentIndex, ListView.Contain))
+
+                    Drift {
+                        id: listDrift
+                    }
+
+                    delegate: NotificationRow {
+                        required property string key
+                        required property string appName
+                        required property string desktopEntry
+                        required property string summary
+                        required property string body
+                        required property string icon
+                        required property int index
+                        width: listView.width
+                        entry: ({ key: key, appName: appName, desktopEntry: desktopEntry, summary: summary, body: body, icon: icon })
+                        isShown: menu.isContentShown
+                        isSelected: menu.zone === "list" && menu.cursor === index
+                        enterDelay: Math.min(index, menu.look.staggerRows) * Motion.notifications.stagger
+                        onActivated: menu.openEntry(menu.entryOf(key))
+                        onForgotten: Qt.callLater(menu.forgetEntry, menu.entryOf(key))
+                        onPointed: menu.select("list", index)
+                    }
                 }
             }
 

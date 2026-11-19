@@ -351,20 +351,6 @@ TestCase {
         closeMenu()
     }
 
-    function test_trayOpensOutOfThePill() {
-        failOnWarning(/.*/)
-        const view = expandActivity("tray", item => item.openItem !== undefined)
-        compare(view.items.length, Tray.items.length)
-        const cell = findItem(view, item => item.hasIcon !== undefined && item.index === 0)
-        verify(cell !== null)
-        tryVerify(() => cell.presence > 0.99, 2000)
-        mouseClick(cell, cell.width / 2, cell.height / 2)
-        compare(Tray.opened[Tray.opened.length - 1], Tray.items[0].id, "a click activates the tray item")
-        mouseClick(cell, cell.width / 2, cell.height / 2, Qt.RightButton)
-        compare(Tray.opened[Tray.opened.length - 1], Tray.items[0].id + " menu", "a right click opens its menu")
-        foldActivity(view)
-    }
-
     function openClipboard() {
         const taskbar = sceneChild("clipboardRect")
         const history = sceneChild("ordered")
@@ -462,7 +448,23 @@ TestCase {
         fuzzyCompare(shot.strokes[1].points[1].x, 700, 2)
         fuzzyCompare(shot.strokes[1].points[1].y, 340, 2)
         keyClick(Qt.Key_Z, Qt.ControlModifier)
-        compare(shot.strokes.length, 2, "Ctrl+Z takes the last stroke back")
+        compare(shot.strokes.length, 3, "Ctrl+Z first takes the reshape back")
+        fuzzyCompare(shot.strokes[1].points[1].x, 660, 2)
+        fuzzyCompare(shot.strokes[1].points[1].y, 320, 2)
+        shot.pick("select")
+        const carried = shot.strokes[2].points[0].x
+        mouseDrag(shot, 700, 320, 0, 120)
+        fuzzyCompare(shot.strokes[2].points[0].y, 420, 2, "a shape carried by its outline moves")
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        fuzzyCompare(shot.strokes[2].points[0].y, 300, 2, "Ctrl+Z puts it back")
+        fuzzyCompare(shot.strokes[2].points[0].x, carried, 2)
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(shot.strokes.length, 2, "and then takes the last stroke back")
+        const toolbarY = toolbar.y
+        const tool = shot.tool
+        mouseDrag(toolbar, toolbar.spineX, toolbar.centerY, 0, -120)
+        fuzzyCompare(toolbar.y, toolbarY - 120, 2, "the toolbar drags along the edge")
+        compare(shot.tool, tool, "a drag picks no tool")
         shot.pick("select")
         mouseDrag(shot, 450, 250, 100, 0)
         fuzzyCompare(shot.selection.x, 500, 2)

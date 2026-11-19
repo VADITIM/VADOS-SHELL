@@ -38,6 +38,16 @@ TestCase {
         compare(Clipboard.shown(entries, 2)[0].text, "entry 1", "pinned entries are shown first")
     }
 
+    function test_dividerSitsOnlyBetweenBothGroups() {
+        let entries = fill(3, 3)
+        compare(Clipboard.pinnedBoundary(Clipboard.shown(entries, 3)), -1, "no divider without pinned entries")
+        entries = Clipboard.togglePin(entries, entries[2].key)
+        compare(Clipboard.pinnedBoundary(Clipboard.shown(entries, 3)), 1, "the divider sits after the pinned group")
+        for (const entry of entries.filter(entry => !entry.isPinned))
+            entries = Clipboard.togglePin(entries, entry.key)
+        compare(Clipboard.pinnedBoundary(Clipboard.shown(entries, 3)), -1, "no divider when every entry is pinned")
+    }
+
     function test_copyingAgainMovesWithoutDuplicates() {
         let entries = fill(3, 150)
         entries = Clipboard.togglePin(entries, entries[2].key)

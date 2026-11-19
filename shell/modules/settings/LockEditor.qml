@@ -3,21 +3,17 @@ import qs.config
 import qs.components
 import "../../utils/Lock.js" as Lock
 
-Column {
+Item {
     id: editor
 
+    required property var carousel
     property var layout: []
     property string picked: ""
-    property string wallpaper: ""
     property int blankAfter: 60
-    property real areaWidth: 0
-    property real areaHeight: 0
-    property real screenAspect: 0
+    property bool isEditing: false
     readonly property var look: Appearance.settings.lock
-    readonly property real gridWidth: screenAspect > 0 ? Math.max(0, Math.min(areaWidth, (areaHeight - look.footer) / screenAspect)) : areaWidth
-    readonly property real gridHeight: screenAspect > 0 ? gridWidth * screenAspect : Math.max(0, areaHeight - look.footer)
-    readonly property real barWidth: gridWidth * look.barShare
-    readonly property real barX: (gridWidth - barWidth) / 2
+    readonly property real gridWidth: carousel.mainWidth
+    readonly property real gridHeight: carousel.mainHeight
     readonly property real cellWidth: gridWidth / Lock.columns
     readonly property real cellHeight: gridHeight / Lock.rows
     readonly property var placements: Lock.parse(layout)
@@ -26,55 +22,28 @@ Column {
 
     signal layoutRequested(var entries)
     signal pickRequested(string key)
-    signal wallpaperRequested(string value)
     signal blankAfterRequested(int seconds)
-
-    spacing: Appearance.settings.section.rowGap
-    x: Math.round((areaWidth - gridWidth) / 2)
-    y: Math.max(0, Math.round((areaHeight - gridHeight) / 2 - options.height - spacing))
+    signal editingRequested(bool isOn)
 
     OptionGroup {
-        id: options
-        x: editor.barX
-        width: editor.barWidth
-        label: "SCREEN OFF AFTER"
-        options: Object.keys(editor.blankChoices)
-        current: Object.keys(editor.blankChoices).find(option => editor.blankChoices[option] === editor.blankAfter) ?? ""
-        onPicked: option => editor.blankAfterRequested(editor.blankChoices[option])
+        x: editor.carousel.mainLeft + editor.gridWidth - width
+        y: editor.carousel.mainTop - Appearance.settings.wallpaper.captionGap - height
+        width: Math.min(Appearance.settings.wallpaper.fieldWidth, editor.gridWidth)
+        label: "WIDGETS EDIT MODE"
+        options: ["off", "on"]
+        current: editor.isEditing ? "on" : "off"
+        onPicked: option => editor.editingRequested(option === "on")
     }
 
     Piece {
         role: "surface"
+        x: editor.carousel.mainLeft
+        y: editor.carousel.mainTop
 
         Item {
             id: frame
             width: editor.gridWidth
             height: editor.gridHeight
-
-            Rectangle {
-                anchors.fill: parent
-                radius: Appearance.unit.small
-                color: Appearance.color.raised
-            }
-
-            Masked {
-                anchors.fill: parent
-                visible: editor.wallpaper.length > 0
-
-                mask: Rectangle {
-                    anchors.fill: parent
-                    radius: Appearance.unit.small
-                }
-
-                Image {
-                    anchors.fill: parent
-                    source: editor.wallpaper.length === 0 ? "" : editor.wallpaper.startsWith("/") ? "file://" + editor.wallpaper : editor.wallpaper
-                    sourceSize.width: Appearance.settings.wallpaper.previewWidth
-                    fillMode: Image.PreserveAspectCrop
-                    asynchronous: true
-                    opacity: editor.look.wallpaperShade
-                }
-            }
 
             Rectangle {
                 anchors.fill: parent
@@ -86,6 +55,7 @@ Column {
 
             Lattice {
                 anchors.fill: parent
+                visible: editor.isEditing
                 columnLines: Lock.columns - 1
                 rowLines: Lock.rows - 1
                 firstX: editor.cellWidth
@@ -109,13 +79,20 @@ Column {
                     width: modelData.columns * editor.cellWidth
                     height: modelData.rows * editor.cellHeight
                     isCentered: true
+                    opacity: editor.isEditing ? 1 : 0
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: Motion.pace(Motion.stateDuration)
+                        }
+                    }
 
                     Rectangle {
                         anchors.fill: parent
                         radius: Appearance.unit.small
                         color: Qt.alpha(Appearance.color.accent, editor.look.tileAlpha)
                         border.width: tile.isPicked ? editor.look.outline : 1
-                        border.color: Appearance.color.accent
+                        border.color: Appearance.color.text
                         opacity: tile.isPicked ? editor.look.pickedShade : 1
 
                         Text {
@@ -151,6 +128,7 @@ Column {
             MouseArea {
                 id: area
                 anchors.fill: parent
+                enabled: editor.isEditing
                 hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                 cursorShape: Qt.PointingHandCursor
@@ -175,12 +153,14 @@ Column {
         }
     }
 
-    TextField {
-        label: "WALLPAPER"
-        x: editor.barX
-        fieldWidth: editor.barWidth
-        placeholder: "IMAGE PATH"
-        value: editor.wallpaper
-        onEdited: value => editor.wallpaperRequested(value)
+    OptionGroup {
+        x: editor.carousel.mainLeft + editor.gridWidth - width
+        y: editor.carousel.mainTop + editor.gridHeight + Appearance.settings.wallpaper.captionGap
+        width: Math.min(Appearance.settings.wallpaper.fieldWidth, editor.gridWidth)
+        canInline: false
+        label: "SCREEN OFF AFTER"
+        options: Object.keys(editor.blankChoices)
+        current: Object.keys(editor.blankChoices).find(option => editor.blankChoices[option] === editor.blankAfter) ?? ""
+        onPicked: option => editor.blankAfterRequested(editor.blankChoices[option])
     }
 }

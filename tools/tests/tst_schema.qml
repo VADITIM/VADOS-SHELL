@@ -65,6 +65,8 @@ TestCase {
         verify(Schema.findProblem("lock.blankAfter", 30.5) !== "")
         verify(Schema.findProblem("lock.blankAfter", "60") !== "")
         verify(Schema.findProblem("lock.blankAfter", 86401) !== "")
+        verify(Schema.findProblem("lock.sleepAfter", 300) === "")
+        verify(Schema.findProblem("lock.sleepAfter", -1) !== "")
     }
 
     function test_cleanSettingsAreIdempotent() {

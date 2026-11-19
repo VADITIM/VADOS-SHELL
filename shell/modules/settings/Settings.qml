@@ -19,7 +19,9 @@ FocusScope {
     property bool hasCircle: false
     property color accent: Appearance.color.defaultAccent
     property string taskbarSide: "left"
-    property string barStyle: "floating"
+    property string taskbarOverlap: "hide"
+    property var taskbarOrder: []
+    property var taskbarHidden: []
     property string taskbarGather: "merge"
     property string windowMode: "canvas"
     property bool canSwitchMode: false
@@ -36,17 +38,18 @@ FocusScope {
     property string profileSecondName: ""
     property string profilePicture: ""
     property string profileGithub: ""
-    property real pillOpacity: 0.94
-    property real pillBlur: 1
-    property string pillColor: ""
+    property var profileFavorites: []
     property bool isMediaPlayerOn: true
+    property bool isDashboardWeatherOn: true
     property bool isNotificationsOn: false
+    property bool isPromptsOn: false
     property var lockLayout: []
     property string lockWallpaper: ""
     property int lockBlankAfter: 60
     property string wallpaper: ""
     property string wallpaperFolder: ""
     property var widgetsLayout: []
+    property var keyboardLayouts: []
     property var widgetScreens: []
     property string widgetScreen: ""
     property bool canConfigureDisplays: false
@@ -55,13 +58,17 @@ FocusScope {
     property int outputTrialLeft: 0
     property real screenAspect:height > 0 && width > 0 ? height / width : 0.5625
     property string pickedModule: ""
+    property bool isLockEditing: false
+    property string carouselTab: ""
+    property bool isCaptionHeld: false
     property var widgetPreviews: ({})
     property string openingTab: ""
     property string tab: "home"
     property string shownTab: tab
     property string subTab: ""
     property string shownSubTab: subTab
-    readonly property bool isPresent: isOpen || burst.isActive || panelBurst.isActive || rising.living > 0
+    property bool isSubFocused: false
+    readonly property bool isPresent: isOpen || burst.isActive || panelBurst.isActive || lockShot.width > 0.5 || rising.living > 0
     readonly property string phase: burst.phase
     readonly property bool isContentShown: burst.isOpened
     readonly property var visitor: burst.visitor
@@ -121,31 +128,26 @@ FocusScope {
                     glyph: "grid"
                 },
                 {
-                    key: "pills",
-                    label: "PILLS",
-                    glyph: "drop"
-                },
-                {
-                    key: "taskbar",
-                    label: "TASKBAR",
-                    glyph: "style-floating"
-                },
-                {
                     key: "font",
                     label: "SYSTEM FONT",
                     glyph: "text"
+                },
+                {
+                    key: "keyboard",
+                    label: "KEYBOARD",
+                    glyph: "keyboard"
                 }
             ],
             advanced: [
                 {
-                    key: "vados",
-                    label: "LINK TO VAD/OS",
-                    glyph: "link"
-                },
-                {
                     key: "services",
                     label: "SERVICES",
-                    glyph: "dots"
+                    glyph: "bolt"
+                },
+                {
+                    key: "vados",
+                    label: "VAD/OS",
+                    glyph: "link"
                 }
             ]
         })
@@ -157,14 +159,19 @@ FocusScope {
     readonly property real rootX: Appearance.taskbar.margin
     readonly property real formWidth: Math.round(width * look.bodyShare * (1 - look.rightSpace) + look.endPadding)
     readonly property real navigationX: rootX + look.inset
+    readonly property real mainBarX: navigationX
     readonly property real subBarX: navigationX + look.navigation.width + look.navigation.gap
-    property real contentX: (hasSubBar ? subBarX + look.navigation.width : navigationX + look.navigation.width) + look.contentGap
+    property real contentX: subBarX + look.navigation.width + look.contentGap
     readonly property real contentSpan: Math.max(0, formWidth - look.endPadding - (contentX - rootX))
+    readonly property real profileLead: contentX - mainBarX - look.navigation.width
     readonly property real centerY: Math.round(height / 2)
     readonly property bool isLockShown: isContentShown && shownTab === "customization" && shownSubTab === "lock"
     readonly property bool isDisplaysShown: displaysHolder.isShown
+    readonly property bool isServicesShown: servicesHolder.isShown
+    readonly property string loginHint: Login.isBusy ? "ACCEPT THE ADMIN PROMPT TO CHANGE THE LOGIN SCREEN" : Login.problem === "agent" ? "NO POLKIT AGENT RUNNING" : Login.problem === "failed" ? "THE LOGIN SCREEN DID NOT CHANGE" : ""
+    readonly property string bootHint: Boot.isBusy ? "REBUILDING THE BOOT IMAGE" : Boot.problem === "agent" ? "NO POLKIT AGENT RUNNING" : Boot.problem === "failed" ? "THE BOOT IMAGE DID NOT BUILD; NOTHING CHANGED" : Boot.needsPlymouth ? "INSTALL PLYMOUTH FOR THE ANIMATED BOOT SCREEN" : ""
     readonly property bool isWidgetsShown: isContentShown && shownTab === "customization" && shownSubTab === "widgets"
-    readonly property bool isSideWanted: isContentShown && ((tab === "customization" && (subTab === "lock" || subTab === "widgets")) || (tab === "settings" && subTab === "displays"))
+    readonly property bool isSideWanted: isContentShown && ((tab === "customization" && ((subTab === "lock" && isLockEditing) || subTab === "widgets")) || (tab === "settings" && subTab === "displays"))
     readonly property var lockRows: arrangeLockRows()
     readonly property real lockContentHeight: lockRows.length > 0 ? lockRows[lockRows.length - 1].y + lockRows[lockRows.length - 1].height : 0
     readonly property var panel: look.lock
@@ -190,7 +197,9 @@ FocusScope {
     signal landed
     signal accentRequested(color value)
     signal sideRequested(string side)
-    signal styleRequested(string style)
+    signal overlapRequested(string overlap)
+    signal orderRequested(var order)
+    signal hiddenRequested(var hidden)
     signal gatherRequested(string gather)
     signal modeRequested(string mode)
     signal reducedMotionRequested(bool isReduced)
@@ -199,16 +208,22 @@ FocusScope {
     signal chargeLimitRequested(bool isLimited)
     signal folderRequested(string kind, string folder)
     signal profileRequested(string field, string value)
+    signal favoritesRequested(var names)
     signal pictureRequested
-    signal pillRequested(string field, var value)
     signal mediaPlayerRequested(bool isOn)
+    signal dashboardWeatherRequested(bool isOn)
     signal notificationsRequested(bool isOn)
+    signal bootRequested(string part, bool isOn)
+    signal loginRequested(string choice)
+    signal promptsRequested(bool isOn)
     signal lockLayoutRequested(var entries)
     signal lockWallpaperRequested(string value)
     signal lockBlankAfterRequested(int seconds)
     signal widgetsLayoutRequested(var entries)
     signal fontRequested(string family)
+    signal keyboardLayoutsRequested(var entries)
     signal choiceStyleRequested(string style)
+    signal pillToneRequested(string tone)
     signal choiceColorRequested(string style, string value)
     signal wallpaperRequested(string path)
     signal wallpaperFolderRequested(string folder)
@@ -263,6 +278,17 @@ FocusScope {
         pick(tabs[(from + direction + tabs.length) % tabs.length].key);
     }
 
+    function stepFocused(direction) {
+        if (isSubFocused && hasSubBar)
+            stepSub(direction);
+        else
+            step(direction);
+    }
+
+    function moveFocus(towardContent) {
+        isSubFocused = towardContent && hasSubBar;
+    }
+
     function stepSub(direction) {
         if (!hasSubBar)
             return;
@@ -272,14 +298,22 @@ FocusScope {
 
     onIsLockShownChanged: if (!isLockShown)
         pickedModule = ""
+    onIsLockEditingChanged: if (!isLockEditing)
+        pickedModule = ""
     onTabChanged: {
         const entries = subTabsByTab[tab] ?? [];
         subTab = entries.length > 0 ? entries[0].key : "";
+        if (entries.length === 0)
+            isSubFocused = false;
         shownTab = "";
         shownSubTab = "";
         pageSwap.restart();
     }
     onSubTabChanged: {
+        const isCarousel = subTab === "wallpaper" || subTab === "lock" || subTab === "widgets";
+        isCaptionHeld = (subTab === "wallpaper" || subTab === "lock") && (carouselTab === "wallpaper" || carouselTab === "lock");
+        wallpaperPage.switchTo(carouselTab, subTab, isCarousel && carouselTab.length > 0 && carouselTab !== subTab);
+        carouselTab = isCarousel ? subTab : "";
         shownSubTab = "";
         pageSwap.restart();
     }
@@ -288,6 +322,7 @@ FocusScope {
             return;
         tab = openingTab.length > 0 ? openingTab : "home";
         subTab = subTabs.length > 0 ? subTabs[0].key : "";
+        isSubFocused = false;
         forceActiveFocus();
     }
     Component.onCompleted: subTab = subTabs.length > 0 ? subTabs[0].key : ""
@@ -306,18 +341,31 @@ FocusScope {
         }
     }
 
+    function nudgeDisplay(event) {
+        const step = (event.modifiers & Qt.ShiftModifier) ? Appearance.settings.displays.grid : 1;
+        const moves = { [Qt.Key_Left]: [-step, 0], [Qt.Key_Right]: [step, 0], [Qt.Key_Up]: [0, -step], [Qt.Key_Down]: [0, step] };
+        const move = moves[event.key];
+        return move !== undefined && displayEditor.nudge(move[0], move[1]);
+    }
+
     Keys.onPressed: event => {
-        if (event.key === Qt.Key_Escape || (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)))
+        if (isDisplaysShown && nudgeDisplay(event))
+            event.accepted = true;
+        else if (event.key === Qt.Key_Escape || (event.key === Qt.Key_P && (event.modifiers & Qt.ControlModifier)))
             closeRequested();
-        else if (event.key === Qt.Key_Down || event.key === Qt.Key_Tab)
+        else if (event.key === Qt.Key_Down)
+            stepFocused(1);
+        else if (event.key === Qt.Key_Up)
+            stepFocused(-1);
+        else if (event.key === Qt.Key_Tab)
             step(1);
-        else if (event.key === Qt.Key_Up || event.key === Qt.Key_Backtab)
+        else if (event.key === Qt.Key_Backtab)
             step(-1);
         else if (event.key === Qt.Key_Right)
-            stepSub(isMirrored ? -1 : 1);
+            moveFocus(!isMirrored);
         else if (event.key === Qt.Key_Left)
-            stepSub(isMirrored ? 1 : -1);
-        else if (shownSubTab === "wallpaper" && (event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp))
+            moveFocus(isMirrored);
+        else if ((shownSubTab === "wallpaper" || shownSubTab === "lock") && (event.key === Qt.Key_PageDown || event.key === Qt.Key_PageUp))
             wallpaperPage.step(event.key === Qt.Key_PageDown ? 1 : -1);
         else if (isDisplaysShown && (event.key === Qt.Key_Return || event.key === Qt.Key_Enter))
             displayEditor.confirm();
@@ -348,9 +396,26 @@ FocusScope {
     }
 
     MouseArea {
-        x: settings.edgeX(settings.rootX, width)
-        width: settings.formWidth
-        height: settings.height
+        x: navigationBar.x
+        y: navigationBar.y
+        width: navigationBar.width
+        height: navigationBar.height
+        enabled: settings.isOpen
+    }
+
+    MouseArea {
+        x: subBar.x
+        y: subBar.y
+        width: subBar.width
+        height: subBar.height
+        enabled: settings.isOpen && settings.hasSubBar
+    }
+
+    MouseArea {
+        x: content.x
+        y: content.y
+        width: content.width
+        height: content.height
         enabled: settings.isOpen
     }
 
@@ -506,32 +571,20 @@ FocusScope {
         }
     }
 
-    Turn {
-        x: settings.edgeX(settings.rootX + settings.formWidth - settings.look.clock.inset - width, width)
-        y: settings.height - settings.look.clock.inset - height
-        isShown: settings.isContentShown
-        enterEasing: Easing.OutBack
-        leaveWindow: 0
-
-        Text {
-            text: Release.version
-            color: Appearance.color.textFaint
-            font.family: Appearance.font.mono
-            font.pixelSize: Appearance.font.chip
-            font.letterSpacing: Appearance.font.labelSpacing
-        }
-    }
-
     TabBar {
         id: navigationBar
-        x: settings.edgeX(settings.navigationX, width)
+        x: settings.edgeX(settings.mainBarX, width)
         y: Math.round(settings.centerY - height / 2)
         tabs: settings.tabs
         z: 3
         currentKey: settings.tab
         isShown: settings.isContentShown
         isMirrored: settings.isMirrored
-        onPicked: key => settings.pick(key)
+        onPicked: key => {
+            settings.isSubFocused = false;
+            settings.pick(key);
+            settings.forceActiveFocus();
+        }
     }
 
     TabBar {
@@ -548,7 +601,11 @@ FocusScope {
         labelFill: Appearance.color.hairline
         glyphFlip: 0
         glyphSpin: Motion.settings.subSpin
-        onPicked: key => settings.pickSub(key)
+        onPicked: key => {
+            settings.isSubFocused = true;
+            settings.pickSub(key);
+            settings.forceActiveFocus();
+        }
     }
 
     Item {
@@ -560,37 +617,33 @@ FocusScope {
 
         Row {
             id: headingRow
+            z: 1
             y: -settings.look.headingLift
             x: settings.edgeX(settings.navigationX, width) - content.x
             height: settings.look.headingHeight - settings.look.headingGap
             spacing: Appearance.unit.medium
 
-            TypedText {
+            ScrambleText {
                 anchors.bottom: parent.bottom
+                label: "settings heading"
                 target: settings.shownLabel
                 isShown: settings.isContentShown
-                characterInterval: Motion.type.quick
-                untypeInterval: Motion.type.quickUntype
-                leaveBudget: Motion.settings.pageSwap
                 color: Appearance.color.text
-                font.family: Appearance.font.mono
-                font.pixelSize: settings.look.heading
-                font.letterSpacing: Appearance.font.labelSpacing
-                font.bold: true
+                family: Appearance.font.mono
+                pixelSize: settings.look.heading
+                isBold: true
             }
 
-            TypedText {
+            ScrambleText {
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: Appearance.unit.base / 2
+                label: "settings sub heading"
                 target: settings.shownSubLabel.length > 0 ? "/  " + settings.shownSubLabel : ""
                 isShown: settings.isContentShown
-                characterInterval: Motion.type.quick
-                untypeInterval: Motion.type.quickUntype
-                leaveBudget: Motion.settings.pageSwap
                 color: Appearance.color.textMuted
-                font.family: Appearance.font.mono
-                font.pixelSize: Appearance.font.body
-                font.letterSpacing: Appearance.font.labelSpacing
+                family: Appearance.font.mono
+                pixelSize: Appearance.font.body
+                isBold: false
             }
         }
 
@@ -618,15 +671,21 @@ FocusScope {
                         y: Math.round(settings.centerY - settings.pageY - height / 2)
                         width: bannerText.implicitWidth
                         height: bannerText.implicitHeight
+                        isFlipping: false
 
-                        Text {
+                        SliceText {
                             id: bannerText
+                            label: "settings banner"
+                            look: settings.look.home.slice
+                            pace: Motion.settings.banner
+                            character: Motion.liquid.snap
+                            hasSweep: true
+                            field: content
+                            isShown: bannerPiece.isShown && bannerPiece.presence > 0
                             text: Banner.art
-                            textFormat: Text.PlainText
                             color: Appearance.color.accent
-                            font.family: Appearance.font.fixedMono
-                            font.preferShaping: false
-                            font.pixelSize: settings.look.home.bannerSize
+                            fontFamily: Appearance.font.fixedMono
+                            pixelSize: settings.look.home.bannerSize
                             lineHeight: settings.look.home.bannerLine
                         }
                     }
@@ -660,13 +719,16 @@ FocusScope {
                 isMirrored: settings.isMirrored
 
                 ProfileEditor {
-                    areaWidth: pageArea.width
+                    x: -(settings.isMirrored ? settings.look.endPadding : settings.profileLead)
+                    areaWidth: pageArea.width + settings.profileLead + settings.look.endPadding
                     areaHeight: pageArea.height
                     name: settings.profileName
                     secondName: settings.profileSecondName
                     picture: settings.profilePicture
                     github: settings.profileGithub
+                    favorites: settings.profileFavorites
                     onProfileRequested: (field, value) => settings.profileRequested(field, value)
+                    onFavoritesRequested: names => settings.favoritesRequested(names)
                     onPictureRequested: settings.pictureRequested()
                 }
             }
@@ -686,42 +748,245 @@ FocusScope {
                         spacing: settings.look.section.gap
 
                         Section {
-                            title: "MOTION & ANIMATIONS"
-                            icon: "animation"
+                            title: "PILL"
+                            isGroup: true
 
-                            OptionGroup {
-                                label: "ANIMATIONS"
-                                options: ["full", "reduced"]
-                                current: settings.isReducedMotion ? "reduced" : "full"
-                                onPicked: option => settings.reducedMotionRequested(option === "reduced")
-                            }
+                            Column {
+                                spacing: settings.look.section.gap
 
-                            OptionGroup {
-                                label: "BURST"
-                                options: ["static", "procedural"]
-                                current: settings.burstStyle
-                                onPicked: option => settings.burstStyleRequested(option)
-                            }
+                                Section {
+                                    title: "MOTION & ANIMATIONS"
+                                    icon: "animation"
 
-                            OptionGroup {
-                                label: "TASKBAR GATHER"
-                                options: ["merge", "shrink"]
-                                current: settings.taskbarGather
-                                onPicked: option => settings.gatherRequested(option)
+                                    OptionGroup {
+                                        label: "ANIMATIONS"
+                                        options: ["full", "reduced"]
+                                        current: settings.isReducedMotion ? "reduced" : "full"
+                                        onPicked: option => settings.reducedMotionRequested(option === "reduced")
+                                    }
+
+                                    OptionGroup {
+                                        label: "BURST"
+                                        options: ["static", "procedural"]
+                                        current: settings.burstStyle
+                                        onPicked: option => settings.burstStyleRequested(option)
+                                    }
+
+                                    OptionGroup {
+                                        label: "TASKBAR GATHER"
+                                        options: ["merge", "shrink"]
+                                        current: settings.taskbarGather
+                                        onPicked: option => settings.gatherRequested(option)
+                                    }
+                                }
+
+                                Section {
+                                    title: "PLACEMENT"
+                                    icon: "style-floating"
+
+                                    OptionGroup {
+                                        label: "TASKBAR SIDE"
+                                        options: ["left", "right"]
+                                        current: settings.taskbarSide
+                                        onPicked: option => settings.sideRequested(option)
+                                    }
+
+                                    OptionGroup {
+                                        label: "OVERLAP"
+                                        options: ["hide", "stay"]
+                                        current: settings.taskbarOverlap
+                                        onPicked: option => settings.overlapRequested(option)
+                                    }
+                                }
+
+                                Section {
+                                    title: "ARRANGEMENT"
+                                    icon: "dots"
+
+                                    PillArrangement {
+                                        order: settings.taskbarOrder
+                                        hidden: settings.taskbarHidden
+                                        onOrderRequested: order => settings.orderRequested(order)
+                                        onHiddenRequested: hidden => settings.hiddenRequested(hidden)
+                                    }
+                                }
                             }
                         }
+                    }
 
-                        Section {
-                            visible: settings.canSwitchMode
-                            title: "WINDOW MODE"
-                            icon: "window"
+                    Column {
+                        spacing: settings.look.section.gap
 
-                            OptionGroup {
-                                options: ["canvas", "desktop"]
-                                current: settings.windowMode
-                                onPicked: option => settings.modeRequested(option)
-                            }
+                        SelectionPanel {
+                            accent: settings.accent
+                            onAccentRequested: value => settings.accentRequested(value)
+                            onStyleRequested: style => settings.choiceStyleRequested(style)
+                            onToneRequested: tone => settings.pillToneRequested(tone)
+                            onColorRequested: (style, value) => settings.choiceColorRequested(style, value)
                         }
+                    }
+                }
+            }
+
+            Page {
+                id: displaysHolder
+                width: pageArea.width
+                height: pageArea.height
+                pageKey: "displays"
+                shownKey: settings.shownSubTab
+                isContentShown: settings.isContentShown
+                isMirrored: settings.isMirrored
+
+                DisplayEditor {
+                    id: displayEditor
+                    outputs: settings.outputs
+                    trial: settings.outputTrial
+                    trialLeft: settings.outputTrialLeft
+                    areaWidth: pageArea.width
+                    areaHeight: settings.bodyHeight
+                    side: displaySlot
+                    field: Qt.rect(settings.edgeX(settings.rootX, settings.formWidth) - content.x, -settings.pageY, settings.formWidth, settings.height)
+                    fieldCorner: settings.look.corner
+                    onApplyRequested: layout => settings.outputsRequested(layout)
+                    onKeepRequested: settings.outputsKept()
+                    onRevertRequested: settings.outputsReverted()
+                    canSwitchMode: settings.canSwitchMode
+                    windowMode: settings.windowMode
+                    onModeRequested: mode => settings.modeRequested(mode)
+                }
+            }
+
+            WallpaperPage {
+                id: wallpaperPage
+                readonly property bool isLocking: settings.subTab === "lock"
+                readonly property bool isWidgeting: settings.subTab === "widgets"
+                readonly property string lockShown: settings.lockWallpaper.length > 0 ? settings.lockWallpaper : settings.wallpaper
+                width: pageArea.width
+                height: pageArea.height
+                isShown: settings.isContentShown && settings.tab === "customization" && (settings.subTab === "wallpaper" || isLocking || isWidgeting)
+                current: isLocking ? lockShown : settings.wallpaper
+                isEditing: isLocking && settings.isLockEditing
+                isFramed: isWidgeting
+                framedRect: widgetEditor.frameRect
+                desktopPath: settings.wallpaper
+                lockPath: lockShown
+                roomWidth: settings.contentSpan
+                roomHeight: settings.bodyHeight
+                screenAspect: settings.screenAspect
+                topEdge: -settings.pageY
+                bottomEdge: settings.height - settings.pageY
+                onWallpaperRequested: path => isLocking ? settings.lockWallpaperRequested(path) : settings.wallpaperRequested(path)
+            }
+
+            Page {
+                width: pageArea.width
+                height: pageArea.height
+                pageKey: "wallpaper"
+                shownKey: settings.isCaptionHeld || settings.shownSubTab === "lock" ? "wallpaper" : settings.shownSubTab
+                isContentShown: settings.isContentShown
+                isMirrored: settings.isMirrored
+
+                WallpaperCaption {
+                    width: pageArea.width
+                    height: pageArea.height
+                    carousel: wallpaperPage
+                    isLocking: wallpaperPage.isLocking
+                    folder: settings.wallpaperFolder
+                    lockWallpaper: settings.lockWallpaper
+                    onFolderRequested: folder => settings.wallpaperFolderRequested(folder)
+                    onLockWallpaperRequested: value => settings.lockWallpaperRequested(value)
+                }
+            }
+
+            Page {
+                width: pageArea.width
+                height: pageArea.height
+                pageKey: "lock"
+                shownKey: settings.shownSubTab
+                isContentShown: settings.isContentShown
+                isMirrored: settings.isMirrored
+
+                LockEditor {
+                    carousel: wallpaperPage
+                    layout: settings.lockLayout
+                    picked: settings.pickedModule
+                    onLayoutRequested: entries => settings.lockLayoutRequested(entries)
+                    onPickRequested: key => settings.pickedModule = key
+                    blankAfter: settings.lockBlankAfter
+                    onBlankAfterRequested: seconds => settings.lockBlankAfterRequested(seconds)
+                    isEditing: settings.isLockEditing
+                    onEditingRequested: isOn => settings.isLockEditing = isOn
+                }
+            }
+
+            Page {
+                width: pageArea.width
+                height: pageArea.height
+                pageKey: "widgets"
+                shownKey: settings.shownSubTab
+                isContentShown: settings.isContentShown
+                isMirrored: settings.isMirrored
+
+                WidgetEditor {
+                    id: widgetEditor
+                    layout: settings.widgetsLayout
+                    screens: settings.widgetScreens
+                    startScreen: settings.widgetScreen
+                    areaWidth: pageArea.width
+                    areaHeight: settings.bodyHeight
+                    side: widgetSlot
+                    onLayoutRequested: entries => settings.widgetsLayoutRequested(entries)
+                }
+            }
+
+            Page {
+                id: fontHolder
+                width: pageArea.width
+                height: pageArea.height
+                pageKey: "font"
+                shownKey: settings.shownSubTab
+                isContentShown: settings.isContentShown
+                isMirrored: settings.isMirrored
+
+                FontPage {
+                    width: pageArea.width
+                    isShown: fontHolder.isShown
+                    onFontRequested: family => settings.fontRequested(family)
+                }
+            }
+
+            Page {
+                id: keyboardHolder
+                width: pageArea.width
+                height: pageArea.height
+                pageKey: "keyboard"
+                shownKey: settings.shownSubTab
+                isContentShown: settings.isContentShown
+                isMirrored: settings.isMirrored
+
+                KeyboardPage {
+                    width: pageArea.width
+                    isShown: keyboardHolder.isShown
+                    layouts: settings.keyboardLayouts
+                    onLayoutsRequested: entries => settings.keyboardLayoutsRequested(entries)
+                }
+            }
+
+            Page {
+                id: servicesHolder
+                width: pageArea.width
+                height: pageArea.height
+                pageKey: "services"
+                shownKey: settings.shownTab === "advanced" ? settings.shownSubTab : ""
+                isContentShown: settings.isContentShown
+                isMirrored: settings.isMirrored
+
+                Row {
+                    spacing: settings.look.section.columnGap
+
+                    Flow {
+                        width: pageArea.width
+                        spacing: settings.look.section.columnGap
 
                         Section {
                             title: "NOTIFICATIONS"
@@ -747,11 +1012,6 @@ FocusScope {
                             }
                         }
 
-                    }
-
-                    Column {
-                        spacing: settings.look.section.gap
-
                         Section {
                             title: "CAPTURE"
                             icon: "capture"
@@ -773,186 +1033,90 @@ FocusScope {
                             }
                         }
 
-                        SelectionPanel {
-                            accent: settings.accent
-                            onAccentRequested: value => settings.accentRequested(value)
-                            onStyleRequested: style => settings.choiceStyleRequested(style)
-                            onColorRequested: (style, value) => settings.choiceColorRequested(style, value)
+                        Section {
+                            title: "ACTIVITY PILL"
+
+                            OptionGroup {
+                                label: "MEDIA PLAYER"
+                                options: ["on", "off"]
+                                current: settings.isMediaPlayerOn ? "on" : "off"
+                                onPicked: option => settings.mediaPlayerRequested(option === "on")
+                            }
+                        }
+
+                        Section {
+                            title: "DASHBOARD"
+
+                            OptionGroup {
+                                label: "WEATHER"
+                                options: ["on", "off"]
+                                current: settings.isDashboardWeatherOn ? "on" : "off"
+                                onPicked: option => settings.dashboardWeatherRequested(option === "on")
+                            }
+                        }
+
+                        Section {
+                            title: "SYSTEM ROLES"
+
+                            OptionGroup {
+                                label: "NOTIFICATION DAEMON"
+                                options: ["on", "off"]
+                                current: settings.isNotificationsOn ? "on" : "off"
+                                onPicked: option => settings.notificationsRequested(option === "on")
+                            }
+
+                            OptionGroup {
+                                label: "PASSWORD PROMPTS"
+                                options: ["on", "off"]
+                                current: settings.isPromptsOn ? "on" : "off"
+                                onPicked: option => settings.promptsRequested(option === "on")
+                            }
+                        }
+
+                        Section {
+                            title: "LOGIN SCREEN"
+                            visible: Login.canChoose
+
+                            OptionGroup {
+                                label: "SDDM THEME"
+                                options: ["vados", "main"]
+                                current: Login.isVados ? "vados" : "main"
+                                onPicked: option => settings.loginRequested(option)
+                            }
+
+                            Hint {
+                                text: settings.loginHint
+                                isWanted: text.length > 0
+                                tint: Login.isBusy ? Appearance.color.accent : Appearance.color.textMuted
+                                alignment: Text.AlignHCenter
+                            }
+                        }
+
+                        Section {
+                            title: "BOOT"
+                            visible: Boot.canSplash
+
+                            OptionGroup {
+                                label: "SPLASH"
+                                options: ["on", "off"]
+                                current: Boot.isSplashOn ? "on" : "off"
+                                onPicked: option => settings.bootRequested("splash", option === "on")
+                            }
+
+                            OptionGroup {
+                                visible: Boot.canPlymouth
+                                label: "PLYMOUTH"
+                                options: ["on", "off"]
+                                current: Boot.isPlymouthOn ? "on" : "off"
+                                onPicked: option => settings.bootRequested("plymouth", option === "on")
+                            }
+
+                            Hint {
+                                text: settings.bootHint
+                                isWanted: text.length > 0
+                            }
                         }
                     }
-                }
-            }
-
-            Page {
-                id: displaysHolder
-                width: pageArea.width
-                height: pageArea.height
-                pageKey: "displays"
-                shownKey: settings.shownSubTab
-                isContentShown: settings.isContentShown
-                isMirrored: settings.isMirrored
-
-                DisplayEditor {
-                    id: displayEditor
-                    outputs: settings.outputs
-                    trial: settings.outputTrial
-                    trialLeft: settings.outputTrialLeft
-                    areaWidth: pageArea.width
-                    areaHeight: settings.bodyHeight
-                    side: displaySlot
-                    onApplyRequested: layout => settings.outputsRequested(layout)
-                    onKeepRequested: settings.outputsKept()
-                    onRevertRequested: settings.outputsReverted()
-                }
-            }
-
-            Page {
-                id: wallpaperHolder
-                width: pageArea.width
-                height: pageArea.height
-                pageKey: "wallpaper"
-                shownKey: settings.shownSubTab
-                isContentShown: settings.isContentShown
-                isMirrored: settings.isMirrored
-
-                WallpaperPage {
-                    id: wallpaperPage
-                    width: pageArea.width
-                    height: pageArea.height
-                    isShown: wallpaperHolder.isShown
-                    current: settings.wallpaper
-                    folder: settings.wallpaperFolder
-                    screenAspect: settings.screenAspect
-                    topEdge: -settings.pageY
-                    bottomEdge: settings.height - settings.pageY
-                    onWallpaperRequested: path => settings.wallpaperRequested(path)
-                    onFolderRequested: folder => settings.wallpaperFolderRequested(folder)
-                }
-            }
-
-            Page {
-                width: pageArea.width
-                height: pageArea.height
-                pageKey: "pills"
-                shownKey: settings.shownSubTab
-                isContentShown: settings.isContentShown
-                isMirrored: settings.isMirrored
-
-                Flow {
-                    width: pageArea.width
-                    spacing: settings.look.section.columnGap
-
-                    Section {
-                        title: "GLASS"
-
-                        Fader {
-                            label: "BLUR"
-                            value: settings.pillBlur
-                            resetValue: Schema.fallbackOf("pills.blur")
-                            trackWidth: settings.look.section.inner
-                            onMoved: value => settings.pillRequested("blur", value)
-                        }
-
-                        Fader {
-                            label: "OPACITY"
-                            value: settings.pillOpacity
-                            resetValue: Schema.fallbackOf("pills.opacity")
-                            trackWidth: settings.look.section.inner
-                            onMoved: value => settings.pillRequested("opacity", value)
-                        }
-                    }
-
-                    Section {
-                        title: "COLOUR"
-
-                        TextField {
-                            label: "HEX"
-                            placeholder: "DEFAULT DARK"
-                            value: settings.pillColor
-                            fieldWidth: settings.look.section.inner
-                            onEdited: value => settings.pillRequested("color", value)
-                        }
-                    }
-                }
-            }
-
-            Page {
-                width: pageArea.width
-                height: pageArea.height
-                pageKey: "taskbar"
-                shownKey: settings.shownSubTab
-                isContentShown: settings.isContentShown
-                isMirrored: settings.isMirrored
-
-                Flow {
-                    width: pageArea.width
-                    spacing: settings.look.section.columnGap
-
-                    Section {
-                        title: "PLACEMENT"
-
-                        OptionGroup {
-                            label: "SIDE"
-                            options: ["left", "right"]
-                            current: settings.taskbarSide
-                            onPicked: option => settings.sideRequested(option)
-                        }
-                    }
-
-                    Section {
-                        title: "LOOK"
-
-                        OptionGroup {
-                            label: "STYLE"
-                            options: ["floating", "fused", "bare"]
-                            current: settings.barStyle
-                            onPicked: option => settings.styleRequested(option)
-                        }
-                    }
-                }
-            }
-
-            Page {
-                width: pageArea.width
-                height: pageArea.height
-                pageKey: "lock"
-                shownKey: settings.shownSubTab
-                isContentShown: settings.isContentShown
-                isMirrored: settings.isMirrored
-
-                LockEditor {
-                    layout: settings.lockLayout
-                    picked: settings.pickedModule
-                    wallpaper: settings.lockWallpaper
-                    areaWidth: settings.contentSpan
-                    areaHeight: settings.bodyHeight
-                    screenAspect: settings.width > 0 ? settings.height / settings.width : 0
-                    onLayoutRequested: entries => settings.lockLayoutRequested(entries)
-                    onPickRequested: key => settings.pickedModule = key
-                    onWallpaperRequested: value => settings.lockWallpaperRequested(value)
-                    blankAfter: settings.lockBlankAfter
-                    onBlankAfterRequested: seconds => settings.lockBlankAfterRequested(seconds)
-                }
-            }
-
-            Page {
-                width: pageArea.width
-                height: pageArea.height
-                pageKey: "widgets"
-                shownKey: settings.shownSubTab
-                isContentShown: settings.isContentShown
-                isMirrored: settings.isMirrored
-
-                WidgetEditor {
-                    id: widgetEditor
-                    layout: settings.widgetsLayout
-                    screens: settings.widgetScreens
-                    startScreen: settings.widgetScreen
-                    wallpaper: settings.wallpaper
-                    areaWidth: pageArea.width
-                    areaHeight: settings.bodyHeight
-                    side: widgetSlot
-                    onLayoutRequested: entries => settings.widgetsLayoutRequested(entries)
                 }
             }
 
@@ -961,65 +1125,13 @@ FocusScope {
                 width: pageArea.width
                 height: pageArea.height
                 pageKey: "vados"
-                shownKey: settings.shownSubTab
+                shownKey: settings.shownTab === "advanced" ? settings.shownSubTab : ""
                 isContentShown: settings.isContentShown
                 isMirrored: settings.isMirrored
 
                 FamilyPage {
-                    width: pageArea.width
+                    width: settings.look.section.width
                     isShown: familyHolder.isShown
-                }
-            }
-
-            Page {
-                id: fontHolder
-                width: pageArea.width
-                height: pageArea.height
-                pageKey: "font"
-                shownKey: settings.shownSubTab
-                isContentShown: settings.isContentShown
-                isMirrored: settings.isMirrored
-
-                FontPage {
-                    width: pageArea.width
-                    isShown: fontHolder.isShown
-                    onFontRequested: family => settings.fontRequested(family)
-                }
-            }
-
-            Page {
-                width: pageArea.width
-                height: pageArea.height
-                pageKey: "services"
-                shownKey: settings.shownSubTab
-                isContentShown: settings.isContentShown
-                isMirrored: settings.isMirrored
-
-                Flow {
-                    width: pageArea.width
-                    spacing: settings.look.section.columnGap
-
-                    Section {
-                        title: "ACTIVITY PILL"
-
-                        OptionGroup {
-                            label: "MEDIA PLAYER"
-                            options: ["on", "off"]
-                            current: settings.isMediaPlayerOn ? "on" : "off"
-                            onPicked: option => settings.mediaPlayerRequested(option === "on")
-                        }
-                    }
-
-                    Section {
-                        title: "SYSTEM ROLES"
-
-                        OptionGroup {
-                            label: "NOTIFICATION DAEMON"
-                            options: ["on", "off"]
-                            current: settings.isNotificationsOn ? "on" : "off"
-                            onPicked: option => settings.notificationsRequested(option === "on")
-                        }
-                    }
                 }
             }
         }

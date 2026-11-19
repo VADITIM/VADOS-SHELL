@@ -14,6 +14,10 @@ Singleton {
     readonly property string defaultFolder: picturesFolder + "/Wallpapers"
     readonly property string folder: Config.data.wallpaper.folder || defaultFolder
 
+    function reveal(place) {
+        Quickshell.execDetached(["xdg-open", place || folder])
+    }
+
     function collect(listing) {
         const found = []
         for (let index = 0; index < listing.count; index++)

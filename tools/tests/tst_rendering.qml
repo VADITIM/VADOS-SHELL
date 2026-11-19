@@ -22,6 +22,24 @@ Item {
         }
     }
 
+    LiquidLayer {
+        id: frosted
+        width: 200
+        height: 150
+        isShown: true
+        fillAlpha: 0.6
+        frostSource: Qt.resolvedUrl("../icons/source/image.svg")
+        frostSize: Qt.size(400, 300)
+
+        LiquidShape {
+            parent: frosted.shapes
+            x: 20
+            y: 20
+            width: 80
+            height: 80
+        }
+    }
+
     Masked {
         id: masked
         anchors.fill: parent
@@ -45,6 +63,12 @@ Item {
         detail: 0.5
     }
 
+    Backdrop {
+        id: unsized
+        isShown: false
+        source: Qt.resolvedUrl("../icons/source/image.svg")
+    }
+
     TestCase {
         name: "Rendering"
         when: windowShown
@@ -57,8 +81,10 @@ Item {
 
         function cleanup() {
             Config.setRenderQuality("full")
+            Config.setPillBlur(1)
             liquid.isShown = true
             liquid.opacity = 1
+            frosted.isShown = true
             masked.visible = true
         }
 
@@ -162,6 +188,16 @@ Item {
             verifyBackdropBlurs(true)
         }
 
+        function test_backdropPreloadsHiddenButNeverAtNoSize() {
+            const picture = findChild(unsized, "picture")
+            compare(String(picture.source), "", "no decode before the backdrop has a size")
+            unsized.width = 120
+            unsized.height = 80
+            verify(String(picture.source).length > 0)
+            tryVerify(() => unsized.hasPicture, 3000)
+            verify(!unsized.visible, "decoded ahead while hidden")
+        }
+
         function test_liteBackdropDrawsThePictureWithoutBlur() {
             tryVerify(() => backdrop.hasPicture, 3000)
             Config.setRenderQuality("lite")
@@ -171,6 +207,42 @@ Item {
             compare(backdrop.bleed, 0)
             Config.setRenderQuality("full")
             verifyBackdropBlurs(true)
+        }
+
+        function frostPart(name) {
+            const found = findChild(frosted, name)
+            verify(found !== null, name)
+            return found
+        }
+
+        function verifyFrostRuns(isRunning) {
+            compare(frosted.isFrosting, isRunning)
+            compare(frostPart("frostTexture").live, isRunning, "wallpaper texture updated")
+            compare(frostPart("frostBlurred").live, isRunning, "frosted texture updated")
+            compare(frostPart("frostBlurPass").blurEnabled, isRunning, "frost blur enabled")
+            compare(frostPart("frostPass").visible, isRunning, "frost drawn inside the body")
+        }
+
+        function test_pillBlurFrostsTheWholeBodyAndLeavesTheEdgesAlone() {
+            tryVerify(() => frosted.isFrosting, 3000)
+            compare(frosted.frostRadius, Appearance.liquid.frost)
+            verifyFrostRuns(true)
+            compare(frostPart("frostPass").maskSource, frostPart("blurredTexture"), "the frost fills the body up to its edge")
+            Config.setPillBlur(0.5)
+            compare(frosted.frostRadius, Math.round(Appearance.liquid.frost * 0.5))
+            compare(liquid.blurRadius, liquid.melt, "the pill blur never changes the melt of the edges")
+            compare(frosted.blurRadius, frosted.melt)
+            Config.setPillBlur(0)
+            verifyFrostRuns(false)
+            compare(frostPart("frostPicture").source.toString(), "", "no wallpaper is held while the frost is off")
+            Config.setPillBlur(1)
+            tryVerify(() => frosted.isFrosting, 3000)
+            frosted.isShown = false
+            verifyFrostRuns(false)
+            frosted.isShown = true
+            tryVerify(() => frosted.isFrosting, 3000)
+            Config.setRenderQuality("lite")
+            verifyFrostRuns(false)
         }
 
         function test_maskedLayersFollowVisibility() {

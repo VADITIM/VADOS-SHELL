@@ -2,6 +2,7 @@ import QtQuick
 import qs.config
 import qs.services
 import qs.components
+import "../../utils/ActivityTabs.js" as Tabs
 
 Item {
     id: pill
@@ -21,8 +22,10 @@ Item {
     readonly property real spineX: thickness / 2
     readonly property string face: isAlerting ? "alert" : isClipboardOpen ? "clipboard" : mode === "hidden" ? "idle" : mode
     readonly property bool isSummoned: isAlerting || isClipboardOpen
-    readonly property bool isShown: (host.isRevealed || (isSummoned && !host.isAway)) && !host.isEaten && (mode !== "hidden" || isSummoned)
-    readonly property var views: ({ recording: recordingView, media: mediaView, call: callView, tray: trayView })
+    readonly property var tabSpan: Tabs.spanOf(Activities.tabs, leadKey)
+    readonly property bool isCovered: !isSummoned && host.isUnderExtension(null, y - Appearance.activity.length / 2 - tabSpan.above * dotPitch, y + extent)
+    readonly property bool isShown: (host.isRevealed || (isSummoned && !host.isAway)) && !host.isEaten && !isCovered && (mode !== "hidden" || isSummoned)
+    readonly property var views: ({ recording: recordingView, media: mediaView, call: callView })
     readonly property size expandedSize: (views[leadKey] ?? mediaView).bodySize
     readonly property size faceSize: face === "alert" ? alertSize
         : face === "clipboard" ? clipboardSize
@@ -44,16 +47,30 @@ Item {
     readonly property bool isAlertShown: face === "alert" && mutate.isInnerShown && (reshape.isArrived || hasAlertArrived)
     readonly property bool isClipboardShown: isFaceShown && face === "clipboard"
     readonly property rect spreadRect: Qt.rect(x + expandedLeft, y - bodyHeight / 2, bodyWidth, bodyHeight)
-    readonly property var satellites: liveKeys.filter(key => key !== leadKey)
-    readonly property real satellitePitch: Appearance.activity.satellite + Appearance.activity.satelliteGap
-    readonly property bool areSatellitesShown: face === "active" && isShown
-    readonly property real extent: Appearance.activity.length / 2 + satellites.length * satellitePitch
+    readonly property var tabs: Activities.tabs
+    readonly property bool hasLiveDot: tabs.some(key => key !== leadKey && Activities.liveKeys.includes(key))
+    readonly property real dotPitch: (hasLiveDot ? Appearance.activity.liveDot : Appearance.activity.dot) + Appearance.activity.dotGap
+    readonly property bool areDotsShown: (face === "active" || face === "idle") && isShown
+    readonly property real extent: Appearance.activity.length / 2 + tabSpan.below * dotPitch
     readonly property bool isRecordingLead: leadKey === "recording"
     property bool hasHoveredRecording: false
     readonly property real reachRight: x + bodyLeft + Math.max(bodyWidth, Appearance.activity.media.head * Math.min(1, expansion)) * popScale + Appearance.taskbar.idleGap
 
+    function innerRestOf(slot) {
+        const inner = slot < 0 ? Math.round(slot) + 1 : Math.round(slot) - 1
+        const key = tabs.find(tab => tab !== leadKey && Tabs.slotOf(tabs, leadKey, tab) === inner)
+        return key !== undefined && Activities.liveKeys.includes(key) ? Appearance.activity.liveDot : Appearance.activity.dot
+    }
+
     signal modeRequested(string mode)
+    signal foldRequested
+
+    onIsCoveredChanged: {
+        if (isCovered && mode === "expanded")
+            foldRequested()
+    }
     signal leadRequested(int direction)
+    signal tabRequested(string key)
 
     width: thickness
     height: 0
@@ -99,7 +116,7 @@ Item {
         growDuration: Motion.pace(pill.face === "alert" ? Motion.alerts.grow : pill.face === "clipboard" ? Motion.clipboard.grow : pill.face === "expanded" ? Motion.activity.expand : Motion.activity.spread)
         shrinkDuration: Motion.pace(pill.isAlertBody ? Motion.alerts.shrink : pill.isClipboardBody ? Motion.clipboard.shrink : Motion.activity.shrink)
         shrinkDelay: Motion.pace(pill.isAlertBody ? Motion.alerts.shrinkDelay : pill.isClipboardBody ? Motion.clipboard.shrinkDelay : Motion.activity.shrinkDelay)
-        shrinkLag: Motion.pace(pill.isClipboardBody ? Motion.clipboard.shrinkLag : Motion.activity.shrinkLag)
+        shrinkLag: Motion.pace(pill.isAlertBody ? Motion.alerts.shrinkLag : pill.isClipboardBody ? Motion.clipboard.shrinkLag : Motion.activity.shrinkLag)
         shrinkEasing: Easing.InBack
         windUp: Motion.activity.windUp
         shrinkArriveShare: 1
@@ -152,27 +169,122 @@ Item {
     }
 
     Repeater {
-        parent: pill.host.liquidShapes
-        model: pill.satellites.length
+        model: pill.tabs
 
-        LiquidShape {
-            id: satellite
+        Item {
+            id: dot
+            required property string modelData
             required property int index
-            readonly property real size: Appearance.activity.satellite * satellitePop.pop * pill.popScale
-            visible: size > 0.5
-            width: size
-            height: size
-            x: pill.x + pill.spineX - size / 2
-            y: pill.y + pill.bodyHeight / 2 + Appearance.activity.satelliteGap + Appearance.activity.satellite / 2 + index * pill.satellitePitch - size / 2
+            property real slot: Tabs.slotOf(pill.tabs, pill.leadKey, dot.modelData)
+            readonly property bool isLive: Activities.liveKeys.includes(dot.modelData)
+            property real liveShare: dot.isLive ? 1 : 0
+            readonly property real rest: Appearance.activity.dot + (Appearance.activity.liveDot - Appearance.activity.dot) * dot.liveShare
+            readonly property real base: Math.max(pill.bodyHeight, Appearance.activity.bead) / 2 + Appearance.activity.dotGap + dot.rest / 2
+            readonly property real offset: Tabs.distanceOf(dot.slot, dot.base, pill.innerRestOf(dot.slot) + Appearance.activity.dotGap)
+            readonly property real size: dot.rest * Math.min(1, Math.abs(dot.slot)) * dotPop.pop * pill.popScale
+            readonly property real reach: Math.max(Appearance.activity.bead, dot.size)
+            x: pill.spineX - dot.reach / 2
+            y: dot.offset - dot.reach / 2
+            width: dot.reach
+            height: dot.reach
+            visible: dot.size > 0.5
+
+            Behavior on liveShare {
+                NumberAnimation {
+                    duration: Motion.pace(Motion.activity.dotEnter)
+                    easing.type: Easing.OutBack
+                    easing.overshoot: Motion.activity.dotOvershoot
+                }
+            }
+
+            Behavior on slot {
+                NumberAnimation {
+                    duration: Motion.pace(Motion.activity.dotTravel)
+                    easing.type: Easing.OutBack
+                    easing.overshoot: Motion.activity.dotOvershoot
+                }
+            }
 
             Mutate {
-                id: satellitePop
-                label: "activity satellite"
-                isShown: pill.areSatellitesShown && reshape.isArrived
+                id: dotPop
+                label: "activity dot"
+                isShown: pill.areDotsShown && reshape.isArrived
                 hasSpread: false
-                enterDelay: (satellite.index + 1) * Motion.activity.stagger
+                enterDelay: (Math.abs(Math.round(dot.slot)) + 1) * Motion.activity.stagger
                 leaveDelay: 0
-                popDuration: Motion.activity.satelliteEnter
+                popDuration: Motion.activity.dotEnter
+            }
+
+            LiquidShape {
+                parent: pill.host.liquidShapes
+                visible: dot.visible
+                width: dot.size
+                height: dot.size
+                x: pill.x + pill.spineX - dot.size / 2
+                y: pill.y + dot.offset - dot.size / 2
+            }
+
+            Rectangle {
+                anchors.centerIn: parent
+                width: dot.size * Appearance.activity.dotCore
+                height: width
+                radius: width / 2
+                color: dotArea.containsMouse ? Appearance.color.accent : dot.isLive ? Appearance.color.textBody : Appearance.color.textFaint
+                opacity: 1 - dot.liveShare
+            }
+
+            Turn {
+                anchors.centerIn: parent
+                width: Appearance.activity.liveGlyph
+                height: width
+                isShown: dot.isLive && dotPop.isInnerShown && Math.abs(dot.slot) >= 1
+                isSlung: true
+                leaveWindow: 0
+
+                ActivityBars {
+                    visible: dot.modelData === "media"
+                    anchors.centerIn: parent
+                    width: implicitWidth
+                    height: implicitHeight
+                    isRunning: Activities.isPlaying && dot.visible
+                    color: dotArea.containsMouse || Activities.isPlaying ? Appearance.color.accent : Appearance.color.textFaint
+                }
+
+                Glyph {
+                    visible: dot.modelData === "call"
+                    anchors.fill: parent
+                    name: Activities.isMicMuted ? "mic-off" : "mic"
+                    color: Activities.isMicMuted ? Appearance.color.danger : Appearance.color.accent
+                    transform: Upright {
+                        isMirrored: pill.host.isMirrored
+                        axis: Appearance.activity.liveGlyph / 2
+                    }
+                }
+
+                Text {
+                    visible: dot.modelData === "notifications"
+                    anchors.fill: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text: Activities.unreadCount > Appearance.activity.countLimit ? Appearance.activity.countLimit + "+" : Activities.unreadCount
+                    color: Appearance.color.accent
+                    font.family: Appearance.font.sans
+                    font.pixelSize: Appearance.font.chip
+                    font.bold: true
+                    transform: Upright {
+                        isMirrored: pill.host.isMirrored
+                        axis: Appearance.activity.liveGlyph / 2
+                    }
+                }
+            }
+
+            MouseArea {
+                id: dotArea
+                anchors.fill: parent
+                enabled: pill.areDotsShown && !pill.isSummoned && Math.abs(dot.slot) >= 1
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: pill.tabRequested(dot.modelData)
             }
         }
     }
@@ -195,7 +307,7 @@ Item {
         }
         onWheel: wheel => {
             if (wheel.angleDelta.y !== 0)
-                pill.leadRequested(wheel.angleDelta.y > 0 ? -1 : 1)
+                pill.leadRequested(wheel.angleDelta.y > 0 ? 1 : -1)
         }
     }
 
@@ -291,13 +403,13 @@ Item {
         isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey === "call"
     }
 
-    ActivityTray {
-        id: trayView
+    ActivityBuds {
         host: pill.host
         pill: pill
-        x: pill.expandedLeft - pill.carry
-        y: -height / 2
-        expansion: pill.leadKey === "tray" ? pill.expansion : 0
-        isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey === "tray"
+        side: 1
+        label: "activity tabs"
+        isShown: pill.isFaceShown && pill.face === "expanded" && pill.leadKey !== "recording"
+        items: pill.tabs.map(key => ({ key: key, glyph: Appearance.activity.glyphs[key] ?? "music", isSelected: key === pill.leadKey }))
+        onChosen: key => pill.tabRequested(key)
     }
 }

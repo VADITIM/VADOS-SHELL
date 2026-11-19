@@ -13,6 +13,7 @@ Item {
     property int first: 0
     property real shift: 0
     property real dragBase: 0
+    property int thumbBase: 0
     property bool isScrolling: false
     property bool isJumping: false
     property string swipedKey: ""
@@ -26,6 +27,7 @@ Item {
     readonly property var ordered: Entries.shown(entries, entries.length)
     readonly property real pitch: look.row + look.rowGap
     readonly property var layout: Entries.layoutOf(ordered, look.imageSpan, look.lineChars)
+    readonly property int boundary: Entries.pinnedBoundary(ordered)
     readonly property int poolSize: look.rows + 2
     readonly property int lastFirst: Math.max(0, layout.total - look.rows)
     readonly property int leadIndex: first > 0 ? Math.max(0, Entries.indexAtSlot(layout, first - 1)) : 0
@@ -63,6 +65,10 @@ Item {
         first = target
         isJumping = false
         shift = 0
+    }
+
+    function scrollTo(target) {
+        scroll(Math.max(0, Math.min(lastFirst, target)) - first)
     }
 
     function follow(travelY) {
@@ -303,10 +309,32 @@ Item {
                     if (entry)
                         history.pickRequested(entry)
                 }
+                property real touchpadTravel: 0
                 onWheel: wheel => {
+                    if (wheel.pixelDelta.y !== 0) {
+                        touchpadTravel += wheel.pixelDelta.y
+                        const steps = Math.trunc(touchpadTravel / history.pitch)
+                        if (steps === 0)
+                            return
+                        touchpadTravel -= steps * history.pitch
+                        history.scroll(-steps)
+                        return
+                    }
+                    touchpadTravel = 0
                     if (wheel.angleDelta.y !== 0)
                         history.scroll(wheel.angleDelta.y > 0 ? -1 : 1)
                 }
+            }
+
+            Rectangle {
+                readonly property int slot: history.layout.starts[history.boundary] ?? 0
+                x: history.look.rowRadius
+                width: parent.width - history.look.rowRadius * 2
+                height: history.look.divider
+                radius: height / 2
+                y: (slot - history.first) * history.pitch + history.shift - (history.look.rowGap + height) / 2
+                visible: history.boundary > 0 && history.isContentShown
+                color: history.look.dividerColor
             }
 
             Repeater {
@@ -328,6 +356,51 @@ Item {
                     slide: entry && entry.key === history.swipedKey ? history.slide : 0
                     onPinRequested: history.pinRequested(entry)
                 }
+            }
+        }
+
+        Rectangle {
+            id: scrollbar
+            readonly property bool isScrollable: history.lastFirst > 0
+            readonly property real thumbHeight: Math.max(history.look.scrollMinimum, height * history.look.rows / Math.max(1, history.layout.total))
+            readonly property real position: history.lastFirst > 0
+                ? Math.max(0, Math.min(1, (history.first - history.shift / history.pitch) / history.lastFirst))
+                : 0
+            x: parent.width - history.look.scrollInset - width
+            y: list.y
+            width: history.look.scrollWidth
+            height: list.height
+            radius: width / 2
+            color: Appearance.color.wash
+            opacity: history.isContentShown && isScrollable ? 1 : 0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Motion.pace(Motion.clipboard.scrollbar)
+                }
+            }
+
+            Rectangle {
+                width: parent.width
+                height: scrollbar.thumbHeight
+                y: scrollbar.position * (scrollbar.height - height)
+                radius: width / 2
+                color: Appearance.color.accent
+            }
+        }
+
+        Gesture {
+            x: scrollbar.x - history.look.scrollGrip
+            y: scrollbar.y
+            width: scrollbar.width + history.look.scrollGrip * 2
+            height: scrollbar.height
+            enabled: history.isContentShown && scrollbar.isScrollable
+            isHorizontal: false
+            cursorShape: Qt.PointingHandCursor
+            onCrossed: history.thumbBase = history.first
+            onMoved: (travelX, travelY) => {
+                const reach = scrollbar.height - scrollbar.thumbHeight
+                history.scrollTo(history.thumbBase + Math.round(travelY / reach * history.lastFirst))
             }
         }
     }

@@ -120,6 +120,12 @@ function shown(entries, count) {
     return list.filter(entry => entry.isPinned).concat(list.filter(entry => !entry.isPinned)).slice(0, Math.max(0, count))
 }
 
+function pinnedBoundary(entries) {
+    const list = entries || []
+    const index = list.findIndex(entry => !entry.isPinned)
+    return index > 0 ? index : -1
+}
+
 function storable(entries) {
     return (entries || []).filter(entry => !entry.isSecret)
 }

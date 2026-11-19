@@ -10,6 +10,8 @@ Item {
     property bool isOpen: false
     property bool isShown: false
     property bool isProtected: false
+    readonly property real footHeight: height - header.y
+    readonly property real area: height - footHeight - Appearance.extension.splitRoom
 
     signal protectRequested(bool isProtected)
 
@@ -20,10 +22,15 @@ Item {
 
     Item {
         id: header
+        y: parent.height - height
         width: parent.width
         height: Appearance.extension.header
 
         Turn {
+            flipAngle: 0
+            spinAngle: Motion.extension.glyphSpin
+            enterDuration: Motion.extension.glyphPop
+            enterEasing: Easing.OutBack
             anchors.verticalCenter: parent.verticalCenter
             width: Appearance.extension.glyph
             height: Appearance.extension.glyph
@@ -37,28 +44,25 @@ Item {
             }
         }
 
-        TypedText {
+        ScrambleText {
+            label: "extension header"
             anchors.verticalCenter: parent.verticalCenter
             x: Appearance.extension.glyph + 10
-            width: Math.min(fullWidth, parent.width - x)
+            width: Math.min(implicitWidth, parent.width - x)
             clip: true
             isShown: page.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
             target: "POWER"
             color: Appearance.color.text
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.font.label
-            font.letterSpacing: Appearance.font.labelSpacing
-            font.bold: true
+            family: Appearance.font.sans
+            pixelSize: Appearance.font.label
         }
     }
 
     Flickable {
         id: scroller
-        y: header.height + Appearance.extension.headerGap
+        y: (page.area - height) / 2
         width: parent.width
-        height: parent.height - y
+        height: Math.min(page.area, contentHeight)
         clip: true
         boundsBehavior: Flickable.StopAtBounds
         contentWidth: width
@@ -74,7 +78,9 @@ Item {
             Repeater {
                 model: Profiles.keys
 
-                delegate: Turn {
+                delegate: Sprout {
+                    look: Appearance.extension.sprout
+                    pace: Motion.extension.sprout
                     id: profileTurn
 
                     required property string modelData
@@ -85,7 +91,7 @@ Item {
                     width: parent.width
                     height: Appearance.extension.row
                     isShown: page.isShown
-                    enterDelay: index * Motion.reveal.stagger
+                    enterDelay: index * Motion.extension.sprout.stagger
 
                     Press {
                         target: profileFace
@@ -131,6 +137,13 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             text: Controls.profileTitle(profileTurn.modelData)
                             color: profileTurn.isActive || profileHover.hovered ? Appearance.color.text : Appearance.color.textBody
+
+                            Behavior on color {
+                                ColorAnimation {
+                                    duration: Motion.pace(Motion.stateDuration)
+                                    easing.type: Easing.OutQuad
+                                }
+                            }
                             font.family: Appearance.font.sans
                             font.pixelSize: Appearance.font.label
                             font.letterSpacing: Appearance.font.labelSpacing
@@ -159,11 +172,13 @@ Item {
                 }
             }
 
-            Turn {
+            Sprout {
+                look: Appearance.extension.sprout
+                pace: Motion.extension.sprout
                 width: parent.width
                 height: brightness.height
                 isShown: page.isShown && Brightness.isAvailable
-                enterDelay: Profiles.keys.length * Motion.reveal.stagger
+                enterDelay: Profiles.keys.length * Motion.extension.sprout.stagger
 
                 Column {
                     id: brightness
@@ -173,9 +188,17 @@ Item {
                     spacing: Appearance.extension.sectionGap
 
                     Rectangle {
-                        width: parent.width
+                        width: parent.width * drawn
                         height: Appearance.extension.divider
+                        property real drawn: page.isShown ? 1 : 0
                         color: Appearance.color.hairline
+
+                        Behavior on drawn {
+                            NumberAnimation {
+                                duration: Motion.pace(page.isShown ? Motion.extension.draw : Motion.extension.sprout.leave)
+                                easing.type: page.isShown ? Easing.OutCubic : Easing.InQuad
+                            }
+                        }
                     }
 
                     Item {
@@ -209,16 +232,19 @@ Item {
                         width: parent.width
                         value: Brightness.level
                         hasSteps: true
+                        isFilled: page.isShown
                         onMoved: value => Brightness.setLevel(value)
                     }
                 }
             }
 
-            Turn {
+            Sprout {
+                look: Appearance.extension.sprout
+                pace: Motion.extension.sprout
                 width: parent.width
                 height: protect.height
                 isShown: page.isShown && Battery.canLimit
-                enterDelay: (Profiles.keys.length + 1) * Motion.reveal.stagger
+                enterDelay: (Profiles.keys.length + 1) * Motion.extension.sprout.stagger
 
                 Column {
                     id: protect
@@ -228,9 +254,17 @@ Item {
 
                     Rectangle {
                         x: Appearance.extension.rowPadding
-                        width: parent.width - Appearance.extension.rowPadding * 2
+                        width: (parent.width - Appearance.extension.rowPadding * 2) * drawn
                         height: Appearance.extension.divider
+                        property real drawn: page.isShown ? 1 : 0
                         color: Appearance.color.hairline
+
+                        Behavior on drawn {
+                            NumberAnimation {
+                                duration: Motion.pace(page.isShown ? Motion.extension.draw : Motion.extension.sprout.leave)
+                                easing.type: page.isShown ? Easing.OutCubic : Easing.InQuad
+                            }
+                        }
                     }
 
                     Item {
@@ -261,6 +295,13 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "PROTECT BATTERY"
                                 color: page.isProtected || protectHover.hovered ? Appearance.color.text : Appearance.color.textBody
+
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: Motion.pace(Motion.stateDuration)
+                                        easing.type: Easing.OutQuad
+                                    }
+                                }
                                 font.family: Appearance.font.sans
                                 font.pixelSize: Appearance.font.label
                                 font.letterSpacing: Appearance.font.labelSpacing
@@ -280,6 +321,13 @@ Item {
                                 Behavior on color {
                                     ColorAnimation {
                                         duration: Motion.pace(Motion.stateDuration)
+                                        easing.type: Easing.OutQuad
+                                    }
+                                }
+
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: Motion.pace(Motion.stateDuration)
                                     }
                                 }
 
@@ -291,6 +339,13 @@ Item {
                                     height: size
                                     radius: size / 2
                                     color: page.isProtected ? Appearance.color.panel : Appearance.color.textBody
+
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: Motion.pace(Motion.stateDuration)
+                                            easing.type: Easing.OutQuad
+                                        }
+                                    }
 
                                     Behavior on x {
                                         NumberAnimation {

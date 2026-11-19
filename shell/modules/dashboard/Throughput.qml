@@ -69,6 +69,8 @@ Item {
     }
 
     Behavior on flow {
+        enabled: throughput.isPresent
+
         NumberAnimation {
             duration: Motion.pace(Motion.dashboard.trafficPoll)
             easing.type: Easing.Linear
@@ -76,6 +78,8 @@ Item {
     }
 
     Behavior on scale {
+        enabled: throughput.isPresent
+
         NumberAnimation {
             duration: Motion.pace(Motion.dashboard.trafficPoll)
             easing.type: Easing.OutCubic

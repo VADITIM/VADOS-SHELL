@@ -1,0 +1,104 @@
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+centre.x = Window.GetX() + Window.GetWidth() / 2;
+centre.y = Window.GetY() + Window.GetHeight() / 2;
+
+mark.image = Image("mark.png");
+mark.sprite = Sprite(mark.image);
+mark.sprite.SetPosition(centre.x - mark.image.GetWidth() / 2, centre.y - mark.image.GetHeight() / 2, 1);
+
+bubble.image = Image("bubble.png");
+bubble.count = 3;
+bubble.gap = bubble.image.GetWidth() * 2;
+bubble.top = centre.y + mark.image.GetHeight() / 2 + bubble.image.GetHeight() * 3;
+bubble.rise = bubble.image.GetHeight();
+bubble.speed = 0.12;
+bubble.phase = 0.9;
+bubble.fadeFrames = 25;
+
+index = 0;
+while (index < bubble.count)
+{
+    bubbles[index] = Sprite(bubble.image);
+    bubbles[index].SetOpacity(0);
+    index++;
+}
+
+frame = 0;
+
+fun refresh_callback()
+{
+    global.frame++;
+    arrival = global.frame / bubble.fadeFrames;
+    if (arrival > 1)
+        arrival = 1;
+    row = (bubble.count - 1) * bubble.gap;
+    index = 0;
+    while (index < bubble.count)
+    {
+        wave = Math.Sin(global.frame * bubble.speed - index * bubble.phase);
+        left = centre.x - row / 2 + index * bubble.gap - bubble.image.GetWidth() / 2;
+        bubbles[index].SetPosition(left, bubble.top - bubble.rise * (wave + 1) / 2, 2);
+        bubbles[index].SetOpacity(arrival * (0.35 + 0.65 * (wave + 1) / 2));
+        index++;
+    }
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+
+dot.image = bubble.image.Scale(bubble.image.GetWidth() / 2, bubble.image.GetHeight() / 2);
+dot.gap = dot.image.GetWidth() * 2;
+dot.top = bubble.top + bubble.image.GetHeight() * 3;
+dot.limit = 32;
+
+fun hide_password()
+{
+    if (global.prompt.sprite)
+        global.prompt.sprite.SetOpacity(0);
+    index = 0;
+    while (index < dot.limit)
+    {
+        if (global.dots[index])
+            global.dots[index].SetOpacity(0);
+        index++;
+    }
+}
+
+fun display_password_callback(prompt, bullets)
+{
+    hide_password();
+    global.prompt.image = Image.Text(prompt, 0.85, 0.85, 0.85);
+    global.prompt.sprite = Sprite(global.prompt.image);
+    global.prompt.sprite.SetPosition(centre.x - global.prompt.image.GetWidth() / 2, dot.top - global.prompt.image.GetHeight() * 2, 3);
+    shown = bullets;
+    if (shown > dot.limit)
+        shown = dot.limit;
+    row = (shown - 1) * dot.gap;
+    index = 0;
+    while (index < shown)
+    {
+        if (!global.dots[index])
+            global.dots[index] = Sprite(dot.image);
+        global.dots[index].SetPosition(centre.x - row / 2 + index * dot.gap - dot.image.GetWidth() / 2, dot.top, 3);
+        global.dots[index].SetOpacity(1);
+        index++;
+    }
+}
+
+fun display_normal_callback()
+{
+    hide_password();
+}
+
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+fun message_callback(text)
+{
+    global.message.image = Image.Text(text, 0.6, 0.6, 0.6);
+    global.message.sprite = Sprite(global.message.image);
+    global.message.sprite.SetPosition(centre.x - global.message.image.GetWidth() / 2, Window.GetY() + Window.GetHeight() - global.message.image.GetHeight() * 3, 3);
+}
+
+Plymouth.SetMessageFunction(message_callback);

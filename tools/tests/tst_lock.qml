@@ -47,6 +47,10 @@ TestCase {
         pam.isAnswering = true
         Compositor.isDriftwm = true
         Config.setLockBlankAfter(60)
+        Config.setReducedMotion(false)
+        part("engageWait").interval = Motion.lock.engageWait
+        if (Lock.isLocking)
+            Lock.lock()
         if (Lock.isLocked) {
             Lock.submit("secret")
             tryVerify(() => !Lock.isLocked, 3000)
@@ -66,11 +70,51 @@ TestCase {
         verify(Lock.lock(), "asking again keeps it locked")
     }
 
+    function test_aRequestWaitsForTheLockScreenToCover() {
+        verify(Lock.request())
+        verify(Lock.isLocking)
+        verify(!Lock.isLocked, "the session lock waits until the lock screen covers the desktop")
+        compare(Lock.status, "locking")
+        compare(marker().isLocked, true, "a crash during the enter still locks on the next start")
+        verify(!Quickshell.watchFiles)
+        verify(Lock.request(), "asking again keeps the one enter")
+        verify(Lock.lock())
+        verify(Lock.isLocked)
+        verify(!Lock.isLocking)
+    }
+
+    function test_aRequestLocksEvenIfTheEnterNeverReports() {
+        part("engageWait").interval = 60
+        verify(Lock.request())
+        verify(!Lock.isLocked)
+        tryVerify(() => Lock.isLocked, 2000)
+        verify(!Lock.isLocking)
+    }
+
+    function test_reducedMotionLocksAtOnce() {
+        Config.setReducedMotion(true)
+        verify(Lock.request())
+        verify(Lock.isLocked)
+        verify(!Lock.isLocking)
+    }
+
+    function test_aLockLostDuringTheEnterLetsGo() {
+        verify(Lock.request())
+        Compositor.isDriftwm = false
+        verify(!Lock.lock())
+        verify(!Lock.isLocking)
+        verify(!Lock.isLocked)
+        compare(marker().isLocked, false)
+        verify(Quickshell.watchFiles)
+    }
+
     function test_withoutTheCapabilityNothingLocks() {
         Compositor.isDriftwm = false
         verify(!Lock.canLock)
         verify(!Lock.lock())
+        verify(!Lock.request())
         verify(!Lock.isLocked)
+        verify(!Lock.isLocking)
         compare(Lock.status, "unsupported")
     }
 
@@ -161,6 +205,33 @@ TestCase {
         Lock.submit("secret")
         tryVerify(() => !Lock.isLocked, 3000)
         verify(!idle.enabled, "the unlocked desktop never blanks")
+    }
+
+    function test_hibernatesAfterTheScreenWentOff() {
+        const rest = part("rest")
+        Config.setLockBlankAfter(1)
+        Config.setLockSleepAfter(1)
+        Lock.lock()
+        verify(!rest.enabled, "no sleep before the compositor confirms the lock")
+        Lock.reportSecure(true)
+        compare(rest.timeout, 2)
+        verify(rest.respectInhibitors, "a playing video holds the sleep off")
+        const before = Power.hibernated
+        tryVerify(() => Lock.isAsleep, 4000)
+        compare(Power.hibernated, before + 1)
+        rest.touch()
+        Lock.submit("secret")
+        tryVerify(() => !Lock.isLocked, 3000)
+        verify(!rest.enabled, "the unlocked desktop never sleeps on its own")
+        Config.setLockSleepAfter(300)
+    }
+
+    function test_zeroNeverSleeps() {
+        Config.setLockSleepAfter(0)
+        Lock.lock()
+        Lock.reportSecure(true)
+        verify(!part("rest").enabled)
+        Config.setLockSleepAfter(300)
     }
 
     function test_zeroNeverBlanks() {

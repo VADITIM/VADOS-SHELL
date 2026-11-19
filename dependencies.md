@@ -8,7 +8,7 @@ Without these the shell does not start or its core does not work.
 
 | Dependency | Package | Used by | Without it |
 |---|---|---|---|
-| Quickshell | `quickshell` (AUR, or `quickshell-git`) | everything: `qs -p ~/.config/vados/shell` | nothing runs |
+| Quickshell | `quickshell` (AUR, or `quickshell-git`) | everything: `qs -p ~/.config/vados/shell`; its `Quickshell.Services.Polkit` module (0.2 or later) for the admin password prompt | nothing runs; without the polkit module the shell does not load |
 | Qt 6 Quick, Shapes, Effects, Wayland | `qt6-declarative`, `qt6-wayland` (pulled in by Quickshell) | every surface; `QtQuick.Shapes` (liquid, glyphs), `QtQuick.Effects` (`LiquidLayer`, `Masked`), `Qt.labs.folderlistmodel` (the wallpaper list) | nothing renders |
 | A Wayland compositor with `wlr-layer-shell` | `driftwm` (primary), `hyprland`, or another wlroots-style compositor | taskbar, overlays, alerts | nothing is shown; see README § Compositor support for what each one offers |
 | Space Mono | `ttf-space-mono` (AUR) or the font files in `~/.local/share/fonts` | every text (`Appearance.font.mono`) | falls back to Consolas, DejaVu Sans Mono or Courier New; the layout is tuned for Space Mono |
@@ -30,6 +30,9 @@ Each row is needed only for the feature it names; the rest of the shell works wi
 | pw-metadata | `pipewire` | moving an audio stream to another output (audio extension page) | streams cannot be moved; devices and volumes still work |
 | power-profiles-daemon (`powerprofilesctl`) | `power-profiles-daemon` | power profiles in the battery pill's POWER page | no profile rows |
 | fontconfig (`fc-list`), gsettings | `fontconfig`, `glib2` | settings, System font: lists families, and sets GTK's `font-name` | no families listed; without gsettings only the fontconfig alias is written |
+| xkeyboard-config (`/usr/share/X11/xkb/rules/evdev.lst`) | `xkeyboard-config` | settings, Keyboard: the layouts and variants to pick from | no layouts listed |
+| hidraw (`/dev/hidraw*`), `python3` (`lzma`), `pkexec` | kernel, `python`, `polkit` | settings, Keyboard: reads and writes VIA/Vial keymaps (`scripts/keyboards.py`) | no REMAP; without access READ AS ADMIN asks through polkit |
+| GitHub CLI, signed in (`gh auth login`) | `github-cli` | settings, User: the GitHub calendar, pinned and owned repositories, push headlines | the box reads public activity of the typed name only: no calendar beyond pushes, no favorites import from pins, pushes say only their branch |
 | xdg-utils (`xdg-mime`, `xdg-open`) | `xdg-utils` | settings, Link to VAD/OS: reads and sets default apps, opens a releases page | defaults are not shown or set; GET IT does nothing |
 | brightnessctl | `brightnessctl` | the brightness slider in the POWER page | no brightness row |
 | An MPRIS media player | Spotify, `mpv-mpris`, a browser | music in the activity pill (`Quickshell.Services.Mpris`) | no music activity |
@@ -50,6 +53,7 @@ Each row is needed only for the feature it names; the rest of the shell works wi
 | ext-session-lock and ext-idle-notify (`Quickshell.Wayland` `WlSessionLock`, `IdleMonitor`) | the compositor (driftwm, Hyprland) | the lock screen (`windows/LockWindow.qml`) and blanking the locked screen after `lock.blankAfter` | no lock screen: the lock button hands over to `loginctl lock-session`; without idle notification the locked screen never blanks |
 | wlr-output-management, Python 3 | the compositor (driftwm), `python` | reading the monitors and their modes for the Displays tab on driftwm (`scripts/outputs.py`, read only, no Python packages) | the Displays tab shows NO MONITORS FOUND |
 | wlopm | `wlopm` (extra) | switching the displays off and on while locked on driftwm (wlr-output-power-management, `Compositor.powerDisplays`) | the locked screen turns black but the displays stay on |
+| `/etc/os-release`, `/proc/sys/kernel/osrelease`, `/proc/sys/kernel/hostname`, `/proc/uptime` | the distribution, the Linux kernel | the system rows on the Settings > User tab | the row shows `-` |
 | `/proc/sys/kernel/random/boot_id`, `XDG_SESSION_ID` | the Linux kernel, `systemd-logind` | locking again when the shell restarts inside a locked session | a restarted shell leaves the crashed lock blank (the session stays locked) |
 
 ## Login screen
@@ -61,7 +65,20 @@ Only for the SDDM theme in `sddm/vados` (README § Login screen); the shell neve
 | SDDM 0.21 or later with its Qt 6 greeter | `sddm` | the login screen (`sddm-greeter-qt6`, `QtVersion=6` in `metadata.desktop`) | the theme is not used; any other login manager works as before |
 | Qt 6 Quick Effects | `qt6-declarative` | the blurred wallpaper and the round profile picture (`MultiEffect`) | the theme does not load |
 | Space Mono, installed system-wide | `ttf-space-mono` (AUR) | the login screen's type; SDDM cannot read `~/.local/share/fonts` | falls back to DejaVu Sans Mono |
+| xrandr | `xorg-xrandr` | the login screen on every monitor (`sddm/vados/Xsetup`) | only the outputs Xorg turns on by itself show the login |
 | Python 3 | `python` | `sddm/install.py` (staging, preview) | install by hand: copy `sddm/vados` and write `theme.conf.user` |
+
+## Boot screen
+
+Only for the BOOT switches in Advanced / Services (README § Boot screen); without these the section is hidden or its PLYMOUTH row is.
+
+| Dependency | Package | Used by | Without it |
+|---|---|---|---|
+| mkinitcpio building a unified kernel image | `mkinitcpio`, `systemd` (`systemd-stub`) | SPLASH and PLYMOUTH: `scripts/boot.py` edits the presets and runs `mkinitcpio -P` | the BOOT section is hidden |
+| Plymouth | `plymouth` | PLYMOUTH: the `plymouth` mkinitcpio hook and the `vados` script theme | only SPLASH shows, with INSTALL PLYMOUTH FOR THE ANIMATED BOOT SCREEN |
+| rsvg-convert | `librsvg` | drawing the mark in your accent (`assets/boot/mark.svg`) | the BOOT section is hidden |
+| polkit (`pkexec`) and a running polkit agent | `polkit`, `polkit-gnome` or `polkit-kde-agent` | running `scripts/boot.py apply` and `scripts/login.py apply` as root | the switch does nothing and the section says NO POLKIT AGENT RUNNING |
+| `/etc/kernel/cmdline` | `mkinitcpio` | PLYMOUTH adds `quiet splash` to the command line baked into the image | only SPLASH shows |
 
 ## Compositor-specific
 
@@ -87,3 +104,11 @@ Only for the SDDM theme in `sddm/vados` (README § Login screen); the shell neve
 | Qt's `qmltestrunner` | running the tests on Linux without PySide6 (`.claude/docs/quirks.md` § Memory) |
 | Node.js | checking the pure `shell/utils/*.js` libraries by hand when Qt is not available |
 | `qmlformat` (ships with PySide6) | syntax check of services that cannot be previewed |
+
+## Password prompts (`prompts.enabled`)
+
+| Needs | Package (Arch) | For | Without it |
+|---|---|---|---|
+| polkit | `polkit` | the admin password prompt (the shell as the polkit agent) | nothing asks for admin rights through the shell |
+| gcr 4 with its GObject introspection data, and PyGObject | `gcr-4`, `python-gobject` | `scripts/keyring.py`, the keyring prompt (secret exchange) | the helper exits, the supervisor logs it, `gcr-prompter` keeps asking |
+| gnome-keyring | `gnome-keyring` | something to prompt for | no keyring prompts appear |

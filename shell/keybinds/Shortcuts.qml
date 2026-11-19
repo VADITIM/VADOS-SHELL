@@ -13,11 +13,24 @@ Scope {
 
     readonly property string notificationStatus: Notifications.status
     readonly property bool isQuiet: Attention.isQuiet
+    readonly property var promptRequest: Passwords.request
+    readonly property bool isPromptOpen: ActivityState.promptScreen.length > 0
+
+    onPromptRequestChanged: {
+        if (promptRequest && !isPromptOpen) {
+            Log.info("prompt", "opening on " + (Compositor.focusedScreen || "no screen"))
+            ActivityState.openPrompt(Compositor.focusedScreen)
+        } else if (!promptRequest && isPromptOpen) {
+            ActivityState.closePrompt()
+        }
+    }
 
     function toggleSearch() {
         const screenName = Compositor.focusedScreen
         if (ActivityState.isClipboardOn(screenName))
             ActivityState.closeClipboard()
+        else if (!Overlays.isOpen("search", screenName) && Overlays.isAnyOn(screenName))
+            Overlays.close(Overlays.stack.filter(key => Overlays.screenOf(key) === screenName).pop())
         else
             Overlays.toggle("search", screenName)
     }
@@ -415,6 +428,26 @@ Scope {
 
         function clear(): void {
             Notifications.clear()
+        }
+    }
+
+    IpcHandler {
+        target: "prompt"
+
+        function enable(): void {
+            Config.setPromptsEnabled(true)
+        }
+
+        function disable(): void {
+            Config.setPromptsEnabled(false)
+        }
+
+        function status(): string {
+            return !Config.data.prompts.enabled ? "off" : "polkit " + (Polkit.isRegistered ? "registered" : "unregistered") + ", keyring " + (Keyring.isServing ? "serving" : "not serving")
+        }
+
+        function cancel(): void {
+            Passwords.cancel("ipc")
         }
     }
 }

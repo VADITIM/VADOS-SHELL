@@ -29,10 +29,14 @@ Item {
         const found = []
         gather(holder, found)
         let card = -1
+        let stripe = -1
         let group = { lead: 0, pieces: [] }
         const groups = [group]
         for (const piece of found) {
-            if (piece.role === "card") {
+            if (piece.role === "stripe") {
+                stripe++
+                piece.enterDelay = stripe * Motion.settings.stripeStagger
+            } else if (piece.role === "card") {
                 card++
                 piece.enterDelay = card * Motion.settings.cardStagger
                 group = { lead: card * Motion.settings.cardStagger + Motion.settings.cardLead, pieces: [] }

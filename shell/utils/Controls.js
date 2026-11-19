@@ -48,19 +48,19 @@ function streamLabel(properties, description, name) {
     return application || description || name || "STREAM"
 }
 
-function sectionRows(outputs, inputs, streams) {
-    const rows = []
-    const add = (title, kind, items) => {
-        if (items.length === 0)
-            return
-        rows.push({ kind: "header", title: title, key: "header-" + kind })
-        for (const item of items)
-            rows.push(Object.assign({ kind: kind }, item))
-    }
-    add("OUTPUT", "output", outputs)
-    add("INPUT", "input", inputs)
-    add("STREAMS", "stream", streams)
-    return rows
+var audioTabs = [
+    { key: "output", label: "OUTPUT" },
+    { key: "input", label: "INPUT" },
+    { key: "stream", label: "STREAM" }
+]
+
+function audioTabOf(key) {
+    return audioTabs.some(tab => tab.key === key) ? key : audioTabs[0].key
+}
+
+function tabRows(outputs, inputs, streams, tab) {
+    const items = { output: outputs, input: inputs, stream: streams }[audioTabOf(tab)]
+    return items.map(item => Object.assign({ kind: audioTabOf(tab) }, item))
 }
 
 function stripEscapes(text) {
@@ -89,8 +89,8 @@ function parsePowered(text) {
 
 function parseIwdNetworks(text) {
     const networks = []
-    for (const line of stripEscapes(text).split("\n")) {
-        const match = /^\s*(>)?\s*(.+?)\s{2,}(open|psk|8021x|wep)\s+(\*+)\s*$/.exec(line)
+    for (const line of stripEscapes(text.replace(/\x1b\[[0-9;]*90m\*+/g, "")).split("\n")) {
+        const match = /^\s*(>)?\s*(.+?)\s{2,}(open|psk|8021x|wep)\s+(\**)\s*$/.exec(line)
         if (!match)
             continue
         networks.push({

@@ -22,7 +22,7 @@ Item {
     property real screenHeight: 0
     property bool canHandOff: false
     property bool hasSteps: true
-    property bool hasSideStep: false
+    property real bottomStepShare: look.stepBottomShare
     property bool isHandingOver: false
     property bool hasCircle: false
     property bool shouldStream: true
@@ -105,7 +105,6 @@ Item {
     readonly property bool isStepped: hasSteps && (isSplashing || isLeaving) && !isHandedOff
     readonly property var topStep: stepForm("top")
     readonly property var bottomStep: stepForm("bottom")
-    readonly property var sideStep: stepForm("side")
     readonly property real aboveRise: isStepped ? topStep.rise : 0
     readonly property real belowRise: isStepped ? bottomStep.rise : 0
     readonly property bool isFullHeight: formHeight >= screenHeight - 1
@@ -382,17 +381,7 @@ Item {
         segments.push(lineSegment(alongX, edge, Math.max(alongX, formRight - radius), edge))
         segments.push(arcSegment(formRight - radius, edge - radius, radius))
         const down = Math.max(0, edge - radius)
-        const sideRise = hasSideStep && isStepped ? sideStep.rise : 0
-        const near = side < 0 ? form.y - sideStep.y : sideStep.y + sideStep.height - form.y
-        if (sideRise > 0.5 && near > 0 && near < down) {
-            const sideCorner = Math.min(sideStep.corner, near)
-            segments.push(lineSegment(formRight, down, formRight, near))
-            segments.push(lineSegment(formRight, near, formRight + sideRise - sideCorner, near))
-            segments.push(arcSegment(formRight + sideRise - sideCorner, near - sideCorner, sideCorner))
-            segments.push(lineSegment(formRight + sideRise, near - sideCorner, formRight + sideRise, 0))
-        } else {
-            segments.push(lineSegment(formRight, down, formRight, 0))
-        }
+        segments.push(lineSegment(formRight, down, formRight, 0))
         return { segments: segments, total: segments.reduce((sum, segment) => sum + segment.length, 0) }
     }
 
@@ -785,22 +774,10 @@ Item {
     function stepForm(kind) {
         const retract = isLeaving ? 1 - Geometry.smooth(Geometry.clampUnit(exit / pace.stepRetract)) : 1
         const grow = Geometry.clampUnit(form.height / Math.max(1, formHeight)) * retract
-        if (kind === "side") {
-            const rise = look.stepSide * grow * Geometry.smooth(Geometry.clampUnit((spread - meetShare) / (1 - meetShare)))
-            const height = look.stepSideHeight * grow
-            return {
-                x: formRight - look.stepSideCorner,
-                y: seedY - height / 2,
-                width: rise + look.stepSideCorner,
-                height: height,
-                rise: rise,
-                corner: Math.min(look.stepSideCorner, rise)
-            }
-        }
         const isTop = kind === "top"
         const rise = (isTop ? look.stepTop : look.stepBottom) * grow
         const left = form.x - form.width / 2
-        const width = form.width * (isTop ? look.stepTopShare : look.stepBottomShare)
+        const width = form.width * (isTop ? look.stepTopShare : bottomStepShare)
         const edge = isTop ? form.y - form.height / 2 - rise : form.y + form.height / 2 - look.stepCorner
         return { x: left, y: edge, width: width, height: rise + look.stepCorner, rise: rise, corner: Math.min(look.stepCorner, rise) }
     }
@@ -1010,11 +987,11 @@ Item {
     }
 
     Repeater {
-        model: burst.hasSideStep ? ["top", "bottom", "side"] : ["top", "bottom"]
+        model: ["top", "bottom"]
 
         Rectangle {
             required property string modelData
-            readonly property var step: modelData === "top" ? burst.topStep : modelData === "bottom" ? burst.bottomStep : burst.sideStep
+            readonly property var step: modelData === "top" ? burst.topStep : burst.bottomStep
             visible: burst.isStepped && step.width > 0.5 && step.corner > 0.5
             color: "white"
             antialiasing: true

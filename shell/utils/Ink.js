@@ -211,10 +211,34 @@ function strokeOf(kind, color, width, point) {
     return { kind: kind, color: color, width: width, points: [point, point] }
 }
 
-function extended(stroke, point) {
+function snappedTo(from, to) {
+    const step = Math.PI / 4
+    const angle = Math.round(Math.atan2(to.y - from.y, to.x - from.x) / step) * step
+    const length = Math.hypot(to.x - from.x, to.y - from.y)
+    return { x: from.x + Math.cos(angle) * length, y: from.y + Math.sin(angle) * length }
+}
+
+function straightened(stroke, isStraight) {
+    const trail = stroke.trail ?? stroke.points
+    const points = isStraight ? [trail[0], snappedTo(trail[0], trail[trail.length - 1])] : trail
+    return Object.assign({}, stroke, { points: points, trail: trail })
+}
+
+function extended(stroke, point, isStraight) {
     if (stroke.kind === "paint")
-        return Object.assign({}, stroke, { points: stroke.points.concat([point]) })
+        return straightened(Object.assign({}, stroke, { trail: (stroke.trail ?? stroke.points).concat([point]) }), isStraight === true)
     return Object.assign({}, stroke, { points: [stroke.points[0], point] })
+}
+
+function windowAt(windows, point) {
+    let best = null
+    for (const window of windows) {
+        if (!contains(window, point))
+            continue
+        if (best === null || window.width * window.height < best.width * best.height)
+            best = window
+    }
+    return best
 }
 
 function ellipseOf(from, to) {
@@ -290,6 +314,14 @@ function erased(strokes, point, reach) {
     return strokes.filter(stroke => !isHit(stroke, point, reach))
 }
 
-function undone(strokes) {
-    return strokes.slice(0, -1)
+function recorded(past, before, after) {
+    if (before === null || JSON.stringify(before) === JSON.stringify(after))
+        return past
+    return past.concat([before])
+}
+
+function undone(past, strokes) {
+    if (past.length === 0)
+        return { past: past, strokes: strokes }
+    return { past: past.slice(0, -1), strokes: past[past.length - 1] }
 }

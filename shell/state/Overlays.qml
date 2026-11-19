@@ -13,6 +13,7 @@ Singleton {
     property var gathering: []
     property var taskbarParts: ({})
     property var taskbarOrigins: ({})
+    property var taskbarGroups: ({})
     property var heldScreens: []
     property var visitors: ({})
     property var phases: ({})
@@ -112,6 +113,16 @@ Singleton {
             returnTaskbar(screenName)
     }
 
+    function move(key, fromScreen, toScreen, phase) {
+        if (fromScreen.length > 0 && fromScreen !== toScreen) {
+            placeVisitor(key, fromScreen, null)
+            if (phaseOf(key, fromScreen) !== "idle")
+                reportPhase(key, fromScreen, "idle")
+        }
+        if (phaseOf(key, toScreen) !== phase)
+            reportPhase(key, toScreen, phase)
+    }
+
     function keepScreens(screenNames) {
         for (const key of stack.slice()) {
             if (screenNames.indexOf(screens[key]) < 0)
@@ -121,6 +132,7 @@ Singleton {
         gathering = gathering.filter(screenName => screenNames.indexOf(screenName) >= 0)
         taskbarParts = keepOnly(taskbarParts, screenNames)
         taskbarOrigins = keepOnly(taskbarOrigins, screenNames)
+        taskbarGroups = keepOnly(taskbarGroups, screenNames)
         heldScreens = heldScreens.filter(screenName => screenNames.indexOf(screenName) >= 0)
         visitors = keepOnly(visitors, screenNames)
         phases = keepOnly(phases, screenNames)
@@ -241,6 +253,12 @@ Singleton {
         const placed = Object.assign({}, taskbarOrigins)
         placed[screenName] = origins
         taskbarOrigins = placed
+    }
+
+    function placeTaskbarGroups(screenName, groups) {
+        const placed = Object.assign({}, taskbarGroups)
+        placed[screenName] = groups
+        taskbarGroups = placed
     }
 
     function placeVisitor(key, screenName, visitor) {

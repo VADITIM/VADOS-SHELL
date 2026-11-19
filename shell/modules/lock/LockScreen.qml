@@ -3,8 +3,6 @@ import qs.config
 import qs.services
 import qs.components
 import "../../utils/Locking.js" as Locking
-import "../../utils/Liquid.js" as Liquid
-import "../../utils/Geometry.js" as Geometry
 
 Item {
     id: lockScreen
@@ -13,9 +11,6 @@ Item {
     property bool isMain: true
     property var layout: []
     property string wallpaper: ""
-    property var parts: []
-    property var origin: null
-    property bool isMirrored: false
     property int passwordLength: 0
     property bool isChecking: false
     property string message: ""
@@ -28,26 +23,11 @@ Item {
     readonly property var pace: Motion.lock
     readonly property string phase: lifecycle.phase
     readonly property bool isPresent: lifecycle.isPresent
-    readonly property bool isOpen: phase === "entering" || phase === "active" || phase === "exiting"
+    readonly property bool isOpen: phase === "entering" || phase === "active"
     readonly property var placements: isMain ? Locking.layoutOf(layout) : []
     readonly property var frames: placements.map(placement => Locking.rectOf(placement, width, height, look.gap))
-    readonly property var delays: Locking.delays(placements.length, pace.stagger, Math.random)
-    readonly property int longestDelay: delays.reduce((longest, delay) => Math.max(longest, delay), 0)
-    readonly property int scatterSpan: pace.scatter + longestDelay
-    readonly property real contentAt: Liquid.arrival(Motion.liquid.sling) * 1000 - pace.contentLead
-    readonly property point center: Qt.point(width / 2, height / 2)
-    readonly property point edgeSeed: origin ?? Qt.point(Appearance.taskbar.thickness / 2, height / 2)
-    readonly property point seed: Qt.point(isMirrored ? width - edgeSeed.x : edgeSeed.x, edgeSeed.y)
-    readonly property point target: isMain ? center : seed
-    readonly property point control: Qt.point(Geometry.mix(seed.x, target.x, 0.5), Math.min(seed.y, target.y) - height * look.arcLift)
-    readonly property point dropPoint: Geometry.arcAt(seed, control, target, sling.share)
-    readonly property point dropAhead: Geometry.arcAt(seed, control, target, Math.min(1, sling.share + look.headingStep))
-    readonly property real fillSize: isMain ? look.fill : 0
-    readonly property real dropSize: scatter.isThrown ? fillSize * (1 - Geometry.clampUnit(scatter.share * scatterSpan / pace.scatter))
-        : filling.isThrown ? Geometry.mix(look.drop, fillSize, filling.share)
-        : look.drop * Geometry.clampUnit(gathering.share * look.dropGrowth)
-    readonly property real stretch: sling.isThrown && !sling.isLanded ? Math.sin(Math.PI * sling.share) * look.stretchLimit : 0
-    readonly property real heading: Geometry.headingOf(dropPoint.x, dropPoint.y, dropAhead.x, dropAhead.y) * 180 / Math.PI
+    readonly property var delays: Locking.delays(placements.length, pace.contentStagger, Math.random)
+    readonly property int contentSpan: delays.reduce((longest, delay) => Math.max(longest, delay), 0) + pace.contentStagger
     readonly property int profileIndex: placements.findIndex(placement => placement.key === "profile")
     readonly property var profileFrame: profileIndex >= 0 ? frames[profileIndex] : null
     readonly property string bumpKey: ["call", "media", "recording", "notifications"].find(key => Activities.liveKeys.indexOf(key) >= 0) ?? ""
@@ -57,18 +37,10 @@ Item {
     readonly property bool isDark: cover.opacity >= 1
     readonly property var emptyFrame: ({ x: 0, y: 0, width: 0, height: 0 })
 
-    function progressOf(index) {
-        if (scatter.isLanded)
-            return 1
-        if (!scatter.isThrown)
-            return 0
-        return Liquid.rise(Motion.liquid.sling, Math.max(0, scatter.share * scatterSpan - (delays[index] ?? 0)) / 1000)
-    }
-
     function isContentShownAt(index) {
-        if (scatter.isLanded)
+        if (arrival.isLanded)
             return true
-        return scatter.isThrown && scatter.share * scatterSpan - (delays[index] ?? 0) >= contentAt
+        return arrival.isThrown && arrival.share * contentSpan >= (delays[index] ?? 0)
     }
 
     Behavior on bumpShare {
@@ -88,33 +60,10 @@ Item {
     }
 
     Throw {
-        id: gathering
-        label: "lock gather"
+        id: arrival
+        label: "lock contents"
         isThrown: lockScreen.isOpen
-        span: lockScreen.pace.gather
-    }
-
-    Throw {
-        id: sling
-        label: "lock sling"
-        isThrown: gathering.isLanded
-        span: lockScreen.pace.sling
-    }
-
-    Throw {
-        id: filling
-        label: "lock fill"
-        isThrown: sling.isLanded
-        span: lockScreen.pace.fill
-        easing: Easing.OutBack
-        overshoot: lockScreen.pace.fillBack
-    }
-
-    Throw {
-        id: scatter
-        label: "lock scatter"
-        isThrown: filling.isLanded
-        span: lockScreen.scatterSpan
+        span: lockScreen.contentSpan
         easing: Easing.Linear
         onIsLandedChanged: if (isLanded) Qt.callLater(lifecycle.send, "entered")
     }
@@ -133,6 +82,7 @@ Item {
     Backdrop {
         anchors.fill: parent
         isShown: !lockScreen.isDark
+        isImmediate: true
         source: lockScreen.wallpaper
         blur: lockScreen.look.blur
         detail: lockScreen.look.backdropScale
@@ -148,32 +98,12 @@ Item {
     LiquidLayer {
         id: liquid
         anchors.fill: parent
-        isShown: lockScreen.isPresent && !lockScreen.isDark
+        isShown: lockScreen.isPresent && !lockScreen.isDark && lockScreen.placements.length > 0
         fill: Appearance.color.panel
         rim: Appearance.color.hairline
         fillAlpha: Appearance.color.panelAlpha
         melt: lockScreen.look.melt
         opacity: 1 - fading.share
-
-        Gather {
-            parent: liquid.shapes
-            parts: lockScreen.parts
-            isMirrored: lockScreen.isMirrored
-            isShown: lockScreen.isOpen && !gathering.isLanded
-            seedX: lockScreen.seed.x
-            seedY: lockScreen.seed.y
-            merge: gathering.share
-        }
-
-        LiquidShape {
-            parent: liquid.shapes
-            visible: lockScreen.isOpen && lockScreen.dropSize > 0.5
-            width: lockScreen.dropSize * (1 + lockScreen.stretch)
-            height: lockScreen.dropSize * (1 - lockScreen.stretch / 2)
-            x: lockScreen.dropPoint.x - width / 2
-            y: lockScreen.dropPoint.y - height / 2
-            rotation: lockScreen.heading
-        }
 
         Item {
             parent: liquid.shapes
@@ -185,17 +115,13 @@ Item {
                 Squircle {
                     required property int index
                     readonly property var frame: lockScreen.frames[index] ?? lockScreen.emptyFrame
-                    readonly property real progress: lockScreen.progressOf(index)
-                    readonly property real centerX: Geometry.mix(lockScreen.center.x, frame.x + frame.width / 2, progress)
-                    readonly property real centerY: Geometry.mix(lockScreen.center.y, frame.y + frame.height / 2, progress)
 
-                    visible: scatter.isThrown
                     color: "white"
                     corner: lockScreen.look.corner
-                    width: Math.max(1, Geometry.mix(lockScreen.look.drop, frame.width, progress))
-                    height: Math.max(1, Geometry.mix(lockScreen.look.drop, frame.height, progress))
-                    x: centerX - width / 2
-                    y: centerY - height / 2
+                    x: frame.x
+                    y: frame.y
+                    width: Math.max(1, frame.width)
+                    height: Math.max(1, frame.height)
                 }
             }
 

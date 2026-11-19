@@ -189,8 +189,12 @@ function withOutput(layout, name, changes) {
     return layout.map(output => output.name === name ? Object.assign({}, output, changes) : output)
 }
 
-function alignedOn(position, length, start, span, reach) {
-    let value = Math.max(start - length + 1, Math.min(start + span - 1, position))
+function onGrid(position, grid) {
+    return grid > 0 ? Math.round(position / grid) * grid : position
+}
+
+function alignedOn(position, length, start, span, reach, grid) {
+    let value = Math.max(start - length + 1, Math.min(start + span - 1, onGrid(position, grid)))
     let nearest = reach
     for (const target of [start, start + span - length, start + (span - length) / 2]) {
         const distance = Math.abs(position - target)
@@ -202,7 +206,7 @@ function alignedOn(position, length, start, span, reach) {
     return Math.round(value)
 }
 
-function snapped(layout, name, x, y, reach) {
+function snapped(layout, name, x, y, reach, grid) {
     const moving = layout.find(output => output.name === name)
     if (!moving || !isLit(moving))
         return layout
@@ -212,8 +216,8 @@ function snapped(layout, name, x, y, reach) {
         return withOutput(layout, name, { x: 0, y: 0 })
     const candidates = []
     for (const other of others) {
-        const slideX = alignedOn(x, size.width, other.x, other.width, reach)
-        const slideY = alignedOn(y, size.height, other.y, other.height, reach)
+        const slideX = alignedOn(x, size.width, other.x, other.width, reach, grid)
+        const slideY = alignedOn(y, size.height, other.y, other.height, reach, grid)
         candidates.push({ x: other.x + other.width, y: slideY }, { x: other.x - size.width, y: slideY }, { x: slideX, y: other.y + other.height }, { x: slideX, y: other.y - size.height })
     }
     const free = candidates.filter(candidate => others.every(other => overlapOf({ x: candidate.x, y: candidate.y, width: size.width, height: size.height }, other) === 0))

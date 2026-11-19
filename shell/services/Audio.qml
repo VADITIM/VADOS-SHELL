@@ -20,6 +20,7 @@ Singleton {
     readonly property var outputs: outputNodes.map(node => rowOf(node, node === sink))
     readonly property var inputs: inputNodes.map(node => rowOf(node, node === source))
     readonly property var streams: streamNodes.map(node => rowOf(node, false))
+    readonly property string tab: Controls.audioTabOf(store.values.tab ?? "")
 
     function rowOf(node, isDefault) {
         return {
@@ -55,8 +56,20 @@ Singleton {
             Pipewire.preferredDefaultAudioSource = row.node
     }
 
+    function pickTab(key) {
+        const next = Controls.audioTabOf(key)
+        if (next !== tab)
+            store.update(Object.assign({}, store.values, { tab: next }))
+    }
+
     function route(stream, output) {
         Quickshell.execDetached(["pw-metadata", String(stream.node.id), "target.node", String(output.node.id), "Spa:Id"])
+    }
+
+    StateFile {
+        id: store
+        name: "audio"
+        defaults: ({ tab: "output" })
     }
 
     PwObjectTracker {

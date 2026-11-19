@@ -26,19 +26,13 @@ IdlePill {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 2
 
-                TypedText {
+                ScrambleText {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.min(fullWidth, 110)
+                    width: Math.min(implicitWidth, 110)
                     clip: true
+                    label: "usb name"
                     isShown: usbIdle.isUnfolded
-                    characterInterval: Motion.type.quick
-                    untypeInterval: Motion.type.quickUntype
                     target: device.modelData.label
-                    color: Appearance.color.text
-                    font.family: Appearance.font.sans
-                    font.pixelSize: Appearance.font.label
-                    font.letterSpacing: Appearance.font.labelSpacing
-                    font.bold: true
                 }
 
                 Turn {
@@ -51,6 +45,7 @@ IdlePill {
 
                     GlyphButton {
                         glyphName: "eject"
+                        hoverName: "EJECT"
                         onClicked: Removable.eject(device.modelData)
                     }
                 }

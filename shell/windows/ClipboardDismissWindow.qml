@@ -13,6 +13,9 @@ PanelWindow {
     readonly property bool isRight: Config.data.taskbar.side === "right"
     readonly property bool isOverMenu: Overlays.isHolding(screenName)
     readonly property var look: Appearance.clipboard
+    readonly property bool isClipboardOpen: ActivityState.isClipboardOn(screenName)
+    readonly property bool isActivityExpanded: screenName.length > 0 && ActivityState.modeOn(screenName) === "expanded" && !isOverMenu
+    readonly property real budReach: isActivityExpanded ? Appearance.activity.bud.gap + Appearance.activity.bud.size : 0
 
     anchors {
         left: true
@@ -21,7 +24,7 @@ PanelWindow {
         bottom: true
     }
     exclusionMode: ExclusionMode.Ignore
-    visible: ActivityState.isClipboardOn(screenName)
+    visible: isClipboardOpen || isActivityExpanded
     WlrLayershell.layer: isOverMenu ? WlrLayer.Overlay : WlrLayer.Top
     WlrLayershell.namespace: "vados-clipboard-dismiss"
     color: "transparent"
@@ -32,9 +35,9 @@ PanelWindow {
         Region {
             readonly property rect zone: window.isOverMenu ? Qt.rect(0, 0, 0, 0) : ActivityState.clipboardZoneOn(window.screenName)
             x: zone.x
-            y: zone.y
+            y: zone.y - window.budReach
             width: zone.width
-            height: zone.height
+            height: zone.height + window.budReach * 2
             intersection: Intersection.Subtract
         }
     }
@@ -42,12 +45,15 @@ PanelWindow {
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.AllButtons
-        onPressed: ActivityState.closeClipboard()
+        onPressed: {
+            ActivityState.closeClipboard()
+            ActivityState.fold()
+        }
     }
 
     Rectangle {
         id: panel
-        visible: window.isOverMenu
+        visible: window.isOverMenu && window.isClipboardOpen
         x: window.isRight ? window.width - width - Appearance.taskbar.margin : Appearance.taskbar.margin
         y: (window.height - height) / 2
         width: window.look.width

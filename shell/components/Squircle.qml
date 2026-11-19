@@ -19,6 +19,27 @@ Shape {
 
     preferredRendererType: Shape.CurveRenderer
 
+    Behavior on color {
+        ColorAnimation {
+            duration: Motion.pace(Motion.stateDuration)
+            easing.type: Easing.OutQuad
+        }
+    }
+
+    Behavior on shade {
+        ColorAnimation {
+            duration: Motion.pace(Motion.stateDuration)
+            easing.type: Easing.OutQuad
+        }
+    }
+
+    Behavior on strokeColor {
+        ColorAnimation {
+            duration: Motion.pace(Motion.stateDuration)
+            easing.type: Easing.OutQuad
+        }
+    }
+
     ShapePath {
         fillGradient: LinearGradient {
             x1: 0

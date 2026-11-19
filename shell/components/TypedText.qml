@@ -65,10 +65,7 @@ Text {
         visible: false
         text: typed.target.length > 0 ? typed.target : " "
         textFormat: Text.PlainText
-        font.family: typed.font.family
-        font.pixelSize: typed.font.pixelSize
-        font.bold: typed.font.bold
-        font.letterSpacing: typed.font.letterSpacing
+        font: typed.font
     }
 
     Timer {

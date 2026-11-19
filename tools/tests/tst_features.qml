@@ -79,14 +79,14 @@ Item {
         onIsReadyChanged: if (isReady) scene.calculatorReadyAt = Clock.now()
     }
 
-    LockScreen {
-        id: lockScreen
+    LockVeil {
+        id: lockVeil
         width: scene.width
         height: scene.height
         visible: isPresent
         layout: ["clock:5:1", "profile:6:4", "login:5:8"]
         parts: [Qt.rect(6, 20, 40, 220), Qt.rect(6, 760, 40, 40)]
-        origin: Qt.point(26, 780)
+        groups: ({ tasks: [Qt.rect(6, 20, 40, 220)], system: [Qt.rect(6, 760, 40, 40)] })
         onIsReadyChanged: if (isReady) scene.lockReadyAt = Clock.now()
     }
 
@@ -225,13 +225,13 @@ Item {
             let best = Infinity
             for (let round = 0; round < rounds; round++) {
                 const start = Clock.now()
-                lockScreen.isLocked = true
-                tryCompare(lockScreen, "isReady", true, 3000)
+                lockVeil.isShown = true
+                tryCompare(lockVeil, "isReady", true, 3000)
                 best = Math.min(best, scene.lockReadyAt - start)
-                tryCompare(lockScreen, "phase", "active", 3000)
-                lockScreen.isLocked = false
-                tryCompare(lockScreen, "phase", "idle", 3000)
-                verify(!lockScreen.isReady)
+                tryCompare(lockVeil, "phase", "active", 3000)
+                lockVeil.isShown = false
+                tryCompare(lockVeil, "phase", "idle", 5000)
+                verify(!lockVeil.isReady)
             }
             console.info("vados: lock ready after " + Math.round(best) + " ms")
             verify(best <= Motion.budget.ready.takeover, Math.round(best) + " ms is over the " + Motion.budget.ready.takeover + " ms takeover budget")

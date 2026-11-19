@@ -27,10 +27,36 @@ TestCase {
         ActivityState.mode = "idle"
     }
 
-    function test_catalogueHoldsNotificationsAndTray() {
-        verify(Activities.keys.includes("notifications"))
-        verify(Activities.keys.includes("tray"))
-        verify(!Activities.isLive("tray"), "the tray is reachable but never makes the pill active by itself")
+    function test_thePillHasThreeTabs() {
+        compare(Activities.tabs, ["notifications", "media", "call"])
+        verify(!Activities.keys.includes("tray"), "background apps live in their own pill")
+    }
+
+    function test_theWheelStepsThroughTheTabsAndStopsAtTheEnds() {
+        quiet()
+        ActivityState.pin("notifications")
+        ActivityState.rotate(-1)
+        compare(ActivityState.leadKey, "notifications", "the first tab never wraps to the last")
+        ActivityState.rotate(1)
+        compare(ActivityState.leadKey, "media", "scrolling up takes the tab below")
+        ActivityState.rotate(1)
+        compare(ActivityState.leadKey, "call")
+        ActivityState.rotate(1)
+        compare(ActivityState.leadKey, "call", "the last tab never wraps to the first")
+        ActivityState.rotate(-1)
+        compare(ActivityState.leadKey, "media")
+    }
+
+    function test_showingATabWhileExpandedKeepsItExpanded() {
+        quiet()
+        ActivityState.pin("media")
+        ActivityState.toggle("screen")
+        ActivityState.show("screen", "call")
+        compare(ActivityState.mode, "expanded")
+        compare(ActivityState.leadKey, "call")
+        ActivityState.show("screen", "notifications")
+        compare(Overlays.top, "notifications", "the bell tab opens the notifications menu")
+        verify(ActivityState.mode !== "expanded")
     }
 
     function test_unreadNotificationWakesThePill() {
@@ -97,19 +123,21 @@ TestCase {
 
     function test_pinPicksTheLead() {
         quiet()
-        ActivityState.pin("tray")
-        compare(ActivityState.leadKey, "tray")
+        ActivityState.pin("call")
+        compare(ActivityState.leadKey, "call")
         ActivityState.pin("nothing")
-        compare(ActivityState.leadKey, "tray", "an unknown key changes nothing")
+        compare(ActivityState.leadKey, "call", "an unknown key changes nothing")
+        ActivityState.pin("tray")
+        compare(ActivityState.leadKey, "call", "the tray is no tab")
     }
 
     function test_expandedKeepsItsLeadWhenAnActivityStarts() {
         quiet()
-        ActivityState.pin("tray")
+        ActivityState.pin("media")
         ActivityState.toggle("screen")
         Activities.isCalling = true
         compare(ActivityState.mode, "expanded")
-        compare(ActivityState.leadKey, "tray")
+        compare(ActivityState.leadKey, "media")
     }
 
     function test_clipboardOpensOnItsOwnScreen() {
@@ -121,11 +149,12 @@ TestCase {
         verify(!ActivityState.isClipboardOn("screen"), "the same key closes it")
     }
 
-    function test_clipboardStaysClosedInAMenu() {
+    function test_clipboardOpensOverAMenu() {
         quiet()
         Overlays.open("notifications", "screen")
         ActivityState.toggleClipboard("screen")
-        verify(!ActivityState.isClipboardOn("screen"), "no clipboard while a menu holds the screen")
+        verify(ActivityState.isClipboardOn("screen"), "the clipboard opens over an open menu")
+        ActivityState.toggleClipboard("screen")
         Overlays.close("notifications")
     }
 

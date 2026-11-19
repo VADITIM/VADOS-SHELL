@@ -11,12 +11,14 @@ Scope {
     id: window
 
     property string draft: ""
-    property var leaving: []
+    property var veiled: []
+    property var covered: []
     readonly property var screenNames: Array.from(Quickshell.screens, screen => screen.name)
     readonly property string mainScreen: Locking.mainScreenOf(screenNames, Lock.screenName)
     readonly property var placements: Locking.layoutOf(Config.data.lock.layout)
     readonly property string background: Config.data.lock.wallpaper.length > 0 ? Config.data.lock.wallpaper : Config.data.wallpaper.path
     readonly property bool isMirrored: Config.data.taskbar.side === "right"
+    readonly property bool isVeiling: Lock.isLocking || Lock.isLocked
 
     function isPlaced(key) {
         return placements.some(placement => placement.key === key)
@@ -40,33 +42,62 @@ Scope {
             Overlays.holdTaskbar(screenName)
     }
 
+    function begin() {
+        backstop.stop()
+        covered = []
+        veiled = screenNames.slice()
+        hold()
+    }
+
+    function cover(screenName) {
+        if (covered.indexOf(screenName) < 0)
+            covered = covered.concat([screenName])
+        if (Lock.isLocking && screenNames.every(name => covered.indexOf(name) >= 0))
+            Lock.lock()
+    }
+
+    function placeVisitor(screenName, visitor) {
+        Overlays.placeVisitor("lock", screenName, visitor)
+        if (visitor && visitor.release > 0 && !window.isVeiling)
+            Overlays.releaseTaskbar(screenName)
+    }
+
     function finish(screenName) {
+        Overlays.placeVisitor("lock", screenName, null)
         Overlays.releaseTaskbar(screenName)
-        leaving = leaving.filter(name => name !== screenName)
+        veiled = veiled.filter(name => name !== screenName)
+        covered = covered.filter(name => name !== screenName)
     }
 
     function finishAll() {
-        for (const screenName of leaving.slice())
+        for (const screenName of veiled.slice())
             finish(screenName)
     }
 
-    Component.onCompleted: if (Lock.isLocked) hold()
+    Component.onCompleted: {
+        if (isVeiling)
+            begin()
+    }
 
     Connections {
         target: Lock
 
-        function onIsLockedChanged() {
-            if (!Lock.isLocked)
+        function onIsLockingChanged() {
+            if (!Lock.isLocking)
                 return
             window.draft = ""
-            window.leaving = []
-            backstop.stop()
-            window.hold()
+            window.begin()
+        }
+
+        function onIsLockedChanged() {
+            if (Lock.isLocked && window.veiled.length === 0) {
+                window.draft = ""
+                window.begin()
+            }
         }
 
         function onUnlocked() {
             window.draft = ""
-            window.leaving = window.screenNames.slice()
             backstop.restart()
         }
     }
@@ -75,8 +106,10 @@ Scope {
         target: Quickshell
 
         function onScreensChanged() {
-            if (Lock.isLocked)
-                window.hold()
+            if (!window.isVeiling)
+                return
+            window.hold()
+            window.veiled = window.screenNames.slice()
         }
     }
 
@@ -124,9 +157,6 @@ Scope {
                     isMain: surface.screenName === window.mainScreen
                     layout: Config.data.lock.layout
                     wallpaper: window.background
-                    parts: Overlays.taskbarParts[surface.screenName] ?? []
-                    origin: Overlays.taskbarOrigins[surface.screenName]?.power ?? null
-                    isMirrored: window.isMirrored
                     passwordLength: window.draft.length
                     isChecking: Lock.isChecking
                     message: Lock.message
@@ -140,15 +170,22 @@ Scope {
     }
 
     Variants {
-        model: Array.from(Quickshell.screens).filter(screen => window.leaving.indexOf(screen.name) >= 0)
+        model: Quickshell.screens
 
         PanelWindow {
-            id: afterglow
+            id: veilWindow
 
             required property ShellScreen modelData
             readonly property string screenName: modelData.name
+            readonly property bool isMain: screenName === window.mainScreen
+            readonly property bool isVeiled: window.veiled.indexOf(screenName) >= 0
+            property Region blocking: Region {
+                item: veilArea
+            }
+            property Region passing: Region {}
 
             screen: modelData
+            visible: isVeiled
             anchors {
                 left: true
                 right: true
@@ -157,18 +194,30 @@ Scope {
             }
             exclusionMode: ExclusionMode.Ignore
             WlrLayershell.layer: WlrLayer.Top
-            WlrLayershell.namespace: "vados-unlock"
+            WlrLayershell.namespace: "vados-lock"
             color: "transparent"
-            mask: Region {}
+            mask: Lock.isLocking ? blocking : passing
 
-            LockLeave {
-                anchors.fill: parent
-                isMain: afterglow.screenName === window.mainScreen
-                layout: Config.data.lock.layout
-                parts: Overlays.taskbarParts[afterglow.screenName] ?? []
-                isMirrored: window.isMirrored
-                onSpilled: Overlays.releaseTaskbar(afterglow.screenName)
-                onLanded: window.finish(afterglow.screenName)
+            Item {
+                id: veilArea
+                width: veilWindow.modelData.width
+                height: veilWindow.modelData.height
+
+                LockVeil {
+                    anchors.fill: parent
+                    isShown: window.isVeiling && veilWindow.isVeiled
+                    isInstant: Lock.isLocked && !Lock.isLocking
+                    isMain: veilWindow.isMain
+                    layout: Config.data.lock.layout
+                    wallpaper: window.background
+                    parts: Overlays.taskbarParts[veilWindow.screenName] ?? []
+                    groups: Overlays.taskbarGroups[veilWindow.screenName] ?? ({})
+                    isMirrored: window.isMirrored
+                    canHandOff: !Occupancy.isCovered(veilWindow.screenName, true)
+                    onCovered: window.cover(veilWindow.screenName)
+                    onVisitorChanged: window.placeVisitor(veilWindow.screenName, visitor)
+                    onLanded: window.finish(veilWindow.screenName)
+                }
             }
         }
     }

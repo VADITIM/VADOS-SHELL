@@ -12,6 +12,8 @@ Singleton {
             return false
         if (window.isFullscreen)
             return true
+        if (Config.data.taskbar.overlap === "stay")
+            return false
         const screen = Quickshell.screens.find(candidate => candidate.name === screenName)
         const screenWidth = screen?.width ?? Number.MAX_VALUE
         const screenHeight = screen?.height ?? Number.MAX_VALUE

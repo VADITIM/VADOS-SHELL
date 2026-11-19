@@ -15,13 +15,22 @@ Turn {
     readonly property var look: Appearance.notifications
     readonly property var source: Sources.identify(entry.appName, entry.desktopEntry)
     property string iconTint: ""
-    readonly property color tint: source.tint.length > 0 ? source.tint : iconTint.length > 0 ? iconTint : Appearance.color.accent
+    readonly property color tint: source.tint.length > 0 ? source.tint : iconTint.length > 0 ? iconTint : Appearance.color.text
     readonly property color groupTint: Qt.alpha(tint, look.groupFade)
     readonly property string appLabel: (source.label.length > 0 ? source.label : entry.appName || "NOTIFICATION").toUpperCase()
     readonly property string groupLabel: Sources.clip(entry.summary, 28).toUpperCase()
     readonly property string message: Sources.clip(entry.body.length > 0 ? entry.body : entry.summary, 120)
     readonly property bool hasIcon: entry.icon.length > 0 && icon.status !== Image.Error
     readonly property bool isArrived: isShown && presence > 0
+
+    function sampleIcon() {
+        if (icon.status !== Image.Ready || !sampler.available)
+            return
+        if (sampler.isImageLoaded(icon.source))
+            sampler.requestPaint()
+        else
+            sampler.loadImage(icon.source)
+    }
 
     signal activated()
     signal forgotten()
@@ -87,7 +96,8 @@ Turn {
                     sourceSize.height: row.look.icon
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
-                    onStatusChanged: if (status === Image.Ready) sampler.requestPaint()
+                    onStatusChanged: row.sampleIcon()
+                    onSourceChanged: row.iconTint = ""
                 }
 
                 Glyph {
@@ -174,13 +184,19 @@ Turn {
         height: row.look.tint.sample
         opacity: 0
         enabled: false
+        onAvailableChanged: row.sampleIcon()
+        onImageLoaded: row.sampleIcon()
         onPaint: {
             const context = getContext("2d")
             context.clearRect(0, 0, width, height)
-            context.drawImage(icon, 0, 0, width, height)
+            if (!isImageLoaded(icon.source))
+                return
+            context.drawImage(icon.source, 0, 0, width, height)
             row.iconTint = Tint.dominant(context.getImageData(0, 0, width, height).data, row.look.tint)
         }
     }
+
+    Component.onCompleted: sampleIcon()
 
     Gesture {
         id: gesture

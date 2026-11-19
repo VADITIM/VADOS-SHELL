@@ -9,6 +9,7 @@ import "../utils/Displays.js" as Displays
 import "../utils/Log.js" as Log
 import "../utils/Platform.js" as Platform
 import "../utils/Toml.js" as Toml
+import "../utils/Keyboards.js" as KeyboardLayouts
 
 Singleton {
     id: compositor
@@ -16,12 +17,14 @@ Singleton {
     readonly property bool isHyprland: Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") !== null && Quickshell.env("HYPRLAND_INSTANCE_SIGNATURE") !== ""
     property bool isDriftwm: false
     readonly property string name: isHyprland ? "hyprland" : isDriftwm ? "driftwm" : "generic"
+    readonly property string label: isHyprland ? "HYPRLAND" : isDriftwm ? "DRIFTWM" : "WAYLAND"
     readonly property var capabilities: Platform.capabilitiesOf(name)
     readonly property string level: Platform.levelOf(capabilities)
 
     property var canvasState: null
     property var activeWindow: null
     property var lastWindow: null
+    property var windows: []
     property string focusedScreen: Quickshell.screens[0]?.name ?? ""
     property string monitorsText: ""
     property bool hasNoCanvas: false
@@ -29,6 +32,7 @@ Singleton {
     readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || Quickshell.env("HOME") + "/.config"
     readonly property string settingsPath: configHome + "/driftwm/config.toml"
     readonly property string hyprlandOutputsPath: configHome + "/hypr/vados-displays.conf"
+    readonly property string hyprlandKeyboardsPath: configHome + "/hypr/vados-keyboards.conf"
     property bool isWatchingOutputs: false
     property var outputs: []
     property var outputTrial: Displays.idle()
@@ -118,6 +122,45 @@ Singleton {
         }
     }
 
+    function refreshWindows() {
+        if (!capabilities.windowGeometry)
+            windows = []
+        else if (isHyprland)
+            clientQuery.running = true
+        else
+            windows = describeCanvasWindows()
+    }
+
+    function describeCanvasWindows() {
+        const state = canvasState
+        const outputs = viewports()
+        if (!state || outputs.length === 0)
+            return []
+        return (state.windows ?? []).map(window => describeCanvasWindow(window, outputs, outputs[0], state))
+    }
+
+    function readHyprlandWindows(clientText) {
+        let monitors
+        let clients
+        try {
+            monitors = JSON.parse(monitorsText)
+            clients = JSON.parse(clientText)
+        } catch (error) {
+            windows = []
+            return
+        }
+        windows = clients.flatMap(client => {
+            const monitor = monitors.find(candidate => candidate.id === client.monitor)
+            if (!monitor || !client.mapped || client.hidden || client.workspace?.id !== monitor.activeWorkspace?.id)
+                return []
+            return [{ id: client.address, appId: client.class ?? "", screen: monitor.name, x: client.at[0] - monitor.x, y: client.at[1] - monitor.y, width: client.size[0], height: client.size[1], isFullscreen: (client.fullscreen ?? 0) > 0 }]
+        })
+    }
+
+    function windowsOn(screenName) {
+        return windows.filter(window => window.screen === screenName)
+    }
+
     function readHyprland(windowText) {
         let monitors
         let window
@@ -201,6 +244,36 @@ Singleton {
         const next = Toml.withTable(current, "background", { type: "wallpaper", path: path })
         if (next !== current)
             settingsFile.setText(next)
+    }
+
+    function applyKeyboardLayouts(entries) {
+        if (!capabilities.keyboardLayout)
+            return false
+        const requested = capabilities.deviceKeyboardLayout ? Array.from(entries ?? []) : KeyboardLayouts.overridesOf(entries).filter(entry => entry.device === KeyboardLayouts.everyKeyboard).map(KeyboardLayouts.encode)
+        if (isHyprland) {
+            hyprlandKeyboardsFile.setText(KeyboardLayouts.hyprlandConfig(requested))
+            Quickshell.execDetached(["hyprctl", "reload"])
+            Log.info("compositor", "wrote " + requested.length + " keyboard layouts to " + hyprlandKeyboardsPath + " and reloaded Hyprland")
+            return true
+        }
+        if (!hasSettings) {
+            Log.warn("compositor", "cannot read " + settingsPath + ", the keyboard layout stays as it is")
+            return false
+        }
+        const before = settingsFile.text()
+        const stored = keyboardStore.values.previous
+        const hasOverride = KeyboardLayouts.overrideFor(requested, KeyboardLayouts.everyKeyboard) !== null
+        if (hasOverride && !stored.isSaved)
+            keyboardStore.update({ previous: Object.assign({ isSaved: true }, KeyboardLayouts.driftwmLayout(before)) })
+        const previous = keyboardStore.values.previous
+        const written = KeyboardLayouts.driftwmText(before, requested, previous.isSaved ? previous : null)
+        if (!hasOverride)
+            keyboardStore.update({ previous: { isSaved: false, layout: "", variant: "" } })
+        keyboardStore.flush()
+        if (written !== before)
+            settingsFile.setText(written)
+        Log.info("compositor", hasOverride ? "set the driftwm keyboard layout" : "put the driftwm keyboard layout back")
+        return true
     }
 
     function readOutputs() {
@@ -409,6 +482,18 @@ Singleton {
         defaults: ({ trial: Displays.idle() })
     }
 
+    StateFile {
+        id: keyboardStore
+        name: "keyboards"
+        defaults: ({ previous: { isSaved: false, layout: "", variant: "" } })
+    }
+
+    FileView {
+        id: hyprlandKeyboardsFile
+        path: compositor.isHyprland ? compositor.hyprlandKeyboardsPath : ""
+        printErrors: false
+    }
+
     FileView {
         id: hyprlandOutputsFile
         path: compositor.isHyprland ? compositor.hyprlandOutputsPath : ""
@@ -463,6 +548,14 @@ Singleton {
                 compositor.monitorsText = text
                 windowQuery.running = true
             }
+        }
+    }
+
+    Process {
+        id: clientQuery
+        command: ["hyprctl", "-j", "clients"]
+        stdout: StdioCollector {
+            onStreamFinished: compositor.readHyprlandWindows(text)
         }
     }
 

@@ -94,6 +94,8 @@ TypedText {
                     y: cell.travel * (1 - cell.progress)
                     opacity: cell.progress
                     color: roll.color
+                    style: roll.style
+                    styleColor: roll.styleColor
                     font: roll.font
                 }
 
@@ -104,6 +106,8 @@ TypedText {
                     y: -cell.travel * cell.progress
                     opacity: 1 - Math.min(1, cell.progress / Motion.roll.leaveShare)
                     color: roll.color
+                    style: roll.style
+                    styleColor: roll.styleColor
                     font: roll.font
                 }
 

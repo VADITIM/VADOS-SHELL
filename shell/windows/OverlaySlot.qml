@@ -5,27 +5,19 @@ import qs.state
 Scope {
     id: slot
 
-    required property ShellScreen modelData
     required property string overlayKey
     default property Component surface
-    readonly property string screenName: modelData?.name ?? ""
-    readonly property bool isWanted: Overlays.isWanted(overlayKey, screenName) || (loader.item?.isPresent ?? false)
-    property bool isLoaded: false
+    property string screenName: ""
+    readonly property string openOn: Overlays.screenOf(overlayKey)
+    readonly property ShellScreen screen: Array.from(Quickshell.screens).find(shown => shown.name === screenName) ?? Quickshell.screens[0] ?? null
 
-    function release() {
-        isLoaded = isWanted
-    }
-
-    onIsWantedChanged: {
-        if (isWanted)
-            isLoaded = true
-        else
-            Qt.callLater(release)
+    onOpenOnChanged: {
+        if (openOn.length > 0)
+            screenName = openOn
     }
 
     LazyLoader {
-        id: loader
-        active: slot.isLoaded
+        active: true
         component: slot.surface
     }
 }

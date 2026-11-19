@@ -1,6 +1,7 @@
 import QtQuick
 import qs.config
 import qs.components
+import qs.services
 import "../../utils/Alerts.js" as Sources
 import "../../utils/Geometry.js" as Geometry
 
@@ -33,10 +34,15 @@ Item {
     readonly property real sideRoom: Appearance.alerts.padding * 2
     readonly property bool hasMessage: fullMessage.length > 0
     readonly property real naturalWidth: Math.max(textRoom + Math.max(labelOpen.implicitWidth, titleOpen.implicitWidth), sideRoom + messageNatural.implicitWidth)
-    readonly property real expandedWidth: hasImage ? Appearance.alerts.expandedWidth : Math.min(Appearance.alerts.expandedWidth, Math.max(Appearance.alerts.width, Math.ceil(naturalWidth)))
+    readonly property real imageAspect: hasImage ? picture.implicitWidth / picture.implicitHeight : 1
+    readonly property real imageNaturalWidth: hasImage ? Math.min(Appearance.alerts.expandedWidth - sideRoom, Appearance.alerts.imageHeight * imageAspect) : 0
+    readonly property real expandedWidth: Math.min(Appearance.alerts.expandedWidth, Math.max(Appearance.alerts.width, Math.ceil(naturalWidth), Math.ceil(imageNaturalWidth + sideRoom)))
     readonly property real headerWidth: expandedWidth - textRoom
     readonly property real fullWidth: expandedWidth - sideRoom
-    readonly property real imageHeight: hasImage ? Math.min(Appearance.alerts.imageHeight, fullWidth * picture.implicitHeight / picture.implicitWidth) : 0
+    readonly property real imageWidth: Math.min(fullWidth, imageNaturalWidth)
+    readonly property real imageHeight: hasImage ? imageWidth / imageAspect : 0
+    readonly property string appIcon: Notifications.appIconOf(lead)
+    readonly property bool hasAppIcon: appIcon.length > 0 && appIconImage.status === Image.Ready
     readonly property real restHeaderHeight: labelMeasure.implicitHeight + Appearance.alerts.lineGap + titleNatural.implicitHeight
     readonly property real restColumnHeight: restHeaderHeight + (hasMessage ? Appearance.alerts.lineGap + messageNatural.implicitHeight : 0)
     readonly property real openHeaderHeight: labelOpen.implicitHeight + Appearance.alerts.lineGap + titleWrapped.implicitHeight
@@ -50,6 +56,22 @@ Item {
     readonly property size bodySize: isExpanded ? Qt.size(expandedWidth, expandedHeight) : Qt.size(Appearance.alerts.width, Appearance.alerts.height)
     readonly property real textWidth: Math.max(0, (isExpanded ? expandedWidth : body.width) - textRoom)
     readonly property real messageWidth: Math.max(0, isExpanded ? fullWidth : textWidth)
+    property real fadeWidth: isExpanded ? 0 : Appearance.alerts.fade
+    property real fadeEnd: isExpanded ? 0 : Appearance.alerts.padding
+
+    Behavior on fadeWidth {
+        NumberAnimation {
+            duration: Motion.pace(Motion.alerts.settle)
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    Behavior on fadeEnd {
+        NumberAnimation {
+            duration: Motion.pace(Motion.alerts.settle)
+            easing.type: Easing.OutCubic
+        }
+    }
 
     signal dismissRequested()
     signal openRequested(var notification)
@@ -107,7 +129,7 @@ Item {
         visible: false
         text: alerts.fullTitle
         textFormat: Text.PlainText
-        font.family: Appearance.font.mono
+        font.family: Appearance.font.sans
         font.pixelSize: Appearance.font.body
         font.bold: true
     }
@@ -117,7 +139,7 @@ Item {
         visible: false
         text: alerts.fullTitle
         textFormat: Text.PlainText
-        font.family: Appearance.font.mono
+        font.family: Appearance.font.sans
         font.pixelSize: Appearance.alerts.openTitle
         font.bold: true
     }
@@ -130,7 +152,7 @@ Item {
         textFormat: Text.PlainText
         wrapMode: Text.Wrap
         maximumLineCount: Appearance.alerts.titleLines
-        font.family: Appearance.font.mono
+        font.family: Appearance.font.sans
         font.pixelSize: Appearance.alerts.openTitle
         font.bold: true
     }
@@ -140,7 +162,7 @@ Item {
         visible: false
         text: alerts.fullMessage
         textFormat: Text.PlainText
-        font.family: Appearance.font.mono
+        font.family: Appearance.font.sans
         font.pixelSize: Appearance.font.body
     }
 
@@ -152,7 +174,7 @@ Item {
         textFormat: Text.PlainText
         wrapMode: Text.Wrap
         maximumLineCount: Appearance.alerts.bodyLines
-        font.family: Appearance.font.mono
+        font.family: Appearance.font.sans
         font.pixelSize: Appearance.font.body
     }
 
@@ -174,85 +196,197 @@ Item {
             enabled: alerts.isContentShown
         }
 
-        Item {
-            id: face
-            x: alerts.slide
-            width: content.width
-            height: content.height
-            opacity: 1 - Math.min(1, Math.abs(alerts.slide) / Math.max(1, content.width))
+        Masked {
+            anchors.fill: parent
+            softness: 1
 
-            Turn {
-                x: alerts.isMirrored ? face.width - Appearance.alerts.padding - Appearance.alerts.badge : Appearance.alerts.padding
-                y: Math.min(alerts.badgeTop, (face.height - Appearance.alerts.badge) / 2)
-                width: Appearance.alerts.badge
-                height: Appearance.alerts.badge
-                isShown: alerts.isContentShown
-                enterDuration: Motion.alerts.faceEnter
-                leaveDuration: Motion.alerts.faceLeave
-                leaveWindow: 0
+            mask: Item {
+                anchors.fill: parent
+                transform: Scale {
+                    origin.x: content.width / 2
+                    xScale: alerts.isMirrored ? -1 : 1
+                }
 
                 Rectangle {
-                    width: Appearance.alerts.badge
-                    height: width
-                    radius: width / 2
-                    color: "transparent"
-                    border.color: alerts.tint
-                    border.width: Appearance.alerts.ring
+                    width: Math.max(0, content.width - alerts.fadeEnd - alerts.fadeWidth)
+                    height: content.height
+                }
 
-                    Glyph {
-                        anchors.centerIn: parent
-                        width: Appearance.alerts.glyph
-                        height: width
-                        name: alerts.source.glyph
-                        color: alerts.tint
+                Rectangle {
+                    x: Math.max(0, content.width - alerts.fadeEnd - alerts.fadeWidth)
+                    width: alerts.fadeWidth
+                    height: content.height
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+
+                        GradientStop {
+                            position: 0
+                            color: "white"
+                        }
+
+                        GradientStop {
+                            position: 1
+                            color: "transparent"
+                        }
                     }
                 }
             }
 
-            Column {
-                id: column
-                x: alerts.isMirrored ? Appearance.alerts.padding : alerts.textLeft
-                y: Math.min(alerts.columnTop, (face.height - alerts.restColumnHeight) / 2)
-                width: alerts.textWidth
-                spacing: Appearance.alerts.lineGap
+            Item {
+                id: face
+                x: alerts.slide
+                width: content.width
+                height: content.height
+                opacity: 1 - Math.min(1, Math.abs(alerts.slide) / Math.max(1, content.width))
 
                 Turn {
-                    width: alerts.textWidth
-                    height: label.height
+                    x: alerts.isMirrored ? face.width - Appearance.alerts.padding - Appearance.alerts.badge : Appearance.alerts.padding
+                    y: Math.min(alerts.badgeTop, (face.height - Appearance.alerts.badge) / 2)
+                    width: Appearance.alerts.badge
+                    height: Appearance.alerts.badge
                     isShown: alerts.isContentShown
                     enterDuration: Motion.alerts.faceEnter
                     leaveDuration: Motion.alerts.faceLeave
                     leaveWindow: 0
 
-                    Text {
-                        id: label
-                        width: alerts.textWidth
-                        horizontalAlignment: alerts.isMirrored ? Text.AlignRight : Text.AlignLeft
-                        text: alerts.labelText
-                        color: alerts.tint
-                        elide: Text.ElideRight
-                        font.family: Appearance.font.mono
-                        font.pixelSize: alerts.isExpanded ? Appearance.alerts.openLabel : Appearance.font.label
-                        font.letterSpacing: Appearance.font.labelSpacing
-                        font.capitalization: Font.AllUppercase
+                    Rectangle {
+                        width: Appearance.alerts.badge
+                        height: width
+                        radius: width / 2
+                        color: "transparent"
+                        border.color: alerts.tint
+                        border.width: Appearance.alerts.ring
 
-                        Behavior on font.pixelSize {
+                        Glyph {
+                            anchors.centerIn: parent
+                            width: Appearance.alerts.glyph
+                            height: width
+                            visible: !alerts.hasAppIcon
+                            name: alerts.source.glyph
+                            color: alerts.tint
+                        }
+
+                        Image {
+                            id: appIconImage
+                            anchors.centerIn: parent
+                            width: Appearance.alerts.appIcon
+                            height: width
+                            visible: alerts.hasAppIcon
+                            source: alerts.appIcon
+                            sourceSize.width: width * 2
+                            sourceSize.height: height * 2
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                            smooth: true
+                        }
+                    }
+                }
+
+                Column {
+                    id: column
+                    x: alerts.isMirrored ? Appearance.alerts.padding : alerts.textLeft
+                    y: Math.min(alerts.columnTop, (face.height - alerts.restColumnHeight) / 2)
+                    width: alerts.textWidth
+                    spacing: Appearance.alerts.lineGap
+
+                    Turn {
+                        width: alerts.textWidth
+                        height: label.height
+                        isShown: alerts.isContentShown
+                        enterDuration: Motion.alerts.faceEnter
+                        leaveDuration: Motion.alerts.faceLeave
+                        leaveWindow: 0
+
+                        Text {
+                            id: label
+                            width: alerts.textWidth
+                            horizontalAlignment: alerts.isMirrored ? Text.AlignRight : Text.AlignLeft
+                            text: alerts.labelText
+                            color: alerts.tint
+                            font.family: Appearance.font.mono
+                            font.pixelSize: alerts.isExpanded ? Appearance.alerts.openLabel : Appearance.font.label
+                            font.letterSpacing: Appearance.font.labelSpacing
+                            font.capitalization: Font.AllUppercase
+
+                            Behavior on font.pixelSize {
+                                NumberAnimation {
+                                    duration: Motion.pace(Motion.alerts.settle)
+                                    easing.type: Easing.OutCubic
+                                }
+                            }
+                        }
+                    }
+
+                    Turn {
+                        width: alerts.textWidth
+                        height: title.height
+                        isShown: alerts.isContentShown
+                        enterDuration: Motion.alerts.faceEnter
+                        enterDelay: Motion.alerts.stagger
+                        leaveDuration: Motion.alerts.faceLeave
+                        leaveWindow: 0
+
+                        Behavior on height {
                             NumberAnimation {
                                 duration: Motion.pace(Motion.alerts.settle)
                                 easing.type: Easing.OutCubic
+                            }
+                        }
+
+                        TypedText {
+                            id: title
+                            width: alerts.textWidth
+                            height: implicitHeight
+                            horizontalAlignment: alerts.isMirrored ? Text.AlignRight : Text.AlignLeft
+                            target: alerts.isExpanded ? alerts.fullTitle : Sources.cut(alerts.lead?.summary, Appearance.alerts.titleCharacters)
+                            isShown: alerts.isContentShown
+                            characterInterval: Motion.type.quick
+                            untypeInterval: Motion.type.quickUntype
+                            leaveBudget: Motion.alerts.faceLeave
+                            typeBudget: alerts.isExpanded ? Motion.alerts.typeBudget : 0
+                            wrapMode: alerts.isExpanded ? Text.Wrap : Text.NoWrap
+                            maximumLineCount: alerts.isExpanded ? Appearance.alerts.titleLines : 1
+                            elide: alerts.isExpanded ? Text.ElideRight : Text.ElideNone
+                            color: Appearance.color.text
+                            font.family: Appearance.font.sans
+                            font.pixelSize: alerts.isExpanded ? Appearance.alerts.openTitle : Appearance.font.body
+                            font.bold: true
+
+                            Behavior on font.pixelSize {
+                                NumberAnimation {
+                                    duration: Motion.pace(Motion.alerts.settle)
+                                    easing.type: Easing.OutCubic
+                                }
                             }
                         }
                     }
                 }
 
                 Turn {
-                    width: alerts.textWidth
-                    height: title.height
+                    x: alerts.isExpanded || alerts.isMirrored ? Appearance.alerts.padding : alerts.textLeft
+                    y: alerts.isExpanded ? alerts.messageTop : column.y + alerts.restHeaderHeight + Appearance.alerts.lineGap
+                    width: alerts.messageWidth
+                    height: message.height
+                    visible: message.target.length > 0
                     isShown: alerts.isContentShown
                     enterDuration: Motion.alerts.faceEnter
-                    enterDelay: Motion.alerts.stagger
+                    enterDelay: Motion.alerts.stagger * 2
                     leaveDuration: Motion.alerts.faceLeave
                     leaveWindow: 0
+
+                    Behavior on x {
+                        NumberAnimation {
+                            duration: Motion.pace(Motion.alerts.settle)
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+
+                    Behavior on y {
+                        NumberAnimation {
+                            duration: Motion.pace(Motion.alerts.settle)
+                            easing.type: Easing.OutCubic
+                        }
+                    }
 
                     Behavior on height {
                         NumberAnimation {
@@ -262,133 +396,72 @@ Item {
                     }
 
                     TypedText {
-                        id: title
-                        width: alerts.textWidth
+                        id: message
+                        width: alerts.messageWidth
                         height: implicitHeight
                         horizontalAlignment: alerts.isMirrored ? Text.AlignRight : Text.AlignLeft
-                        target: alerts.isExpanded ? alerts.fullTitle : Sources.clip(alerts.lead?.summary, Appearance.alerts.titleCharacters)
+                        target: alerts.isExpanded ? alerts.fullMessage : Sources.cut(alerts.lead?.body, Appearance.alerts.bodyCharacters)
                         isShown: alerts.isContentShown
                         characterInterval: Motion.type.quick
                         untypeInterval: Motion.type.quickUntype
                         leaveBudget: Motion.alerts.faceLeave
                         typeBudget: alerts.isExpanded ? Motion.alerts.typeBudget : 0
-                        wrapMode: Text.Wrap
-                        maximumLineCount: alerts.isExpanded || shown !== target ? Appearance.alerts.titleLines : 1
-                        elide: Text.ElideRight
-                        color: Appearance.color.text
-                        font.family: Appearance.font.mono
-                        font.pixelSize: alerts.isExpanded ? Appearance.alerts.openTitle : Appearance.font.body
-                        font.bold: true
+                        wrapMode: alerts.isExpanded ? Text.Wrap : Text.NoWrap
+                        maximumLineCount: alerts.isExpanded ? Appearance.alerts.bodyLines : 1
+                        elide: alerts.isExpanded ? Text.ElideRight : Text.ElideNone
+                        color: Appearance.color.textMuted
+                        font.family: Appearance.font.sans
+                        font.pixelSize: Appearance.font.body
+                    }
+                }
 
-                        Behavior on font.pixelSize {
-                            NumberAnimation {
-                                duration: Motion.pace(Motion.alerts.settle)
-                                easing.type: Easing.OutCubic
-                            }
+                Item {
+                    id: photo
+                    readonly property real shortSide: Math.min(width, height)
+                    property real bloom: isShown ? 1 : 0
+                    property real corner: isShown && bloom >= 1 ? 1 : 0
+                    readonly property bool isShown: alerts.isExpanded && alerts.hasImage
+                    x: Appearance.alerts.padding + (alerts.fullWidth - width) / 2
+                    y: alerts.imageTop
+                    width: alerts.imageWidth
+                    height: alerts.imageHeight
+                    visible: bloom > 0
+                    scale: bloom
+
+                    Behavior on bloom {
+                        NumberAnimation {
+                            duration: Motion.pace(photo.isShown ? Motion.alerts.imagePop : Motion.alerts.imageLeave)
+                            easing.type: photo.isShown ? Easing.OutBack : Easing.InCubic
+                            easing.overshoot: Motion.alerts.imageOvershoot
                         }
                     }
-                }
-            }
 
-            Turn {
-                x: alerts.isExpanded || alerts.isMirrored ? Appearance.alerts.padding : alerts.textLeft
-                y: alerts.isExpanded ? alerts.messageTop : column.y + alerts.restHeaderHeight + Appearance.alerts.lineGap
-                width: alerts.messageWidth
-                height: message.height
-                visible: message.target.length > 0
-                isShown: alerts.isContentShown
-                enterDuration: Motion.alerts.faceEnter
-                enterDelay: Motion.alerts.stagger * 2
-                leaveDuration: Motion.alerts.faceLeave
-                leaveWindow: 0
-
-                Behavior on x {
-                    NumberAnimation {
-                        duration: Motion.pace(Motion.alerts.settle)
-                        easing.type: Easing.OutCubic
-                    }
-                }
-
-                Behavior on y {
-                    NumberAnimation {
-                        duration: Motion.pace(Motion.alerts.settle)
-                        easing.type: Easing.OutCubic
-                    }
-                }
-
-                Behavior on height {
-                    NumberAnimation {
-                        duration: Motion.pace(Motion.alerts.settle)
-                        easing.type: Easing.OutCubic
-                    }
-                }
-
-                TypedText {
-                    id: message
-                    width: alerts.messageWidth
-                    height: implicitHeight
-                    horizontalAlignment: alerts.isMirrored ? Text.AlignRight : Text.AlignLeft
-                    target: alerts.isExpanded ? alerts.fullMessage : Sources.clip(alerts.lead?.body, Appearance.alerts.bodyCharacters)
-                    isShown: alerts.isContentShown
-                    characterInterval: Motion.type.quick
-                    untypeInterval: Motion.type.quickUntype
-                    leaveBudget: Motion.alerts.faceLeave
-                    typeBudget: alerts.isExpanded ? Motion.alerts.typeBudget : 0
-                    wrapMode: Text.Wrap
-                    maximumLineCount: alerts.isExpanded || shown !== target ? Appearance.alerts.bodyLines : 1
-                    elide: Text.ElideRight
-                    color: Appearance.color.textMuted
-                    font.family: Appearance.font.mono
-                    font.pixelSize: Appearance.font.body
-                }
-            }
-
-            Item {
-                id: photo
-                readonly property real shortSide: Math.min(width, height)
-                property real bloom: isShown ? 1 : 0
-                property real corner: isShown && bloom >= 1 ? 1 : 0
-                readonly property bool isShown: alerts.isExpanded && alerts.hasImage
-                x: Appearance.alerts.padding
-                y: alerts.imageTop
-                width: alerts.fullWidth
-                height: alerts.imageHeight
-                visible: bloom > 0
-                scale: bloom
-
-                Behavior on bloom {
-                    NumberAnimation {
-                        duration: Motion.pace(photo.isShown ? Motion.alerts.imagePop : Motion.alerts.imageLeave)
-                        easing.type: photo.isShown ? Easing.OutBack : Easing.InCubic
-                        easing.overshoot: Motion.alerts.imageOvershoot
-                    }
-                }
-
-                Behavior on corner {
-                    NumberAnimation {
-                        duration: Motion.pace(photo.isShown ? Motion.alerts.imageCorner : Motion.alerts.imageLeave)
-                        easing.type: Easing.OutCubic
-                    }
-                }
-
-                Masked {
-                    anchors.fill: parent
-                    mask: Rectangle {
-                        x: (photo.width - width) / 2
-                        y: (photo.height - height) / 2
-                        width: Geometry.mix(photo.shortSide, photo.width, photo.corner)
-                        height: Geometry.mix(photo.shortSide, photo.height, photo.corner)
-                        radius: Geometry.mix(photo.shortSide / 2, Appearance.alerts.imageRadius, photo.corner)
+                    Behavior on corner {
+                        NumberAnimation {
+                            duration: Motion.pace(photo.isShown ? Motion.alerts.imageCorner : Motion.alerts.imageLeave)
+                            easing.type: Easing.OutCubic
+                        }
                     }
 
-                    Image {
-                        id: picture
+                    Masked {
                         anchors.fill: parent
-                        source: alerts.heldPeek !== null ? alerts.imageSource : ""
-                        sourceSize.width: Appearance.alerts.expandedWidth * 2
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                        smooth: true
+                        mask: Rectangle {
+                            x: (photo.width - width) / 2
+                            y: (photo.height - height) / 2
+                            width: Geometry.mix(photo.shortSide, photo.width, photo.corner)
+                            height: Geometry.mix(photo.shortSide, photo.height, photo.corner)
+                            radius: Geometry.mix(photo.shortSide / 2, Appearance.alerts.imageRadius, photo.corner)
+                        }
+
+                        Image {
+                            id: picture
+                            anchors.fill: parent
+                            source: alerts.heldPeek !== null ? alerts.imageSource : ""
+                            sourceSize.width: Appearance.alerts.expandedWidth * 2
+                            fillMode: Image.PreserveAspectFit
+                            asynchronous: true
+                            smooth: true
+                        }
                     }
                 }
             }

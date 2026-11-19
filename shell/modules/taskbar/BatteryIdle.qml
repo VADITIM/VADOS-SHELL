@@ -21,17 +21,13 @@ IdlePill {
         height: Appearance.taskbar.idleSize
         spacing: 10
 
-        TypedText {
+        ScrambleText {
             anchors.verticalCenter: parent.verticalCenter
+            label: "battery level"
             target: Math.round(Battery.level * 100) + "%"
             isShown: batteryIdle.isUnfolded
-            holdsWidth: true
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
-            color: Appearance.color.text
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.font.body + 2
-            font.bold: true
+            pixelSize: Appearance.font.body + 2
+            spacing: 0
         }
     }
 }

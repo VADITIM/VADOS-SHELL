@@ -15,7 +15,8 @@ FocusScope {
     property bool isHandingOver: false
     property bool hasCircle: false
     property bool hasTaskIcons: false
-    readonly property bool isPresent: isOpen || burst.isActive || taskBurst.isActive || rising.living > 0 || taskRising.living > 0
+    property bool hasWeather: true
+    readonly property bool isPresent: isOpen || burst.isActive || taskBurst.isActive || taskShot.width > 0.5 || rising.living > 0 || taskRising.living > 0
     readonly property string phase: burst.phase
 
     property real dim: isOpen ? 1 : 0
@@ -25,6 +26,7 @@ FocusScope {
     readonly property bool isCarrying: burst.isCarrying
 
     readonly property var look: Appearance.dashboard
+    readonly property real bodyWidth: hasWeather ? look.width : Battery.isPresent ? look.chargeWidth : look.bareWidth
     readonly property real rootX: Appearance.taskbar.margin
     readonly property real bodyTop: Math.round((height - look.height) / 2)
     readonly property real centerY: bodyTop + look.height / 2
@@ -32,13 +34,13 @@ FocusScope {
     readonly property var disk: Hardware.disks.length > 0 ? Hardware.disks[Math.min(diskPage, Hardware.disks.length - 1)] : null
 
     readonly property var task: look.task
-    readonly property real taskBodyFar: rootX + look.width + (Battery.isPresent ? Appearance.burst.stepSide : 0)
+    readonly property real taskBodyFar: rootX + bodyWidth
     readonly property real taskWidth: Math.min(task.width, width - taskBodyFar - task.bodyGap)
     readonly property real taskHeight: Math.min(task.height, height - (task.edgeGap + task.search + task.searchGap) * 2)
     readonly property real taskTop: Math.round((height - taskHeight) / 2)
     readonly property real taskLeft: isMirrored ? 0 : width - taskWidth
     readonly property real shotY: centerY
-    readonly property real shotStart: burst.formRight + (Battery.isPresent ? burst.sideStep.rise : 0) - task.shotInset
+    readonly property real shotStart: burst.formRight - task.shotInset
     readonly property real shotDistance: width + task.shotSink - task.shot / 2 - taskBodyFar + task.shotInset
     readonly property bool hasTaskRoom: taskWidth >= task.minWidth
     readonly property bool isTaskWanted: isOpen && hasTaskRoom && !burst.isLeaving && burst.spread >= Motion.dashboard.taskAt
@@ -53,7 +55,7 @@ FocusScope {
     signal taskIconsToggled()
 
     function heatColor(temperature, isKnown) {
-        return isKnown ? Appearance.bandColor(temperature, look.temperatureBands) : Appearance.color.textMuted
+        return isKnown ? Appearance.levelColor(temperature, look.heatBands) : Appearance.color.textMuted
     }
 
     function heatShare(temperature, isKnown) {
@@ -61,7 +63,7 @@ FocusScope {
     }
 
     function usageColor(share, isKnown) {
-        return isKnown ? Appearance.bandColor(share, look.usageBands) : Appearance.color.textMuted
+        return isKnown ? Appearance.levelColor(share, look.loadBands) : Appearance.color.textMuted
     }
 
     function percentText(share, isKnown) {
@@ -112,9 +114,9 @@ FocusScope {
     }
 
     MouseArea {
-        x: dashboard.placeX(0, dashboard.look.width)
+        x: dashboard.placeX(0, dashboard.bodyWidth)
         y: dashboard.bodyTop
-        width: dashboard.look.width
+        width: dashboard.bodyWidth
         height: dashboard.look.height
         enabled: dashboard.isOpen
     }
@@ -164,7 +166,7 @@ FocusScope {
                 rootX: dashboard.rootX
                 seedX: dashboard.rootX + Appearance.taskbar.thickness / 2
                 seedY: dashboard.centerY
-                formWidth: dashboard.look.width
+                formWidth: dashboard.bodyWidth
                 formHeight: dashboard.look.height
                 leftCorner: dashboard.look.rootCorner
                 rightCorner: dashboard.look.corner
@@ -173,7 +175,7 @@ FocusScope {
                 canHandOff: dashboard.canHandOff
                 isHandingOver: dashboard.isHandingOver
                 hasCircle: dashboard.hasCircle
-                hasSideStep: Battery.isPresent
+                bottomStepShare: dashboard.look.drive.step / dashboard.bodyWidth
                 onLanded: dashboard.landed()
             }
 
@@ -314,7 +316,7 @@ FocusScope {
             Gauge {
                 id: memoryGauge
                 x: dashboard.placeX(dashboard.look.memoryX, width)
-                y: dashboard.bodyTop + dashboard.look.top + dashboard.look.gauge.blockHeight + dashboard.look.gauge.blockGap
+                y: dashboard.bodyTop + dashboard.look.top + (dashboard.look.gauge.blockHeight + dashboard.look.gauge.blockGap) / 2
                 chipName: "ram"
                 ringShare: dashboard.memoryShare
                 ringColor: dashboard.usageColor(dashboard.memoryShare, true)
@@ -336,7 +338,7 @@ FocusScope {
                 property var held: null
 
                 x: dashboard.placeX(dashboard.look.readoutX, width)
-                y: dashboard.bodyTop + dashboard.look.top + (dashboard.look.gauge.blockHeight - height) / 2
+                y: dashboard.bodyTop + dashboard.look.top
                 width: dashboard.look.dividerX - dashboard.look.traffic.dividerGap - dashboard.look.readoutX
                 height: upperReadout.height + dashboard.look.gauge.readoutGap + lowerReadout.height
                 onHoveredChanged: if (hovered) held = hovered
@@ -378,19 +380,20 @@ FocusScope {
                 y: dashboard.bodyTop + fromTop
                 width: dashboard.look.dividerX - dashboard.look.graphicsX - dashboard.look.traffic.dividerGap
                 height: dashboard.look.height - fromTop - dashboard.look.traffic.inset
-                download: Traffic.download
-                upload: Traffic.upload
-                downloads: Traffic.downloads
-                uploads: Traffic.uploads
-                samples: Traffic.samples
-                ping: Traffic.ping
-                jitter: Traffic.jitter
-                hasPing: Traffic.hasPing
+                download: dashboard.isPresent ? Traffic.download : 0
+                upload: dashboard.isPresent ? Traffic.upload : 0
+                downloads: dashboard.isPresent ? Traffic.downloads : []
+                uploads: dashboard.isPresent ? Traffic.uploads : []
+                samples: dashboard.isPresent ? Traffic.samples : 0
+                ping: dashboard.isPresent ? Traffic.ping : 0
+                jitter: dashboard.isPresent ? Traffic.jitter : 0
+                hasPing: dashboard.isPresent && Traffic.hasPing
                 isShown: dashboard.isContentShown
                 enterDelay: dashboard.revealDelay(dashboard.look.graphicsX) + Motion.pill.elementStagger * 3
             }
 
             Item {
+                visible: dashboard.hasWeather && !Battery.isPresent
                 x: dashboard.placeX(dashboard.look.dividerX, 1)
                 y: dashboard.bodyTop + dashboard.look.dividerInset
                 width: 1
@@ -412,11 +415,23 @@ FocusScope {
                 }
             }
 
+            Charge {
+                visible: Battery.isPresent
+                x: dashboard.placeX(dashboard.look.dividerX - width / 2, width)
+                y: dashboard.centerY - height / 2
+                level: Battery.level
+                isCharging: Battery.isCharging
+                cap: Battery.cap
+                isShown: dashboard.isContentShown && Battery.isPresent
+                enterDelay: dashboard.revealDelay(dashboard.look.dividerX)
+            }
+
             Forecast {
+                visible: dashboard.hasWeather
                 x: dashboard.placeX(dashboard.look.weatherX, width)
                 y: dashboard.bodyTop + dashboard.look.top
                 width: dashboard.look.weatherWidth
-                isShown: dashboard.isContentShown
+                isShown: dashboard.isContentShown && dashboard.hasWeather
                 enterDelay: dashboard.revealDelay(dashboard.look.weatherX)
                 stagger: Motion.pill.elementStagger
             }
@@ -447,6 +462,7 @@ FocusScope {
 
             Drive {
                 x: dashboard.placeX(dashboard.look.graphicsX, width)
+                width: dashboard.look.drive.step - dashboard.look.graphicsX - Appearance.burst.stepCorner
                 y: dashboard.bodyTop + dashboard.look.height + dashboard.look.drive.inset
                 label: dashboard.disk ? "DISK " + dashboard.disk.mount : "DISK"
                 used: dashboard.disk?.used ?? 0
@@ -456,39 +472,6 @@ FocusScope {
                 isShown: dashboard.isContentShown
                 enterDelay: dashboard.revealDelay(dashboard.look.graphicsX) + Motion.pill.elementStagger * 3
                 onPaged: dashboard.diskPage = (dashboard.diskPage + 1) % Hardware.disks.length
-            }
-        }
-    }
-    Item {
-        id: sideClip
-
-        readonly property var step: burst.sideStep
-
-        visible: Battery.isPresent && burst.isStepped
-        x: dashboard.isMirrored ? dashboard.width - step.x - width : step.x
-        y: step.y
-        width: Math.max(0, step.width)
-        height: Math.max(0, step.height)
-        clip: true
-
-        MouseArea {
-            anchors.fill: parent
-            enabled: dashboard.isOpen
-        }
-
-        Item {
-            x: -sideClip.x
-            y: -sideClip.y
-            width: dashboard.width
-            height: dashboard.height
-
-            Charge {
-                x: dashboard.placeX(dashboard.look.width + (Appearance.burst.stepSide - width) / 2 - dashboard.look.battery.pull, width)
-                y: dashboard.centerY - height / 2
-                level: Battery.level
-                isCharging: Battery.isCharging
-                isShown: dashboard.isContentShown && sideClip.step.rise > Appearance.burst.stepSide / 2
-                enterDelay: Motion.pill.elementStagger
             }
         }
     }

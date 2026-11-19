@@ -4,6 +4,131 @@ Newest version first. The version and its number are set by the user on each pus
 
 ## Unreleased
 
+## 0.3.0
+
+- Advanced settings: split into two sub tabs, SERVICES and VAD/OS, the VAD/OS app cards (Files, Gallery, Notes, Terminal) on their own tab.
+- Lock Screen settings: a WIDGETS EDIT MODE toggle brings the module column in and darkens the wallpaper like the Widgets tab; module outlines are white, SCREEN OFF AFTER moved under the grid on the left, and switching between Wallpaper and Lock Screen slices the new wallpaper in from left to right; edit mode hides the neighbour images and the + tiles, and the module tiles show only while editing.
+- Taskbar: an expanded activity pill covered by an open system pill folds, and stays folded when the system pill closes.
+- Taskbar: a click anywhere outside the expanded activity pill folds it back.
+- Taskbar: the activity tab dots keep an even gap; a small dot no longer sits far from a larger live dot.
+- Wallpaper and Lock Screen tabs share one carousel at the lock grid's size, with the previous and next images on both; switching between them only changes the overlays.
+- Wallpaper, Lock Screen and Widgets show the same wallpaper image: going to Widgets reshapes it to the widget frame instead of loading it again, and its main image now grows and fades in and out like the widget frame. The lock wallpaper is darkened only in edit mode, and dragging no longer changes the wallpaper (the wheel, PageUp/PageDown and taps still do). On Widgets the previous and next images leave to the screen edges instead of fading.
+- Lock Screen settings show the file name and count at the bottom left like Wallpaper, SCREEN OFF AFTER moved to the bottom right, and the path field and caption stay in place when switching between the two tabs.
+
+- Settings: the symbol wave through the VAD/OS banner comes every 3 to 5 seconds, runs as a wider band that stretches furthest along the middle row, and now also plays on the User tab's name banner.
+- User tab: a CONNECT button beside the GitHub name signs `gh` in from a terminal and reloads the profile.
+- Settings > User: the second name is small sans text under the name banner, the system details are larger, the GitHub box is centred with a back and a forward arrow as small translucent squircles, and the version no longer shows in the settings corner.
+- Alerts: when the pointer leaves, the width and height shrink back together and finish at the same time.
+- Dashboard: the battery bar shows the charge limit like the taskbar ring, and its percentage is larger.
+- Alerts show the app's own icon, use the readable sans font for title and message, and fit a picture whole in a smaller pill sized to it.
+- The screenshot toolbar appears and disappears at once, without animating.
+- Dashboard: readings are colour-coded from green to red, and the dashed tracks behind them are faint grey. GPU and CPU have a gap between them, RAM sits centred beside them, and the disk row no longer runs past its notch.
+- Dashboard: the battery is a slim bar between the readings and the weather instead of a notch on the far side.
+- Dashboard: the weather can be turned off in Settings > Advanced > DASHBOARD (`dashboard.weather`); the dashboard then ends after the battery.
+- Settings > User: the name banner is centred, and the picture, system details and history sit centred with equal gaps on both sides.
+- Settings text fields enter cleanly: the field grows out from its left end and its label types in place, instead of the label sliding over the field.
+- Settings > Customization > Wallpaper: NONE is gone; a + tile before the first and after the last image opens the folder in your file manager. The Lock Screen WALLPAPER field has FIND too.
+- Settings > Customization > Wallpaper: FIND beside FOLDER opens the folder in your file manager.
+- Settings > Customization > Lock Screen: the WALLPAPER field sits above the grid at the Wallpaper tab's field width, and SCREEN OFF AFTER moved under the grid.
+- Screenshot: Ctrl+C while typing a text with nothing selected copies the screenshot; with text selected it copies the text.
+- Settings > General > ARRANGEMENT: a switch at the end of each row removes that pill from the taskbar, and a divider you can drag sets which pills stay when the taskbar compacts (SETTINGS and POWER by default).
+- Wi-Fi rows show each network's real signal strength, and the lock is gone from the connected network and from networks you have joined before.
+- Opening an extended pill while it is already hover-open no longer stutters: its page is built while you hover, and its width no longer jumps as the lift starts.
+- The extended pill's split is cleaner: the bottom pill now fully pinches off from the top one after the lift has settled, and the idle pills under an open page leave entirely instead of leaving an empty body showing through the gap.
+- The extended pills keep their header and buttons at the bottom (Audio's volume bar too) and centre their list in the room above.
+- Settings > General > COLORS widens its left column to its options, so MARK (OUTLINE | PILL) is no longer cut off.
+- Extended system pills (audio, power, Wi-Fi) are larger: 440 px wide and 55% of the screen tall.
+- The LOGIN SCREEN switch also writes the monitor mirroring, so SDDM shows on every screen.
+- Dragged and flung widgets glide again (their timing tokens were missing).
+- The power confirm floods in the pressed option's colour (restart amber, log out teal), in the taskbar and the launcher.
+- The activity tabs read NOTIFICATIONS, MUSIC, AUDIO/INPUT and stop at the ends instead of wrapping.
+- The User tab's column is centred with its arrow, so both side gaps match; the log out glyph sits centred.
+- The dashboard's task manager shot no longer flashes at the screen edge when the dashboard opens.
+- A live activity tab that is not in front shows as a larger dot with its animated icon.
+- The search rows' hover highlight has tighter corners.
+- The activity pill and its tab dots step aside while an extended pill (audio, Wi-Fi, power) covers them, instead of drawing over its list.
+- The clipboard history's rows sit further apart (12 px), so the pinned divider has room.
+- Screenshot: Ctrl+Z takes back moves, reshapes, erases and text edits too, not only the last stroke.
+- Screenshot: the toolbar can be held and dragged up and down the screen edge; it has a thin accent rim, and its hotkey letters are the accent with a shadow.
+- The audio page has OUTPUT, INPUT and STREAM tabs at its top and lists one kind at a time; the last tab picked is remembered across sessions (`~/.cache/vados/audio.json`). A stream's name is capped and its volume bar fills the rest of the row.
+- Extended system pills (audio, Wi-Fi, power) split into two liquid pills: the list on top, the header, volume and controls in a bottom pill that splits out of it. The Wi-Fi password prompt now sits in the bottom pill with the list still shown above.
+
+- Customization > Keyboard: override the keyboard layout and variant (every keyboard on driftwm, each keyboard on Hyprland) from every xkb layout, and remap a VIA or Vial keyboard on a drawn board: click a key, pick its keycode, CONFIRM to write it to the board (`keyboard.layouts`).
+
+- The activity pill has three tabs (notifications, audio/input, music), shown as liquid dots above and under it: scrolling merges the next dot in and shoots the old tab out, a click on a dot jumps to it. Expanded views type with the symbol typewriter in a smaller font, the call view matches the music view, its controls bud out above the pill as separate pills and the tabs as pills under it. Background apps left the activity pill.
+- A background apps pill sits at the top of the taskbar while tray apps run: hovering it opens it to the right with every app, a click opens one and a right click its menu.
+- Scrolling down on the idle pills folds them like dragging down, scrolling up unfolds them (the audio pill keeps its wheel for the volume).
+- Settings > General > ARRANGEMENT: drag the idle pills (USB, audio, Wi-Fi, battery, settings, power) into the order you want; the taskbar slides them into it (`taskbar.order`).
+- Colour changes ease: glyphs, buttons, squircles, taskbar pill texts and extension rows fade between colours instead of jumping.
+- The power pill's confirm shows the pressed action's own icon and colour (restart amber, shut down red, log out), and pressing the glyph again confirms that action.
+- The window title tip shows the whole title: it grows to fit, and a title too long for the screen scrolls back and forth.
+- The Wi-Fi, audio and power pages enter with life: rows spring out of the pill on a liquid curve, staggered, header glyphs spin-pop, headers type with the symbol typewriter, sliders fill from zero and dividers draw in; the leave is a faster collapse (`Sprout`).
+
+- White pills: Settings > General > COLORS has PILLS (DARK | WHITE, `pills.tone`), turning every pill and overlay body white with dark icons and text, eased when toggled. COLORS now keeps ACCENT, MARK and PILLS in a left column with the wheel and FOLLOW THE ACCENT on the right.
+
+- Advanced shows LINK TO VAD/OS and the services side by side on one page; the User tab is centred between the main bar and the body's far edge.
+
+- LOG OUT ends the session and returns to the login screen: a teal button in the taskbar power pill, the launcher's power column and the lock screen's password module, each asking for a second press first; it sits at the far end of the power pill and at the top of the launcher's column.
+
+- The SDDM login screen shows on every monitor: the theme ships an `Xsetup` that turns every connected output on and mirrors it onto the primary one (re-run `sddm/install.py` and its commands).
+
+- The clipboard history no longer replays an entry's reveal when it scrolls back into view, images keep their own aspect ratio inside their row (cached, decoded asynchronously), the history is 20% taller (11 rows), and a faint accent divider separates pinned from unpinned entries.
+
+- The clipboard history scrolls one row per row of trackpad travel instead of one row per wheel event, which was far too fast; a mouse wheel still steps one row per notch.
+- The settings home banner is 1.5x larger and comes alive: every 5 to 12 seconds a symbol-typewriter wave runs through it column by column, left to right, each character spinning through symbols and settling back. It rests under reduced motion.
+- Performance: the shell is responsive again. Since the menus are built at startup, the hidden dashboard kept redrawing its traffic graph every frame on every screen; hidden menus now do no work until they open. Idle CPU dropped from about 12% to about 5% here (three screens).
+- Memory: each menu (search, settings, dashboard, notifications, screenshot) is now built once and moves to the screen it opens on, instead of once per screen: about 845 MB resident instead of 960 MB here (three screens). Menus still open at once.
+- Performance: the settings banners (home and the User tab names) slice in at about half the script cost per frame, and the lock screen no longer plans its animation each time a menu opens.
+- Fixed: the record dot in the activity glance no longer pulses while hidden and nothing is recording.
+- Folded idle pills show the battery instead of audio, beside power and the dot.
+- Screenshot opens at once on `Print`: the frozen frame is captured uncompressed (`grim -l 0`, about 60 ms instead of 900 ms of PNG compression) and decoded once for both of its views. The saved screenshot is unchanged.
+- Taskbar overlap: Settings > General > PLACEMENT has OVERLAP, HIDE (the default) hides the taskbar when the focused window overlaps it, STAY keeps it in place; a fullscreen window still hides it.
+- Notifications menu: the list fades out softly at its top and bottom instead of being cut off by a hard edge mid-row.
+- Notifications: every row now takes its colour from the app's icon, also when the icon was already loaded; until the colour is read it is plain white, never the accent.
+- Settings keyboard: Up and Down move through the bar that has the keyboard, Left and Right move between the main bar and the sub bar; Tab and Shift+Tab still step the main tabs. Clicking a tab gives the keyboard back to settings.
+- Symbol typewriter: typing fast no longer replays every character; only the new one spins in, the rest carry on where they are.
+- Password prompts: with PASSWORD PROMPTS on (Settings > Advanced > Services), the shell asks for admin passwords (as the polkit agent, instead of polkit-gnome) and keyring passwords (instead of the GNOME keyring window) in its own prompt, which opens out of the activity pill like the clipboard and stays above every menu, keeping the keyboard until it is answered.
+- Menus start at once: the launcher, dashboard, notifications, settings and screenshot windows are built when the shell starts and only shown when opened, instead of being built at each press. Settings opens in about 50 ms instead of up to 630 ms, the dashboard in about 35 ms instead of up to 380 ms. This keeps about 75 MB more resident on one screen.
+- Lock screen starts at once on `SUPER + L`: each screen keeps its lock veil window ready (unmapped while unlocked) with the wallpaper decoded ahead in the background, instead of building the window and decoding the wallpaper on the UI thread (twice, the first time at 1×1) at the keypress. On a 7 MB wallpaper that was about 0.4 s per lock, plus building the window.
+- Lock screen: while they merge and expand, the pills and modules stretch along the way they move and squash as they stop, and the gathering blob stretches along every pill that hits it.
+- Settings > Advanced > Services: LOGIN SCREEN picks the SDDM theme, VADOS (installs the VAD/OS login screen with your accent, lock wallpaper and profile picture) or MAIN (the theme your system had). Each switch asks for admin rights once.
+- Lock screen enter and leave are punchier and quicker: the modules grow steadily along their flight instead of ballooning at the end, land with a squash and a bounce, the gathered blob is bigger, the leave reacts at once on unlock and ends 130 ms sooner, and the password field ticks on every key and on a wrong password.
+- Lock screen: 5 minutes after the locked screen switches off, the machine hibernates (or suspends where hibernation is unavailable) instead of staying awake (`lock.sleepAfter`).
+- Settings > User: the name banners slice in and out character by character like the home banner, and the picture is now round and spins as it pops in and out.
+- Settings > User: the first and second name banners sit in one row, the second half as big and centred beside the first; each name's field appears above its own banner on hover or while editing. The system details are larger and list the GPU.
+- Settings > User: your name is drawn as an ASCII banner in the Def Leppard FIGlet font, with the second name as a smaller banner under it. The picture, details and GitHub history keep their place; the banners grow upward at a fixed size, the second name half as big as the first. Clicking a name shows only that name's text field, above the name banner (the two fields stacked, name above second name), and the banner redraws live as you type without moving. The empty second field reads "Second Name".
+- Settings > Customization: the PILLS tab is gone. `pills.opacity`, `pills.blur` and `pills.color` still work from `shell.json`.
+- Settings > General: MOTION & ANIMATIONS and PLACEMENT sit together under a larger PILL group heading. WINDOW MODE moved to Settings > Displays (top of the side column); NOTIFICATIONS, BATTERY and CAPTURE moved to Advanced > Services.
+- Settings: the page heading (`ADVANCED / SERVICES`) types with the symbol typewriter.
+
+- Settings > User: the GitHub box is live. It signs in through your `gh` CLI with nothing to set up (the name fills in from `gh` when the field is empty; without `gh` it reads your public activity by the typed name). The arrow beside it cycles three slides: GITHUB HISTORY (your real contribution calendar), FAVORITES (up to 5 repositories side by side, imported from your pinned ones; EDIT picks from your repositories) and RECENT PUSHES (up to 15 commit cards, 5 at a time, scrolled or dragged sideways). A click opens the commit or repository in your browser.
+- Settings > User: the picture spins and pops in, ringed in the accent colour.
+
+- Settings sections show an accent stripe to the left of their rows.
+
+- Settings > Displays: monitors are static, sharp-cornered rectangles; dragging one follows the grid without any bounce or glide, and a clicked monitor moves by one pixel with the arrow keys (a grid step with Shift).
+- Alerts: the title and message stay on one line until you hover the alert, and fade out softly at the end instead of ending in "…". On leave the text clears before the pill closes, so nothing pokes past it.
+- Settings > User: the picture moves left and the system sits beside it: OS, kernel, compositor, shell version, host, uptime, CPU and memory.
+- Settings: the taskbar side moved to Settings > General (PLACEMENT); the Customization > Taskbar tab is gone. The taskbar style is still set by `taskbar.style` in `shell.json`.
+- Settings: the main bar sits at the edge and the sub bar beside it; the content always starts after both slots.
+- Settings > Displays: the whole settings pill is the monitor canvas's grid, a faint grid with no grey box, and a dropped monitor snaps onto it (every 120 pixels) when no neighbouring edge is close.
+- Settings > Displays: the right column no longer shifts when you pick another monitor; REFRESH (HZ) always sits under its label and the description keeps room for two lines.
+- Customization > Pills: BLUR now frosts the whole pill: the wallpaper behind each taskbar pill is blurred inside its shape, as strongly as the fader says (0 turns it off). It no longer changes the pill edges, and it does not touch driftwm or your window blur. Lower OPACITY to see it through the pill colour.
+- Lock screen: locking no longer redraws the screen. The lock background slices in over your live desktop with an angled cut while every taskbar pill is slingshot on its own random curve into one blob, each hit knocking it the way it flew and making it bounce; the blob pops, is slung across to the far screen edge, splats against it with a spray of popping bubbles and pops into the modules, gone as they fly, each slung to its place, growing on the way and snapping back. The session lock engages once the screen is covered. Unlocking slices the background away to the real desktop while the modules are slung into the middle, knocking the blob around as they merge; it winds up, is slung at the taskbar and bursts at 70% of the way with a pop and bubbles into three pills that hit the taskbar edge and turn into it, the system pill splitting into the audio, Wi-Fi, battery and other pills. When a window covers the taskbar, the blob instead smashes into the screen edge and vanishes past it. Every lock and unlock throws new curves, and locking or unlocking mid-animation carries on from where everything is.
+- Settings home: the VAD/OS banner slices in and out diagonally, character by character: each character is pulled on its own spring from a random spot anywhere in the settings menu into place, and on leave flung to another random spot, new spots on every open and close. The pointer pushes nearby characters gently away from it, more the closer it gets, and they ease back once it leaves.
+- Taskbar clock: time and date are set in the sans font, larger and bolder, with fixed-width digits and a faint shadow so they stay readable on bright wallpapers.
+- Settings > Wallpaper: the main image arrives with a glance of light sweeping across it from left to right, on opening and each time a new image settles in the middle.
+- Settings > Wallpaper: as the carousel enters and leaves, the images above come from and go to the top edge and those below the bottom edge, instead of all gathering at the centre.
+- Screenshot: clicking a window selects it as the area (the window under the pointer is outlined); holding Shift while painting straightens the line to 45° steps.
+- Clipboard history: a thin scrollbar at the right edge shows where the visible rows sit in the list and can be dragged, only when there are more entries than rows.
+- Settings faders: the label and the percentage sit level with RESET, closing the gap above the bar.
+- The power buttons are coloured by action in the launcher and the taskbar: lock blue, sleep violet, restart amber, shut down red.
+- Taskbar power pill: the separate shutdown button is gone; the pill's own power glyph shuts down once the pill is open. Restart and shutdown ask to confirm by filling the whole pill with their colour from left to right and typing CONFIRM.
+- A new symbol typewriter: letters arrive as symbols (& $ ~ | = + - / \ # * %) that spin and turn into the real characters. The taskbar pills type their names and values with it (Wi-Fi name, volume, battery, USB drive); a changed value only rescrambles the characters that changed.
+- Buttons in an open taskbar pill (lock, sleep, restart, shut down, eject, mute, networks) type their name at the pill's end on hover.
+- Settings > Advanced > Services: a BOOT section with SPLASH (the VAD/OS mark in your accent as the picture shown before Linux starts) and PLYMOUTH (a VAD/OS boot screen with rising accent bubbles and a password prompt), both off by default. Each switch asks for admin rights, rebuilds the boot image with mkinitcpio, keeps the previous image as a boot entry and puts everything back if the rebuild fails. Needs a unified kernel image built by mkinitcpio; PLYMOUTH needs the `plymouth` package.
+- Settings: a click on the gaps between the pills (around the tab bars and the content) closes the menu.
+- Super (the search key) while any menu is open closes it and does not open the launcher.
 - Every push to master publishes a GitHub release of the version in `shell/config/Release.qml` whose notes are that version's section of this file (`.github/workflows/release.yml`, `tools/release-notes.sh`). A version that already has a release is left alone.
 
 ## 0.2.0

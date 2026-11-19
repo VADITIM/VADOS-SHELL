@@ -1,5 +1,6 @@
 import QtQuick
 import qs.config
+import qs.services
 import qs.components
 
 Item {
@@ -7,6 +8,7 @@ Item {
 
     property Item host: null
     property bool isShown: false
+    property bool isLogOutArmed: false
     readonly property var look: Appearance.lock
     readonly property int passwordLength: host?.passwordLength ?? 0
     readonly property bool isChecking: host?.isChecking ?? false
@@ -17,6 +19,25 @@ Item {
         : Appearance.color.hairline
 
     anchors.fill: parent
+    onPasswordLengthChanged: tick.restart()
+    onIsMessageErrorChanged: if (isMessageError) tick.restart()
+
+    Timer {
+        id: disarm
+        interval: Motion.search.profileDisarm
+        onTriggered: login.isLogOutArmed = false
+    }
+
+    Timer {
+        id: tick
+        interval: Motion.press.down
+    }
+
+    Press {
+        target: field
+        isPressed: tick.running
+        depth: Motion.lock.keyTick
+    }
 
     Column {
         anchors.centerIn: parent
@@ -33,6 +54,7 @@ Item {
         }
 
         Turn {
+            id: field
             width: parent.width
             height: login.look.fieldHeight
             isShown: login.isShown
@@ -104,6 +126,30 @@ Item {
             font.family: Appearance.font.mono
             font.pixelSize: Appearance.font.label
             font.letterSpacing: Appearance.font.labelSpacing
+        }
+    }
+
+    Turn {
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: login.look.padding
+        isShown: login.isShown
+        enterEasing: Easing.OutBack
+
+        GlyphButton {
+            glyphName: "logout"
+            label: login.isLogOutArmed ? "CONFIRM" : "LOG OUT"
+            color: Appearance.color.powerColors["logout"]
+            isArmed: login.isLogOutArmed
+            onClicked: {
+                if (login.isLogOutArmed) {
+                    login.isLogOutArmed = false
+                    Power.logOut()
+                    return
+                }
+                login.isLogOutArmed = true
+                disarm.restart()
+            }
         }
     }
 }

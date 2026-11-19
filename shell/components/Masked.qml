@@ -6,6 +6,7 @@ Item {
 
     default property alias content: contentHolder.data
     property alias mask: maskHolder.data
+    property real softness: 0
     readonly property bool isRendering: visible && opacity > 0
 
     Item {
@@ -24,6 +25,8 @@ Item {
         layer.effect: MultiEffect {
             maskEnabled: true
             maskSource: maskHolder
+            maskThresholdMin: masked.softness / (1 + masked.softness)
+            maskSpreadAtMin: masked.softness
         }
     }
 }

@@ -59,7 +59,7 @@ Item {
             height: gauge.look.ring
             isShown: gauge.isPresent
             level: gauge.barShare
-            fill: Appearance.bandColor(gauge.barShare, gauge.bands.usageBands)
+            fill: Appearance.levelColor(gauge.barShare, gauge.bands.loadBands)
         }
 
         Column {
@@ -71,7 +71,7 @@ Item {
             Text {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: gauge.gigabytes(gauge.barUsed)
-                color: Appearance.bandColor(gauge.barShare, gauge.bands.usageBands)
+                color: Appearance.levelColor(gauge.barShare, gauge.bands.loadBands)
                 font.family: Appearance.font.mono
                 font.pixelSize: gauge.look.fraction
                 font.bold: true

@@ -43,7 +43,7 @@ FocusScope {
             cpu: ProcessTable.percent(Hardware.cpuLoad),
             memory: ProcessTable.percent(Hardware.memoryTotal > 0 ? Hardware.memoryUsed / Hardware.memoryTotal : 0),
             disk: ProcessTable.rate(Processes.diskRate),
-            network: ProcessTable.rate(Traffic.download + Traffic.upload)
+            network: ProcessTable.rate(manager.isShown ? Traffic.download + Traffic.upload : 0)
         }
 
     signal iconsToggled()

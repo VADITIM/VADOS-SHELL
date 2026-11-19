@@ -218,7 +218,6 @@ Window {
             onVisitorChanged: Overlays.placeVisitor("settings", root.screenName, visitor)
             accent: Appearance.color.accent
             taskbarSide: Config.data.taskbar.side
-            barStyle: Config.data.taskbar.style
             windowMode: Config.data.desktop.mode
             canSwitchMode: true
             canConfigureDisplays: true
@@ -233,7 +232,6 @@ Window {
             onLanded: root.landOverlay()
             onAccentRequested: value => Config.setAccent(value.toString())
             onSideRequested: side => Config.setTaskbarSide(side)
-            onStyleRequested: style => Config.setTaskbarStyle(style)
             onModeRequested: mode => Config.setWindowMode(mode)
             isReducedMotion: Config.data.motion.reduced
             burstStyle: Config.data.motion.burst
@@ -245,9 +243,6 @@ Window {
             profileSecondName: Config.data.profile.secondName
             profilePicture: Config.data.profile.picture
             profileGithub: Config.data.profile.github
-            pillOpacity: Config.data.pills.opacity
-            pillBlur: Config.data.pills.blur
-            pillColor: Config.data.pills.color
             isMediaPlayerOn: Config.data.services.mediaPlayer
             isNotificationsOn: Config.data.notifications.enabled
             lockLayout: Config.data.lock.layout
@@ -271,11 +266,6 @@ Window {
                 secondName: Config.setProfileSecondName,
                 picture: Config.setProfilePicture,
                 github: Config.setProfileGithub
-            })[field](value)
-            onPillRequested: (field, value) => ({
-                opacity: Config.setPillOpacity,
-                blur: Config.setPillBlur,
-                color: Config.setPillColor
             })[field](value)
             onMediaPlayerRequested: isOn => Config.setMediaPlayer(isOn)
             onNotificationsRequested: isOn => Config.setNotificationsEnabled(isOn)
@@ -366,6 +356,7 @@ Window {
                 return
             Overlays.placeTaskbarParts(root.screenName, taskbar.liquidParts())
             Overlays.placeTaskbarOrigins(root.screenName, taskbar.originPoints())
+            Overlays.placeTaskbarGroups(root.screenName, taskbar.liquidGroups())
         }
     }
 
@@ -373,36 +364,73 @@ Window {
         id: lockPreview
 
         property string draft: ""
-        property bool isLeaving: false
+        property bool isVeiled: false
+        readonly property bool isVeiling: Lock.isLocking || Lock.isLocked
 
         anchors.fill: parent
-        visible: Lock.isLocked || isLeaving
-        Keys.onShortcutOverride: event => event.accepted = Lock.isLocked
+        visible: isVeiled
+        Keys.onShortcutOverride: event => event.accepted = lockPreview.isVeiling
         Keys.onPressed: event => {
             event.accepted = true
             if (Lock.isChecking)
                 return
             const typed = Locking.typeInto(draft, event.key, event.text, event.modifiers)
+            if (typed.password.length > 0 && !Lock.isLocked)
+                return
             draft = typed.draft
             if (typed.password.length > 0)
                 Lock.submit(typed.password)
         }
 
+        function begin() {
+            draft = ""
+            isVeiled = true
+            Overlays.holdTaskbar(root.screenName)
+            forceActiveFocus()
+        }
+
         Connections {
             target: Lock
 
+            function onIsLockingChanged() {
+                if (Lock.isLocking)
+                    lockPreview.begin()
+            }
+
             function onIsLockedChanged() {
-                if (!Lock.isLocked)
-                    return
-                lockPreview.isLeaving = false
-                Overlays.holdTaskbar(root.screenName)
-                lockPreview.forceActiveFocus()
+                if (Lock.isLocked && !lockPreview.isVeiled)
+                    lockPreview.begin()
             }
 
             function onUnlocked() {
                 lockPreview.draft = ""
-                lockPreview.isLeaving = true
                 root.contentItem.forceActiveFocus()
+            }
+        }
+
+        Loader {
+            anchors.fill: parent
+            active: lockPreview.isVeiled
+
+            sourceComponent: LockVeil {
+                isShown: lockPreview.isVeiling
+                isInstant: Lock.isLocked && !Lock.isLocking
+                layout: Config.data.lock.layout
+                wallpaper: Config.data.lock.wallpaper.length > 0 ? Config.data.lock.wallpaper : Config.data.wallpaper.path
+                parts: Overlays.taskbarParts[root.screenName] ?? []
+                groups: Overlays.taskbarGroups[root.screenName] ?? ({})
+                isMirrored: root.isRight
+                onCovered: if (Lock.isLocking) Lock.lock()
+                onVisitorChanged: {
+                    Overlays.placeVisitor("lock", root.screenName, visitor)
+                    if (visitor && visitor.release > 0 && !lockPreview.isVeiling)
+                        Overlays.releaseTaskbar(root.screenName)
+                }
+                onLanded: {
+                    Overlays.placeVisitor("lock", root.screenName, null)
+                    Overlays.releaseTaskbar(root.screenName)
+                    lockPreview.isVeiled = false
+                }
             }
         }
 
@@ -414,9 +442,6 @@ Window {
                 isLocked: Lock.isLocked
                 layout: Config.data.lock.layout
                 wallpaper: Config.data.lock.wallpaper.length > 0 ? Config.data.lock.wallpaper : Config.data.wallpaper.path
-                parts: Overlays.taskbarParts[root.screenName] ?? []
-                origin: Overlays.taskbarOrigins[root.screenName]?.power ?? null
-                isMirrored: root.isRight
                 passwordLength: lockPreview.draft.length
                 isChecking: Lock.isChecking
                 message: Lock.message
@@ -424,19 +449,6 @@ Window {
                 isBlank: Lock.isBlank
                 profileName: Config.data.profile.name
                 profilePicture: Config.data.profile.picture
-            }
-        }
-
-        Loader {
-            anchors.fill: parent
-            active: lockPreview.isLeaving
-
-            sourceComponent: LockLeave {
-                layout: Config.data.lock.layout
-                parts: Overlays.taskbarParts[root.screenName] ?? []
-                isMirrored: root.isRight
-                onSpilled: Overlays.releaseTaskbar(root.screenName)
-                onLanded: lockPreview.isLeaving = false
             }
         }
     }
@@ -552,7 +564,7 @@ Window {
 
     Shortcut {
         sequence: "L"
-        enabled: !Overlays.isAnyOpen() && !Lock.isLocked
+        enabled: !Overlays.isAnyOpen() && !Lock.isLocked && !Lock.isLocking
         context: Qt.ApplicationShortcut
         onActivated: Power.lock()
     }

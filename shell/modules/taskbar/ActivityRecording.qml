@@ -62,29 +62,23 @@ Item {
             axis: details.width / 2
         }
 
-        TypedText {
+        ScrambleText {
             id: stateLabel
+            label: "activity recording state"
             target: Capture.isPaused ? "PAUSED" : "RECORDING"
             isShown: view.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
             color: Capture.isPaused ? Appearance.color.textMuted : Appearance.capture.tint
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.activity.expanded.label
-            font.letterSpacing: Appearance.font.labelSpacing
-            font.bold: true
+            pixelSize: Appearance.activity.expanded.smallLabel
         }
 
-        TypedText {
+        ScrambleText {
             y: stateLabel.height + Appearance.activity.expanded.lineGap
+            label: "activity recording clock"
             target: Capture.clock
             isShown: view.isShown
-            characterInterval: Motion.type.quick
-            untypeInterval: Motion.type.quickUntype
             color: Appearance.color.text
-            font.family: Appearance.font.sans
-            font.pixelSize: Appearance.activity.expanded.body
-            font.bold: true
+            pixelSize: Appearance.activity.expanded.smallBody
+            spacing: 0
         }
     }
 

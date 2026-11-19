@@ -25,22 +25,46 @@ Singleton {
     readonly property QtObject color: QtObject {
         readonly property color ground: "#181818"
         readonly property color cornerFill: "#000000"
-        readonly property color panel: Config.data.pills.color || "#121212"
+        readonly property bool isWhite: Config.data.pills.tone === "white"
+        property real whiteness: isWhite ? 1 : 0
+
+        Behavior on whiteness {
+            NumberAnimation {
+                duration: Motion.pace(Motion.stateDuration)
+            }
+        }
+
+        function blend(whiteTone, darkTone) {
+            const white = typeof whiteTone === "string" ? Qt.color(whiteTone) : whiteTone
+            const dark = typeof darkTone === "string" ? Qt.color(darkTone) : darkTone
+            return Qt.rgba(dark.r + (white.r - dark.r) * whiteness, dark.g + (white.g - dark.g) * whiteness, dark.b + (white.b - dark.b) * whiteness, dark.a + (white.a - dark.a) * whiteness)
+        }
+
+        readonly property color panel: Config.data.pills.color || blend("#f4f4f4", "#121212")
         readonly property real panelAlpha: Config.data.pills.opacity
-        readonly property color hairline: "#3a3a3a"
-        readonly property color text: "#dedede"
-        readonly property color textBody: "#d8d8d8"
-        readonly property color textMuted: "#9a9a9a"
-        readonly property color textFaint: "#6a6a6a"
+        readonly property color hairline: blend("#c4c4c4", "#3a3a3a")
+        readonly property color text: blend("#1c1c1c", "#dedede")
+        readonly property color textBody: blend("#262626", "#d8d8d8")
+        readonly property color textMuted: blend("#5e5e5e", "#9a9a9a")
+        readonly property color clockText: "#dedede"
+        readonly property color clockShade: "#99000000"
+        readonly property real clockDateOpacity: 0.85
+        readonly property color textFaint: blend("#8a8a8a", "#6a6a6a")
         readonly property color accent: Config.data.appearance.accent || defaultAccent
         readonly property color defaultAccent: "#ffffff"
         readonly property color danger: "#ff6b6b"
+        readonly property color powerLock: "#4d9dff"
+        readonly property color powerSleep: "#a78bfa"
+        readonly property color powerRestart: "#ffb340"
+        readonly property color powerShutdown: "#ff4d4d"
+        readonly property color powerLogOut: "#3fc8b4"
+        readonly property var powerColors: ({ "lock": powerLock, "suspend": powerSleep, "logout": powerLogOut, "restart": powerRestart, "shutdown": powerShutdown })
         readonly property color levelWarm: "#ffd429"
         readonly property color levelHot: "#ff9020"
         readonly property color levelCritical: "#e5342b"
         readonly property color levelFair: "#c8e65a"
         readonly property color levelFull: "#6fdc8c"
-        readonly property color wash: Qt.rgba(1, 1, 1, 0.08)
+        readonly property color wash: blend(Qt.rgba(0, 0, 0, 0.08), Qt.rgba(1, 1, 1, 0.08))
         readonly property color raised: Qt.tint(panel, wash)
         readonly property color shadow: "#000000"
     }
@@ -65,9 +89,13 @@ Singleton {
         readonly property int label: 13
         readonly property real labelSpacing: 2.2
         readonly property int clock: 22
+        readonly property int taskbarClock: 24
+        readonly property real clockDateSpacing: 1.2
+        readonly property var tabularFigures: ({ "tnum": 1 })
         readonly property int reading: 19
         readonly property int degrees: 36
         readonly property int chip: 12
+        readonly property string scrambleSymbols: "&$~|=+-/\\#*%"
     }
 
     function bandColor(value, limits) {
@@ -78,6 +106,11 @@ Singleton {
         if (value < limits[2])
             return color.levelHot
         return color.levelCritical
+    }
+
+    function levelColor(value, limits) {
+        const shades = [color.levelFull, color.levelFair, color.levelWarm, color.levelHot, color.levelCritical]
+        return shades[limits.filter(limit => value >= limit).length]
     }
 
     function chargeColor(level, isCharging) {
@@ -93,6 +126,8 @@ Singleton {
         readonly property real edgeSoftness: 0.04
         readonly property real coreThreshold: 0.5
         readonly property real coreSoftness: 0.1
+        readonly property int frost: 48
+        readonly property real frostDetail: 0.25
     }
 
     readonly property QtObject screenCorner: QtObject {
@@ -100,6 +135,7 @@ Singleton {
     }
 
     readonly property QtObject taskbar: QtObject {
+        readonly property int clockLine: 1
         readonly property int margin: 12
         readonly property int thickness: 52
         readonly property int item: 44
@@ -129,9 +165,13 @@ Singleton {
         readonly property int reach: 76
         readonly property int tipHeight: 32
         readonly property int tipGap: 8
-        readonly property int tipTextLimit: 220
+        readonly property int tipScreenGap: 16
+        readonly property int tipPadding: 13
         readonly property int melt: 12
         readonly property int foldDot: 24
+        readonly property int trayIcon: 22
+        readonly property int trayCell: 30
+        readonly property int trayLimit: 12
         readonly property int foldSpeck: 3
         readonly property int foldSpeckGap: 3
     }
@@ -147,8 +187,11 @@ Singleton {
         readonly property int bar: 3
         readonly property int barGap: 3
         readonly property int barHeight: 14
-        readonly property int satellite: 10
-        readonly property int satelliteGap: 5
+        readonly property int dot: 10
+        readonly property int liveDot: 30
+        readonly property int liveGlyph: 16
+        readonly property int dotGap: 6
+        readonly property real dotCore: 0.5
         readonly property int detailGap: 14
         readonly property int lineGap: 2
         readonly property int control: 28
@@ -168,6 +211,8 @@ Singleton {
             readonly property int glyph: Math.round(20 * factor)
             readonly property int label: Math.round(13 * factor)
             readonly property int body: Math.round(15 * factor)
+            readonly property int smallLabel: 11
+            readonly property int smallBody: 14
             readonly property int fade: 28
         }
         readonly property QtObject media: QtObject {
@@ -180,13 +225,17 @@ Singleton {
             readonly property int padding: Math.round(14 * activity.expanded.factor)
         }
         readonly property QtObject call: QtObject {
-            readonly property int width: Math.round(236 * activity.expanded.factor)
-            readonly property int height: Math.round(76 * activity.expanded.factor)
-            readonly property int avatar: Math.round(56 * activity.expanded.factor)
-            readonly property int padding: Math.round(12 * activity.expanded.factor)
-            readonly property int drop: Math.round(34 * activity.expanded.factor)
-            readonly property int dropGap: Math.round(3 * activity.expanded.factor)
-            readonly property int dropSpacing: Math.round(8 * activity.expanded.factor)
+            readonly property int width: activity.media.width
+            readonly property int height: activity.media.height
+            readonly property int head: activity.media.head
+            readonly property int avatar: activity.media.ring
+            readonly property int padding: activity.media.padding
+        }
+        readonly property QtObject bud: QtObject {
+            readonly property int size: 40
+            readonly property int glyph: 18
+            readonly property int gap: 8
+            readonly property int spacing: 8
         }
         readonly property QtObject tray: QtObject {
             readonly property int height: Math.round(64 * activity.expanded.factor)
@@ -205,9 +254,9 @@ Singleton {
         readonly property int header: 42
         readonly property int headerGap: 8
         readonly property int row: 46
-        readonly property int rowGap: 6
+        readonly property int rowGap: 12
         readonly property int rowRadius: 18
-        readonly property int rows: 9
+        readonly property int rows: 11
         readonly property int height: padding * 2 + header + headerGap + rows * row + (rows - 1) * rowGap
         readonly property int imageSpan: 3
         readonly property int imageInset: 4
@@ -226,6 +275,13 @@ Singleton {
         readonly property int text: 18
         readonly property int label: 14
         readonly property int trashInset: padding
+        readonly property int scrollWidth: 4
+        readonly property int scrollInset: 7
+        readonly property int scrollMinimum: 36
+        readonly property int scrollGrip: 6
+        readonly property int divider: 2
+        readonly property real dividerShare: 0.35
+        readonly property color dividerColor: Qt.alpha(color.accent, dividerShare)
     }
 
     readonly property QtObject capture: QtObject {
@@ -243,6 +299,7 @@ Singleton {
         readonly property int toolGlyph: 20
         readonly property int hotkeySize: 9
         readonly property int hotkeyGap: 4
+        readonly property color hotkeyShade: Tint.isLight(appearance.color.accent) ? "#000000" : "#ffffff"
         readonly property int toolGap: 2
         readonly property int toolPadding: 4
         readonly property int swatch: 30
@@ -287,6 +344,7 @@ Singleton {
         readonly property int lineGap: 2
         readonly property int count: 18
         readonly property int titleCharacters: 40
+        readonly property int fade: 36
         readonly property int bodyCharacters: 72
         readonly property int expandedWidth: 400
         readonly property int radius: 40
@@ -296,7 +354,8 @@ Singleton {
         readonly property int sectionGap: 10
         readonly property int openLabel: 13
         readonly property int openTitle: 17
-        readonly property int imageHeight: 200
+        readonly property int imageHeight: 140
+        readonly property int appIcon: 26
         readonly property int imageRadius: 12
     }
 
@@ -308,7 +367,6 @@ Singleton {
         readonly property int radius: 36
         readonly property int padding: 16
         readonly property int header: 44
-        readonly property int headerGap: 14
         readonly property color hoverWash: Qt.rgba(1, 1, 1, 0.05)
         readonly property color pickedWash: Qt.rgba(1, 1, 1, 0.12)
         readonly property int row: 46
@@ -319,6 +377,9 @@ Singleton {
         readonly property int track: 6
         readonly property int trackGrab: 24
         readonly property int trackWidth: 64
+        readonly property int streamName: 120
+        readonly property int tab: 34
+        readonly property int tabGap: 8
         readonly property real sliderStep: 0.05
         readonly property int percentWidth: 40
         readonly property int sectionGap: 10
@@ -326,13 +387,21 @@ Singleton {
         readonly property int toggleWidth: 34
         readonly property int toggleHeight: 18
         readonly property int toggleInset: 3
-        readonly property real heightShare: 0.32
+        readonly property real heightShare: 0.55
         readonly property int safeReach: 40
         readonly property int clockGap: 6
-        readonly property int width: 360
+        readonly property int width: 440
+        readonly property int split: 28
+        readonly property int splitRoom: padding * 2 + split
         readonly property int field: 40
         readonly property int fieldPadding: 16
         readonly property int promptGap: 10
+        readonly property QtObject sprout: QtObject {
+            readonly property int reach: 26
+            readonly property int rise: 18
+            readonly property real seed: 0.35
+            readonly property real fade: 2.5
+        }
     }
 
     readonly property QtObject settings: QtObject {
@@ -358,6 +427,11 @@ Singleton {
         readonly property int fieldPadding: 16
         readonly property int fieldWidth: 220
         readonly property int pathWidth: 360
+        readonly property QtObject textField: QtObject {
+            readonly property real fadeLead: 2.5
+            readonly property real textFrom: 0.6
+            readonly property int actionReach: 6
+        }
         readonly property int hexText: 15
         readonly property int option: 36
         readonly property int optionGap: 6
@@ -365,6 +439,20 @@ Singleton {
         readonly property int headingHeight: 84
         readonly property int headingGap: 12
         readonly property int headingLift: 44
+        readonly property QtObject arrangement: QtObject {
+            readonly property int cell: 44
+            readonly property int glyph: 22
+            readonly property int gap: 6
+            readonly property real lift: 1.12
+            readonly property int fold: 14
+            readonly property int foldLine: 2
+            readonly property int toggleWidth: 34
+            readonly property int toggleHeight: 18
+            readonly property int toggleInset: 3
+            readonly property int toggleReach: 56
+            readonly property real hiddenOpacity: 0.35
+        }
+
         readonly property QtObject piece: QtObject {
             readonly property int slide: 22
             readonly property int rise: 12
@@ -380,6 +468,7 @@ Singleton {
             readonly property int gap: 30
             readonly property int columnGap: 72
             readonly property int title: 18
+            readonly property int groupTitle: 24
             readonly property real titleSpacing: 1.6
             readonly property int tick: 3
             readonly property int tickHeight: 14
@@ -392,11 +481,22 @@ Singleton {
             readonly property int rowGap: 18
             readonly property int rule: 1
             readonly property real ruleShade: 0.7
+            readonly property int stripe: 4
+            readonly property int stripeGap: 16
             readonly property real disabled: 0.4
             readonly property int icon: 52
             readonly property int list: 300
             readonly property int listRow: 38
             readonly property int preview: 24
+        }
+        readonly property QtObject keyboard: QtObject {
+            readonly property int key: 38
+            readonly property int keyGap: 4
+            readonly property int keyRadius: 6
+            readonly property int legend: 10
+            readonly property int list: 220
+            readonly property int pickerList: 260
+            readonly property int canvasWidth: 640
         }
         readonly property QtObject choice: QtObject {
             readonly property int height: 38
@@ -424,12 +524,16 @@ Singleton {
             readonly property int gap: 18
             readonly property int preview: 64
             readonly property int swatchGap: 12
+            readonly property int hexField: 124
+            readonly property int markGap: 36
         }
         readonly property QtObject clock: QtObject {
             readonly property int size: 15
             readonly property int inset: 30
         }
         readonly property QtObject wallpaper: QtObject {
+            readonly property int plus: 56
+            readonly property int plusStroke: 3
             readonly property real near: 0.32
             readonly property real far: 0.22
             readonly property real nearOverlap: 0.15
@@ -443,6 +547,13 @@ Singleton {
             readonly property int captionCount: 15
             readonly property int fieldWidth: 360
             readonly property int reach: 2
+            readonly property real glintFrom: 0.6
+            readonly property QtObject glint: QtObject {
+                readonly property real band: 0.35
+                readonly property real reach: 1.6
+                readonly property real tilt: 18
+                readonly property real strength: 0.28
+            }
         }
         readonly property QtObject lock: QtObject {
             readonly property int width: 560
@@ -461,11 +572,9 @@ Singleton {
             readonly property int captionHeight: 36
             readonly property real contentAt: 0.6
             readonly property int footer: 176
-            readonly property real barShare: 0.6
             readonly property real lineAlpha: 0.12
             readonly property real tileAlpha: 0.14
             readonly property int outline: 2
-            readonly property real wallpaperShade: 0.55
             readonly property real pickedShade: 0.5
         }
         readonly property QtObject widgets: QtObject {
@@ -478,14 +587,17 @@ Singleton {
         }
         readonly property QtObject displays: QtObject {
             readonly property int padding: 36
-            readonly property int corner: 18
             readonly property int line: 1
             readonly property int outline: 2
             readonly property real lineAlpha: 0.1
             readonly property real bodyAlpha: 0.16
             readonly property real restAlpha: 0.06
             readonly property int snap: 48
+            readonly property int grid: 120
+            readonly property real gridAlpha: 0.05
+            readonly property int gridSpacingMin: 8
             readonly property int nameGap: 4
+            readonly property int descriptionLines: 2
             readonly property int value: 150
             readonly property int stepper: 36
             readonly property int buttonWidth: 120
@@ -502,10 +614,17 @@ Singleton {
             readonly property real shade: 0.04
         }
         readonly property QtObject home: QtObject {
-            readonly property int bannerSize: 21
+            readonly property int bannerSize: 32
             readonly property real bannerLine: 1
             readonly property int gap: 24
             readonly property real versionShade: 0.5
+            readonly property QtObject slice: QtObject {
+                readonly property real spin: 90
+                readonly property real jitter: 0.3
+                readonly property real fade: 2.5
+                readonly property int pushReach: 90
+                readonly property int pushDepth: 14
+            }
         }
         readonly property QtObject profile: QtObject {
             readonly property real avatarShare: 0.5
@@ -518,7 +637,7 @@ Singleton {
             readonly property int nameGap: 16
             readonly property int lineGap: 6
             readonly property int nameSize: 40
-            readonly property int secondSize: 22
+            readonly property int secondSize: 16
             readonly property int underline: 2
             readonly property real hint: 0.35
             readonly property int weeks: 26
@@ -527,6 +646,27 @@ Singleton {
             readonly property int boxPadding: 16
             readonly property int linkSize: 22
             readonly property real cellRound: 0.2
+            readonly property real cellFloor: 0.2
+            readonly property real cellStep: 0.2
+            readonly property int rowGap: 8
+            readonly property int rowPadding: 12
+            readonly property real rowRest: 0.6
+            readonly property int arrow: 44
+            readonly property int arrowGlyph: 22
+            readonly property real arrowWash: 0.14
+            readonly property int arrowCorner: 14
+            readonly property int arrowGap: 10
+            readonly property int arrowNudge: 6
+            readonly property int pickRows: 3
+            readonly property real avatarSpin: -90
+            readonly property real sliceReach: 0.5
+            readonly property int infoWidth: 360
+            readonly property int bannerSize: 9
+            readonly property int fieldWidth: 220
+            readonly property real bannerLine: 1
+            readonly property int infoLabel: 160
+            readonly property int infoSize: 16
+            readonly property int infoGap: 10
         }
         readonly property QtObject navigation: QtObject {
             readonly property int width: 76
@@ -599,18 +739,50 @@ Singleton {
         readonly property real dim: 0.32
         readonly property int blur: 64
         readonly property real backdropScale: 0.25
-        readonly property int drop: 44
-        readonly property int fill: 150
-        readonly property real arcLift: 0.22
-        readonly property real stretchGain: 0.0016
+        readonly property int drop: 54
+        readonly property real press: 0.42
+        readonly property real bend: 0.34
+        readonly property real bendLeast: 0.1
+        readonly property int pull: 26
+        readonly property int corePull: 90
+        readonly property int splitPull: 14
+        readonly property real pullLimit: 0.3
+        readonly property real stretchGain: 0.1
         readonly property real stretchLimit: 0.45
+        readonly property real bodyStretch: 0.55
+        readonly property real stretchFade: 0.3
+        readonly property real knockStretch: 0.012
+        readonly property int knock: 34
+        readonly property real knockSwell: 0.4
+        readonly property int settle: 46
+        readonly property real settleSwell: 0.06
+        readonly property real settleSquash: 0.07
+        readonly property int gatherReach: 150
+        readonly property real gatherPop: 1.35
+        readonly property real wallSpread: 0.16
+        readonly property real wallCone: 1.15
+        readonly property real growth: 2.2
+        readonly property real bloom: 1.35
+        readonly property real splitAt: 0.7
+        readonly property real lead: 0.45
+        readonly property real shotBirth: 0.6
+        readonly property real popSwell: 1.6
+        readonly property real smashSquash: 0.35
+        readonly property int bubble: 20
+        readonly property int bubblesLeast: 5
+        readonly property int bubblesMost: 9
+        readonly property int bubbleReach: 170
+        readonly property real bubbleSpread: 0.4
+        readonly property real bubbleBirth: 0.4
+        readonly property real bubblePopAt: 0.72
+        readonly property real bubblePop: 1.6
+        readonly property real cutLean: 0.32
+        readonly property int cutLine: 2
         readonly property int clock: 96
         readonly property int date: 19
         readonly property int glyph: 22
         readonly property int smallGlyph: 18
         readonly property int weatherGlyph: 44
-        readonly property real dropGrowth: 2
-        readonly property real headingStep: 0.02
         readonly property int avatar: 132
         readonly property int avatarRing: 2
         readonly property int initial: 54
@@ -628,7 +800,6 @@ Singleton {
         readonly property int rowGap: 10
         readonly property int readingGap: 15
         readonly property int notificationRows: 4
-        readonly property int spillWidth: 52
     }
 
     readonly property QtObject desktop: QtObject {
@@ -666,9 +837,6 @@ Singleton {
         readonly property int stepBottom: 84
         readonly property real stepBottomShare: 0.42
         readonly property int stepCorner: 64
-        readonly property int stepSide: 56
-        readonly property int stepSideHeight: 244
-        readonly property int stepSideCorner: 36
         readonly property int cornerSplash: 30
         readonly property int cornerReach: 46
         readonly property int blob: 22
@@ -694,7 +862,9 @@ Singleton {
     }
 
     readonly property QtObject dashboard: QtObject {
-        readonly property int width: 1000
+        readonly property int width: 1040
+        readonly property int chargeWidth: 690
+        readonly property int bareWidth: 620
         readonly property int height: 600
         readonly property int corner: 130
         readonly property int rootCorner: 40
@@ -707,11 +877,12 @@ Singleton {
         readonly property int readoutX: 290
         readonly property int dividerX: 572
         readonly property int dividerInset: 60
-        readonly property int weatherX: 616
+        readonly property int weatherX: 656
         readonly property int weatherWidth: 314
         readonly property real iconStroke: 2
-        readonly property var temperatureBands: [60, 70, 85]
         readonly property var usageBands: [0.75, 0.85, 0.95]
+        readonly property var loadBands: [0.3, 0.55, 0.75, 0.9]
+        readonly property var heatBands: [50, 65, 75, 85]
         readonly property int temperatureScale: 100
         readonly property QtObject font: QtObject {
             readonly property int label: 15
@@ -722,7 +893,7 @@ Singleton {
         readonly property QtObject gauge: QtObject {
             readonly property int blockWidth: 246
             readonly property int blockHeight: 224
-            readonly property int blockGap: 4
+            readonly property int blockGap: 20
             readonly property int ring: 212
             readonly property real ringStroke: 3
             readonly property int dashes: 44
@@ -738,7 +909,7 @@ Singleton {
             readonly property int chipTextShift: 1
             readonly property int usageGap: 14
             readonly property real usageStroke: 3
-            readonly property real usageTrack: 0.3
+            readonly property real usageTrack: 0.5
             readonly property int nameLift: 26
             readonly property int name: 16
             readonly property int nameSweep: 76
@@ -758,7 +929,7 @@ Singleton {
             readonly property int fractionGap: 2
         }
         readonly property QtObject drive: QtObject {
-            readonly property int width: 360
+            readonly property int step: 420
             readonly property int glyph: 30
             readonly property int glyphGap: 14
             readonly property int rowGap: 12
@@ -784,15 +955,13 @@ Singleton {
             readonly property real headroom: 1.3
         }
         readonly property QtObject battery: QtObject {
-            readonly property int width: 50
-            readonly property int height: 140
-            readonly property int cap: 20
-            readonly property int capHeight: 6
-            readonly property int corner: 7
-            readonly property int inset: 4
-            readonly property int bolt: 26
+            readonly property int width: 60
+            readonly property int height: 240
+            readonly property int bar: 12
+            readonly property int bolt: 22
             readonly property int gap: 12
-            readonly property int pull: 6
+            readonly property int percent: 18
+            readonly property int capGap: 6
             readonly property var bands: [0.1, 0.2, 0.4, 0.6]
         }
         readonly property QtObject task: QtObject {
@@ -863,9 +1032,28 @@ Singleton {
         }
     }
 
+    readonly property QtObject prompt: QtObject {
+        readonly property int width: 460
+        readonly property int padding: 24
+        readonly property int rowGap: 14
+        readonly property int fieldHeight: 46
+        readonly property int caret: 2
+        readonly property int caretHeight: 18
+        readonly property int dotGap: 2
+        readonly property int caretGap: 3
+        readonly property string mask: "•"
+        readonly property int dotLimit: 24
+        readonly property int buttonHeight: 40
+        readonly property int buttonGap: 12
+        readonly property int toggle: 18
+        readonly property int shake: 12
+        readonly property real disabled: 0.4
+    }
+
     readonly property QtObject notifications: QtObject {
         readonly property real widthShare: 0.25
         readonly property int corner: 64
+        readonly property int listFade: 36
         readonly property int rootCorner: 40
         readonly property int melt: 14
         readonly property real dim: 0.55
@@ -907,6 +1095,7 @@ Singleton {
         readonly property real widthShare: 0.2
         readonly property int corner: 64
         readonly property int rootCorner: 40
+        readonly property int rowCorner: 14
         readonly property int inset: 22
         readonly property int top: 28
         readonly property int sectionGap: 18

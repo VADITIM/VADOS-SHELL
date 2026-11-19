@@ -26,7 +26,10 @@ Item {
 
     x: tip.host.inset + Appearance.taskbar.thickness + Appearance.taskbar.tipGap
     y: heldY - height / 2
-    width: Math.max(height, Math.min(label.fullWidth, Appearance.taskbar.tipTextLimit) + 26)
+    readonly property real textRoom: Math.max(0, tip.host.width - x - Appearance.taskbar.tipScreenGap - Appearance.taskbar.tipPadding * 2)
+    readonly property real overflow: Math.max(0, label.fullWidth - textRoom)
+    property real scrolled: 0
+    width: Math.max(height, Math.min(label.fullWidth, textRoom) + Appearance.taskbar.tipPadding * 2)
     height: Appearance.taskbar.tipHeight
     visible: presence > 0.001
 
@@ -91,23 +94,54 @@ Item {
         transformOrigin: Item.Left
     }
 
-    TypedText {
-        id: label
-        x: 13
+    SequentialAnimation {
+        id: scroll
+        paused: Motion.isHeld && running
+        running: tip.isShown && tip.overflow > 0 && tip.presence > 0.99
+        loops: Animation.Infinite
+        onRunningChanged: if (!running) tip.scrolled = 0
+        PauseAnimation { duration: Motion.pace(Motion.tip.scrollRest) }
+        NumberAnimation {
+            target: tip
+            property: "scrolled"
+            to: tip.overflow
+            duration: Motion.pace(tip.overflow / Motion.tip.scrollSpeed)
+            easing.type: Easing.InOutSine
+        }
+        PauseAnimation { duration: Motion.pace(Motion.tip.scrollRest) }
+        NumberAnimation {
+            target: tip
+            property: "scrolled"
+            to: 0
+            duration: Motion.pace(tip.overflow / Motion.tip.scrollSpeed)
+            easing.type: Easing.InOutSine
+        }
+    }
+
+    Item {
+        id: textWindow
+        x: Appearance.taskbar.tipPadding
         anchors.verticalCenter: parent.verticalCenter
-        width: Math.min(implicitWidth, Appearance.taskbar.tipTextLimit)
+        width: Math.min(label.implicitWidth, tip.textRoom)
+        height: label.implicitHeight
         clip: true
-        target: tip.title
-        isShown: tip.isShown
-        characterInterval: tip.isRetyping ? Motion.tip.retype : Motion.tip.character
-        untypeInterval: tip.isRetyping ? Motion.tip.retypeUntype : Motion.tip.untype
-        opacity: tip.presence
-        color: Appearance.color.text
-        font.family: Appearance.font.sans
-        font.pixelSize: Appearance.font.body
-        transform: Upright {
-            isMirrored: tip.host.isMirrored
-            axis: tip.width / 2 - label.x
+
+        TypedText {
+            id: label
+            x: -tip.scrolled
+            width: implicitWidth
+            target: tip.title
+            isShown: tip.isShown
+            characterInterval: tip.isRetyping ? Motion.tip.retype : Motion.tip.character
+            untypeInterval: tip.isRetyping ? Motion.tip.retypeUntype : Motion.tip.untype
+            opacity: tip.presence
+            color: Appearance.color.text
+            font.family: Appearance.font.sans
+            font.pixelSize: Appearance.font.body
+            transform: Upright {
+                isMirrored: tip.host.isMirrored
+                axis: tip.width / 2 - textWindow.x - label.x
+            }
         }
     }
 }

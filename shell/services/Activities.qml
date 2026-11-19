@@ -8,7 +8,8 @@ import qs.config
 Singleton {
     id: activities
 
-    readonly property var keys: ["recording", "call", "media", "notifications", "tray"]
+    readonly property var keys: ["recording", "call", "media", "notifications"]
+    readonly property var tabs: ["notifications", "media", "call"]
     readonly property var callApplications: ["discord", "vesktop", "webcord", "armcord", "webrtc voiceengine"]
 
     readonly property var players: Mpris.players.values

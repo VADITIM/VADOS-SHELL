@@ -8,6 +8,8 @@ Item {
     required property bool isMirrored
     property string extensionKey: ""
     property string heldKey: ""
+    property string preparedKey: ""
+    readonly property string builtKey: isOpen || isHeld ? heldKey : preparedKey
     property rect body: Qt.rect(0, 0, 0, 0)
     property real lift: 0
     property bool isBatteryProtected: false
@@ -20,6 +22,7 @@ Item {
     readonly property real inputTop: Math.max(0, body.y - safeY)
     readonly property real inputHeight: Math.min(height, body.y + body.height + safeY) - inputTop
     property bool hasEntered: false
+    readonly property real footHeight: loader.item !== null && loader.item.footHeight !== undefined ? loader.item.footHeight : 0
     readonly property bool isTyping: isOpen && loader.item !== null && loader.item.isTyping === true
 
     signal closeRequested()
@@ -90,7 +93,7 @@ Item {
             Loader {
                 id: loader
                 anchors.fill: parent
-                sourceComponent: !extension.isOpen && !extension.isHeld ? null : extension.heldKey === "network" ? networkPage : extension.heldKey === "audio" ? audioPage : extension.heldKey === "power" ? powerPage : null
+                sourceComponent: extension.builtKey === "network" ? networkPage : extension.builtKey === "audio" ? audioPage : extension.builtKey === "power" ? powerPage : null
                 onLoaded: {
                     item.isOpen = Qt.binding(() => extension.isOpen)
                     item.isShown = Qt.binding(() => extension.isContentShown)

@@ -53,74 +53,63 @@ ShellRoot {
     Variants {
         model: Config.data.taskbar.enabled ? Quickshell.screens : []
 
-        TaskbarWindow {
+        PromptPanelWindow {
             required property ShellScreen modelData
             screen: modelData
         }
     }
 
     Variants {
-        model: Quickshell.screens
+        model: Config.data.taskbar.enabled ? Quickshell.screens : []
 
-        OverlaySlot {
-            id: searchSlot
-            overlayKey: "search"
-
-            SearchWindow {
-                screen: searchSlot.modelData
-            }
+        TaskbarWindow {
+            required property ShellScreen modelData
+            screen: modelData
         }
     }
 
-    Variants {
-        model: Quickshell.screens
+    OverlaySlot {
+        id: searchSlot
+        overlayKey: "search"
 
-        OverlaySlot {
-            id: settingsSlot
-            overlayKey: "settings"
-
-            SettingsWindow {
-                screen: settingsSlot.modelData
-            }
+        SearchWindow {
+            screen: searchSlot.screen
         }
     }
 
-    Variants {
-        model: Quickshell.screens
+    OverlaySlot {
+        id: settingsSlot
+        overlayKey: "settings"
 
-        OverlaySlot {
-            id: dashboardSlot
-            overlayKey: "dashboard"
-
-            DashboardWindow {
-                screen: dashboardSlot.modelData
-            }
+        SettingsWindow {
+            screen: settingsSlot.screen
         }
     }
 
-    Variants {
-        model: Quickshell.screens
+    OverlaySlot {
+        id: dashboardSlot
+        overlayKey: "dashboard"
 
-        OverlaySlot {
-            id: notificationsSlot
-            overlayKey: "notifications"
-
-            NotificationMenuWindow {
-                screen: notificationsSlot.modelData
-            }
+        DashboardWindow {
+            screen: dashboardSlot.screen
         }
     }
 
-    Variants {
-        model: Quickshell.screens
+    OverlaySlot {
+        id: notificationsSlot
+        overlayKey: "notifications"
 
-        OverlaySlot {
-            id: screenshotSlot
-            overlayKey: "screenshot"
+        NotificationMenuWindow {
+            screen: notificationsSlot.screen
+        }
+    }
 
-            ScreenshotWindow {
-                screen: screenshotSlot.modelData
-            }
+    OverlaySlot {
+        id: screenshotSlot
+        overlayKey: "screenshot"
+
+        ScreenshotWindow {
+            screen: screenshotSlot.screen
         }
     }
 

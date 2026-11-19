@@ -131,7 +131,7 @@ def blocks(text, opener):
 
 
 def readme_section(title):
-    with open(os.path.join(ROOT, "README.md"), encoding="utf-8") as handle:
+    with open(os.path.join(ROOT, ".claude", "docs", "readme-full.md"), encoding="utf-8") as handle:
         text = handle.read()
     match = re.search(r"^## " + re.escape(title) + r"\n(.*?)(?=^## |\Z)", text, re.M | re.S)
     return match.group(1) if match else ""

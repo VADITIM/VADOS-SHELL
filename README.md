@@ -25,6 +25,8 @@ It is built as independent subsystems (the liquid engine, overlays, gestures, at
 
 **Clipboard Manager**
 
+**Task Manager**
+
 **Settings**
 
 **Widgets**
@@ -35,7 +37,7 @@ It is built as independent subsystems (the liquid engine, overlays, gestures, at
 
 **Custom boot splash**
 
-- Everything lives in one live-reloaded `shell.json`, validated against a schema.
+> Everything lives in one live-reloaded `shell.json`, validated against a schema.
 
 ## Dependencies
 
@@ -56,8 +58,6 @@ The shell itself is QML and a few Python scripts; the rest comes from your syste
 - GPU readings: `nvidia-utils` on NVIDIA (AMD is read from `/sys`)
 
 **Opt-in system roles** (off by default): the notification daemon (replaces mako, dunst or swaync), the polkit and keyring prompts (`polkit`, `gcr-4`, `gnome-keyring`), the SDDM login theme (`sddm`, `xorg-xrandr`) and the boot splash (`mkinitcpio`, `plymouth`, `librsvg`, `polkit`).
-
-Nothing is installed behind your back: the shell downloads no fonts, icons or updates, and reaches the network only for the weather.
 
 ## Status
 
